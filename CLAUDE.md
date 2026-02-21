@@ -9,6 +9,34 @@ Splitwise-style app: create groups, add expenses, get simplified debts. Portfoli
 - **Tailwind CSS 4**, **Zod 4** (validation), **Vitest 4** (testing)
 - **Deployed on Vercel** at `https://gregbigelow.com/quid`
 
+## Testing After Changes
+Run tests before and after every non-trivial change:
+
+```bash
+npm test                              # All unit + integration tests (fast, no network)
+npm test tests/smoke.test.ts          # Smoke tests against live production site
+```
+
+**Test files:**
+- `lib/balances/simplify.test.ts` — 14 unit tests for debt simplification logic
+- `lib/supabase/supabase.test.ts` — Validates env vars + Supabase anon key works
+- `tests/smoke.test.ts` — Production smoke tests (unauthenticated + optional authenticated)
+
+**Smoke test setup:**
+- Unauthenticated tests run with no extra config — they hit `www.gregbigelow.com/quid`
+- Authenticated tests require `SMOKE_TEST_EMAIL` and `SMOKE_TEST_PASSWORD` in `.env.local` (a dedicated test account in Supabase)
+- Skip all smoke tests in environments without internet: `SKIP_SMOKE_TESTS=1 npm test`
+
+**What the smoke tests verify:**
+1. Login and signup pages are publicly reachable and render HTML
+2. Auth-protected pages (`/dashboard`, `/groups/:id`) redirect unauthenticated users to `/login`
+3. All API endpoints return `401` when called without a session
+4. (Authenticated) `GET /api/groups` returns `{ data: [], error: null }` shape
+5. (Authenticated) `POST /api/groups` creates a group and returns `201`
+6. (Authenticated) `GET /api/groups/:id/balances` returns simplified debts for own group
+
+**Always run smoke tests after:** changing `proxy.ts`, auth routes, API routes, or env var handling.
+
 ## Quick Start
 ```bash
 npm run dev              # Dev server (localhost:3000/quid)
@@ -36,6 +64,8 @@ All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, falls back to `http://localhost:3000/quid` in dev
+- `SMOKE_TEST_EMAIL` — (optional) Email for a dedicated test account used by authenticated smoke tests
+- `SMOKE_TEST_PASSWORD` — (optional) Password for the smoke test account
 
 ## Project Structure
 No `src/` directory — all code at repo root.
