@@ -1,149 +1,116 @@
 # Quid — Expense Splitting App
 
-## Project Overview
-A Splitwise-style expense splitting app. Users create groups, add expenses, and the app calculates simplified debts between group members. Built as a learning/portfolio project that real people will use.
+Splitwise-style app: create groups, add expenses, get simplified debts. Portfolio project with real users.
 
-## Tech Stack
-- **Framework:** Next.js 14+ (App Router, TypeScript)
-- **Database:** PostgreSQL via Supabase
-- **ORM:** Prisma
-- **Auth:** Supabase Auth (email/password + Google OAuth)
-- **Styling:** Tailwind CSS
-- **Deployment:** Vercel
+## Tech Stack & Versions
+- **Next.js 16** (App Router, React 19, TypeScript strict)
+- **PostgreSQL** via Supabase (data host) + **Prisma 7** (ORM, driver adapter pattern)
+- **Supabase Auth** (email/password; Google OAuth planned)
+- **Tailwind CSS 4**, **Zod 4** (validation), **Vitest 4** (testing)
+- **Deployed on Vercel** at `https://gregbigelow.com/quid`
 
-## Deployment & URLs
-- **Production domain:** `gregbigelow.com`
-- **App lives at:** `https://gregbigelow.com/quid` — this is the Vercel project root, served under a `/quid` path prefix via `basePath: "/quid"` in `next.config.ts`
-- All public URLs for this app start with `https://gregbigelow.com/quid`
-- `NEXT_PUBLIC_SITE_URL` env var = `https://gregbigelow.com/quid` (set in Vercel). In dev, code falls back to `http://localhost:3000/quid`.
-- Auth email confirmation callback: `https://gregbigelow.com/quid/auth/callback`
-- Supabase dashboard must have Site URL = `https://gregbigelow.com/quid` and redirect allowlist including `https://gregbigelow.com/quid/auth/callback`
+## Quick Start
+```bash
+npm run dev              # Dev server (localhost:3000/quid)
+npm run build            # Production build (runs prisma generate first)
+npm run lint             # ESLint
+npm test                 # Vitest (run once)
+npx prisma migrate dev   # Run migrations (reads prisma.config.ts → .env.local)
+npx prisma generate      # Regenerate Prisma client → app/generated/prisma/
+npx prisma studio        # Visual DB browser
+```
 
-## Architecture Principles
-- API routes should be resource-oriented (REST), not page-specific. A mobile client will eventually consume the same API.
-- Use React Server Components for data fetching where possible. Client components only when interactivity requires it.
-- Keep business logic (especially debt simplification) in pure functions with no framework dependencies, so they're testable and reusable.
-- Supabase JS client handles auth only. All data access goes through Prisma.
+## Environment Variables
+All in `.env.local` (see `.env.local.example`):
+- `DATABASE_URL` — Direct (non-pooled) Supabase Postgres connection string
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
+- `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, falls back to `http://localhost:3000/quid` in dev
 
 ## Project Structure
-Note: The project does NOT use a `src/` directory. All code is at the repo root.
+No `src/` directory — all code at repo root.
 ```
-app/                        # Next.js App Router
-  (auth)/                   # Auth pages — route group, no layout nesting
-    login/page.tsx          # Email/password login (client component)
-    signup/page.tsx         # Registration with display name (client component)
-  auth/
-    callback/route.ts       # Exchanges Supabase email confirmation code for session, redirects to /dashboard
-  (app)/                    # Authenticated app pages — shared layout with nav
-    layout.tsx              # Auth guard + Nav + container wrapper
-    dashboard/
-      page.tsx              # Lists user's groups (server component)
-      CreateGroupButton.tsx # Modal form to create a group (client component)
-    groups/[id]/
-      page.tsx              # Group detail: members, expenses, balances (server component)
-      AddMemberForm.tsx     # Modal form to add member by email (client component)
-      AddExpenseForm.tsx    # Modal form to create expense (client component)
-    settings/               # (not yet implemented)
-  api/
-    groups/route.ts         # POST create group, GET list groups
-    groups/[id]/members/route.ts    # POST add member by email
-    groups/[id]/expenses/route.ts   # POST create expense (equal split, prisma.$transaction)
-    groups/[id]/balances/route.ts   # GET simplified debts with display names
-  generated/prisma/         # Auto-generated Prisma client (do not edit)
-  layout.tsx                # Root layout (fonts, globals, title: "Quid")
-  page.tsx                  # Root redirect: authed → /dashboard, unauthed → /login
-  globals.css               # Tailwind CSS imports
+app/
+  (auth)/login|signup/       # Public auth pages (client components)
+  auth/callback/route.ts     # Email confirmation → session exchange → redirect
+  (app)/layout.tsx           # Auth guard wrapper (redirects unauthed to /login)
+  (app)/dashboard/           # Group list + create group modal
+  (app)/groups/[id]/         # Group detail: members, expenses, balances + forms
+  api/groups/                # REST API (see API Routes below)
+  generated/prisma/          # Auto-generated — do NOT edit
+  layout.tsx                 # Root layout (fonts, metadata)
+  page.tsx                   # Root redirect (authed → dashboard, else → login)
+
 components/
-  Nav.tsx                   # Top nav bar with logout (client component)
-  ui/
-    Button.tsx              # Styled button (variants: primary, secondary, ghost)
-    Card.tsx                # White bordered card wrapper
-    Input.tsx               # Styled text input
+  Nav.tsx                    # Top nav with logout (client component)
+  ui/Button|Card|Input.tsx   # Reusable styled components
+
 lib/
-  supabase/
-    client.ts               # Browser Supabase client
-    server.ts               # Server Supabase client (cookie-aware)
-  prisma/
-    client.ts               # Prisma singleton with PrismaPg adapter
-  balances/
-    simplify.ts             # Debt simplification algorithm (pure function)
-    simplify.test.ts        # 14 Vitest test cases
-  validators/               # (not yet created) Zod schemas
-types/                      # (not yet created) Shared TypeScript types
-prisma/
-  schema.prisma             # Database schema (User, Group, GroupMember, Expense, ExpenseSplit)
-  migrations/               # Prisma migrations
-prisma.config.ts            # Prisma config (loads .env.local)
+  prisma/client.ts           # Prisma singleton (pg Pool + PrismaPg adapter)
+  supabase/client.ts         # Browser Supabase client
+  supabase/server.ts         # Server Supabase client (cookie-aware, for RSC/routes)
+  balances/simplify.ts       # Debt simplification — pure function, 14 tests
+
+prisma/schema.prisma         # DB schema (5 models, see below)
+proxy.ts                     # Auth middleware (Next.js 16 uses proxy.ts, not middleware.ts)
 ```
 
-## Key Commands
-```bash
-npm run dev              # Start dev server
-npm run build            # Production build
-npm run lint             # ESLint
-npx prisma migrate dev   # Run migrations (reads prisma.config.ts → .env.local)
-npx prisma generate      # Regenerate Prisma client (output: app/generated/prisma/)
-npx prisma studio        # Visual database browser
-npm test                 # Run Vitest tests
+## Data Models
+All monetary values are integers (cents). Never floats.
+```
+User        — id (UUID), email (unique), displayName, avatarUrl?, createdAt
+Group       — id, name, createdAt, createdById → User
+GroupMember — id, groupId, userId, joinedAt  [unique: groupId+userId, cascade delete]
+Expense     — id, groupId, paidById → User, description, amountCents, date, createdAt
+ExpenseSplit— id, expenseId, userId, amountCents  [cascade delete on expense]
 ```
 
-## Code Style
-- TypeScript strict mode. No `any` types.
-- Functional components with hooks. No class components.
-- Use Zod for all input validation (API routes and forms).
-- Error handling: API routes return consistent `{ data, error }` shape.
-- Use `async/await`, not `.then()` chains.
-- Prefer named exports over default exports (except for page/layout files which Next.js requires as default).
+## API Routes
+All return `{ data, error }` JSON. Auth required (Supabase session checked via server client).
+```
+GET  /api/groups                    — List user's groups
+POST /api/groups                    — Create group (+ auto-add creator as member)
+POST /api/groups/[id]/members       — Add member by email
+POST /api/groups/[id]/expenses      — Create expense with equal split (transaction)
+GET  /api/groups/[id]/balances      — Simplified debts with display names
+```
 
-## Database Notes
-- Prisma 7 with `@prisma/adapter-pg` (driver adapter pattern). No direct Prisma connection string — uses `pg` Pool.
-- `prisma.config.ts` loads `.env.local` via dotenv so Prisma CLI can read `DATABASE_URL`.
-- `DATABASE_URL` should be the **direct** (non-pooled) connection string for migrations.
-- The runtime Prisma client in `lib/prisma/client.ts` also reads `DATABASE_URL` to create a `pg.Pool`.
-- All monetary values stored as integers (cents), never floats.
-- Prisma client is generated to `app/generated/prisma/` (not node_modules).
+## Architecture Rules
+1. **Auth = Supabase, Data = Prisma.** Never query data through Supabase JS client.
+2. **Server Components by default.** Client components (`"use client"`) only for interactivity.
+3. **Business logic stays pure.** `lib/balances/simplify.ts` has zero framework deps — keep it that way.
+4. **REST API is mobile-ready.** Routes are resource-oriented, not page-specific.
+5. **Zod validates at API boundaries.** Schemas defined inline in route handlers currently.
 
-## Models
-- **User** — id (UUID), email (unique), displayName, avatarUrl?, createdAt
-- **Group** — id, name, createdAt, createdById → User
-- **GroupMember** — id, groupId → Group, userId → User, joinedAt. Unique on [groupId, userId]. Cascade delete.
-- **Expense** — id, groupId → Group, paidById → User, description, amountCents (Int), date, createdAt
-- **ExpenseSplit** — id, expenseId → Expense, userId → User, amountCents (Int). Cascade delete on expense.
+## Gotchas & Patterns
 
-## Testing
-- Use Vitest for unit tests.
-- Test the debt simplification algorithm thoroughly — it's the core logic.
-- API route tests can use Prisma with a test database.
+### Next.js 16 specifics
+- **`params` is a Promise**: `const { id } = await params` in pages and route handlers.
+- **Auth middleware is `proxy.ts`**, not `middleware.ts`. This is the Next.js 16 convention.
+- **`basePath: "/quid"`**: Internal routing uses relative paths (`router.push("/dashboard")`), but external URLs (Supabase email redirects) must use the full URL: `${NEXT_PUBLIC_SITE_URL}/auth/callback`.
 
-## Current State (as of 2026-02-21)
-**Working:**
-- Auth flow (login, signup, logout) via Supabase email/password
-- Email confirmation callback (`app/auth/callback/route.ts`) — handles Supabase redirect, exchanges code for session
-- Root page redirects based on auth state
-- Dashboard: lists user's groups, create group modal
-- API: `POST /api/groups` (create), `GET /api/groups` (list)
-- Debt simplification algorithm with 13 passing tests
-- Prisma schema with initial migration applied
-- Group detail page (`/groups/[id]`): members, expenses list, balance summary
-- Add member by email (`POST /api/groups/[id]/members`)
-- Create expense with equal split (`POST /api/groups/[id]/expenses`)
-- Balance calculation & display (wiring `simplify.ts` to real data, server-computed on page)
-- GET `/api/groups/[id]/balances` (for mobile client use)
-- UI components: Button, Card, Input in `components/ui/`
+### Prisma
+- Import: `import { prisma } from "@/lib/prisma/client"` (named export).
+- Uses `@prisma/adapter-pg` with a `pg.Pool` — no direct Prisma connection string at runtime.
+- Generated output: `app/generated/prisma/` (not node_modules). `npm run build` runs `prisma generate` automatically.
+- `prisma.config.ts` loads `.env.local` via dotenv so the CLI can find `DATABASE_URL`.
 
-**Not yet built:**
-- Edit/delete expenses
-- Settings page
-- Google OAuth
-- Zod validator modules (`lib/validators/`)
-- Shared types (`types/`)
-- Loading/error states
-- Non-equal splits (custom split amounts)
+### Expense splitting
+- Equal split: total divided evenly, remainder distributed 1 cent at a time to first N members.
+- Created atomically via `prisma.$transaction` (expense + all splits in one call).
 
-## Important Implementation Notes
-- Next.js 16: `params` in page/route handler components is a `Promise<{ id: string }>` — must `await params`
-- Prisma client: `import { prisma } from "@/lib/prisma/client"` (named export, not default)
-- Expense splits: equal split distributes remainder 1 cent at a time to first N splits (`amountCents % memberCount` extra cents)
-- Balances are computed server-side on the group page from already-fetched data (no extra DB call needed)
-- `basePath: "/quid"` — Next.js internal routing is relative (e.g., `router.push("/dashboard")`), but external URLs like Supabase `emailRedirectTo` must include the full path: `${NEXT_PUBLIC_SITE_URL}/auth/callback` = `https://gregbigelow.com/quid/auth/callback`
-- Auth email confirmation: `signUp` passes `emailRedirectTo` using `NEXT_PUBLIC_SITE_URL`. Signup page shows "check your email" state and does NOT redirect to dashboard (user isn't authenticated until they click the link).
+### Auth flow
+- Signup sends confirmation email with `emailRedirectTo: ${NEXT_PUBLIC_SITE_URL}/auth/callback`.
+- Signup page shows "check your email" — does NOT redirect (user isn't authed until they click the link).
+- `auth/callback/route.ts` exchanges the code for a session, then redirects to `/dashboard`.
+- Supabase dashboard must have Site URL = `https://gregbigelow.com/quid` and redirect allowlist including the callback URL.
+
+## Code Conventions
+- TypeScript strict mode. No `any`.
+- `async/await`, not `.then()`.
+- Named exports (except Next.js page/layout defaults).
+- Functional components with hooks. No classes.
+
+## Reference Files
+- **PLANNING.md** — Architecture decisions with rationale, open design questions, future roadmap. Consult before structural changes.
+- **TODOS.md** — What's done, what's in progress, what's in the backlog.
