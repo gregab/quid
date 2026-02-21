@@ -11,16 +11,7 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **This i
 
 ## Default Workflow for Changes
 
-When asked to make any non-trivial change, follow this sequence (adapting order as needed):
-
-1. **Understand** — Read relevant files, understand existing patterns, clarify scope.
-2. **Plan** — Identify what needs to change and in what order before touching code.
-3. **Implement** — Make the changes. Keep scope tight; don't gold-plate.
-4. **Write tests** — Add unit/integration tests for new behavior. Update existing tests if needed.
-5. **Test everything** — Run `npm test`. Fix failures before moving on. Don't skip this.
-6. **Commit and push** — Always finish by committing all changes and pushing to production (`git push origin main`). Vercel auto-deploys on push.
-
-The order may shift (e.g., write a failing test first, then implement), but **testing and pushing to prod are always the last two steps**. Never leave a task half-done without at least noting what's unfinished.
+For any non-trivial change: understand the codebase first, make the changes, write tests for new behavior, run `npm test`, and finish by committing and pushing to production. The order is flexible — use judgment. The two things that are always true: **tests pass before shipping**, and **every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys).
 
 ## Testing After Changes
 Run tests before and after every non-trivial change:
