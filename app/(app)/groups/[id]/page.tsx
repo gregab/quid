@@ -6,6 +6,7 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
 import { AddExpenseForm } from "./AddExpenseForm";
+import { ExpenseActions } from "./ExpenseActions";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -114,21 +115,38 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           <p className="text-gray-500 text-sm">No expenses yet. Add one to get started.</p>
         ) : (
           <ul className="space-y-2">
-            {group.expenses.map((expense) => (
-              <li key={expense.id}>
-                <Card className="px-4 py-3 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{expense.description}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Paid by {expense.paidBy.displayName} · {formatDate(expense.date)}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold whitespace-nowrap">
-                    {formatCents(expense.amountCents)}
-                  </span>
-                </Card>
-              </li>
-            ))}
+            {group.expenses.map((expense) => {
+              const canEdit = expense.paidById === user.id;
+              const canDelete = expense.paidById === user.id || group.createdById === user.id;
+              return (
+                <li key={expense.id}>
+                  <Card className="px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{expense.description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Paid by {expense.paidBy.displayName} · {formatDate(expense.date)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-semibold whitespace-nowrap">
+                        {formatCents(expense.amountCents)}
+                      </span>
+                      <ExpenseActions
+                        groupId={group.id}
+                        expense={{
+                          id: expense.id,
+                          description: expense.description,
+                          amountCents: expense.amountCents,
+                          date: expense.date.toISOString().split("T")[0]!,
+                        }}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                      />
+                    </div>
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
