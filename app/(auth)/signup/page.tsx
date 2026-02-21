@@ -12,6 +12,7 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,19 +26,35 @@ export default function SignupPage() {
     }
 
     const supabase = createClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid";
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { display_name: displayName } },
+      options: {
+        data: { display_name: displayName },
+        emailRedirectTo: `${siteUrl}/auth/callback`,
+      },
     });
 
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/dashboard");
-      router.refresh();
+      setEmailSent(true);
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-sm bg-white rounded-lg border border-gray-200 p-8 text-center">
+          <h1 className="text-2xl font-semibold mb-3">Check your email</h1>
+          <p className="text-sm text-gray-600">
+            We sent a confirmation link to <strong>{email}</strong>. Click it to activate your account.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

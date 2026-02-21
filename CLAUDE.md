@@ -11,6 +11,14 @@ A Splitwise-style expense splitting app. Users create groups, add expenses, and 
 - **Styling:** Tailwind CSS
 - **Deployment:** Vercel
 
+## Deployment & URLs
+- **Production domain:** `gregbigelow.com`
+- **App lives at:** `https://gregbigelow.com/quid` — this is the Vercel project root, served under a `/quid` path prefix via `basePath: "/quid"` in `next.config.ts`
+- All public URLs for this app start with `https://gregbigelow.com/quid`
+- `NEXT_PUBLIC_SITE_URL` env var = `https://gregbigelow.com/quid` (set in Vercel). In dev, code falls back to `http://localhost:3000/quid`.
+- Auth email confirmation callback: `https://gregbigelow.com/quid/auth/callback`
+- Supabase dashboard must have Site URL = `https://gregbigelow.com/quid` and redirect allowlist including `https://gregbigelow.com/quid/auth/callback`
+
 ## Architecture Principles
 - API routes should be resource-oriented (REST), not page-specific. A mobile client will eventually consume the same API.
 - Use React Server Components for data fetching where possible. Client components only when interactivity requires it.
@@ -24,6 +32,8 @@ app/                        # Next.js App Router
   (auth)/                   # Auth pages — route group, no layout nesting
     login/page.tsx          # Email/password login (client component)
     signup/page.tsx         # Registration with display name (client component)
+  auth/
+    callback/route.ts       # Exchanges Supabase email confirmation code for session, redirects to /dashboard
   (app)/                    # Authenticated app pages — shared layout with nav
     layout.tsx              # Auth guard + Nav + container wrapper
     dashboard/
@@ -108,6 +118,7 @@ npm test                 # Run Vitest tests
 ## Current State (as of 2026-02-21)
 **Working:**
 - Auth flow (login, signup, logout) via Supabase email/password
+- Email confirmation callback (`app/auth/callback/route.ts`) — handles Supabase redirect, exchanges code for session
 - Root page redirects based on auth state
 - Dashboard: lists user's groups, create group modal
 - API: `POST /api/groups` (create), `GET /api/groups` (list)
@@ -134,3 +145,5 @@ npm test                 # Run Vitest tests
 - Prisma client: `import { prisma } from "@/lib/prisma/client"` (named export, not default)
 - Expense splits: equal split distributes remainder 1 cent at a time to first N splits (`amountCents % memberCount` extra cents)
 - Balances are computed server-side on the group page from already-fetched data (no extra DB call needed)
+- `basePath: "/quid"` — Next.js internal routing is relative (e.g., `router.push("/dashboard")`), but external URLs like Supabase `emailRedirectTo` must include the full path: `${NEXT_PUBLIC_SITE_URL}/auth/callback` = `https://gregbigelow.com/quid/auth/callback`
+- Auth email confirmation: `signUp` passes `emailRedirectTo` using `NEXT_PUBLIC_SITE_URL`. Signup page shows "check your email" state and does NOT redirect to dashboard (user isn't authenticated until they click the link).
