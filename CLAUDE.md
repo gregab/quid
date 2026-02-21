@@ -15,6 +15,7 @@ Run tests before and after every non-trivial change:
 ```bash
 npm test                              # All unit + integration tests (fast, no network)
 npm test tests/smoke.test.ts          # Smoke tests against live production site
+SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # Against local server
 ```
 
 **Test files:**
@@ -40,20 +41,22 @@ npm test tests/smoke.test.ts          # Smoke tests against live production site
 ## Quick Start
 ```bash
 npm run dev              # Dev server (localhost:3000/quid)
+vercel dev               # Local dev server that mirrors Vercel production environment
 npm run build            # Production build (runs prisma generate first)
 npm run lint             # ESLint
 npm test                 # Vitest (run once)
+SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # Smoke tests against local server
 npx prisma migrate dev   # Run migrations (reads prisma.config.ts → .env.local)
 npx prisma generate      # Regenerate Prisma client → app/generated/prisma/
 npx prisma studio        # Visual DB browser
+git push origin main                   # Deploy to production (Vercel auto-builds on push)
 vercel logs --follow                   # Stream live production logs
 vercel logs --level error --since 1h   # Recent errors only
 vercel logs --environment production --expand  # Full log details
 vercel ls                              # List recent deployments
 vercel inspect [url|id]                # Deployment details/status
 vercel rollback                        # Quick revert to previous deployment
-vercel promote [url|id]                # Promote preview → production
-vercel redeploy [url|id]               # Rebuild and redeploy
+vercel redeploy [url|id]               # Rebuild and redeploy (use sparingly; prefer git push)
 vercel env pull                        # Sync env vars from Vercel → .env.local
 vercel env ls                          # List all env vars in Vercel project
 ```
@@ -113,6 +116,58 @@ POST /api/groups                    — Create group (+ auto-add creator as memb
 POST /api/groups/[id]/members       — Add member by email
 POST /api/groups/[id]/expenses      — Create expense with equal split (transaction)
 GET  /api/groups/[id]/balances      — Simplified debts with display names
+```
+
+## Local Investigation Workflow
+
+When a bug needs hands-on verification, use a local server rather than deploying to production.
+
+### Start a local server
+```bash
+vercel dev        # Preferred: mirrors Vercel production env, auto-loads env vars
+# or
+npm run dev       # Faster startup, sufficient for most cases
+```
+App runs at `http://localhost:3000/quid`.
+
+### Get an auth token for curl
+The smoke test helper in `tests/smoke.test.ts` (`getAuthCookie`) shows the exact approach, but for one-off curl testing, get a bearer token directly from Supabase:
+```bash
+curl -s -X POST "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password" \
+  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"<SMOKE_TEST_EMAIL>","password":"<SMOKE_TEST_PASSWORD>"}' \
+  | jq '.access_token'
+```
+Then use the token in subsequent requests:
+```bash
+TOKEN="<paste token here>"
+
+# List groups
+curl -s http://localhost:3000/quid/api/groups \
+  -H "Cookie: sb-<projectRef>-auth-token=<url-encoded-session-json>" | jq
+
+# Or use Authorization header if the route accepts it
+curl -s http://localhost:3000/quid/api/groups \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+**Note:** The app uses `@supabase/ssr` which reads sessions from a cookie, not an Authorization header. The easiest way to get a valid cookie is to sign in via the browser and copy the cookie from DevTools, or use the `getAuthCookie()` helper in the smoke tests.
+
+### Run smoke tests against local
+```bash
+SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts
+```
+This runs all smoke tests except the basePath-sanity checks (which are production-only).
+
+### Read server logs
+With `vercel dev` or `npm run dev` running, `console.log` / `console.error` output from route handlers and server components prints directly to the terminal. Add temporary logs freely — they're visible immediately without any log-streaming setup.
+
+### Investigate production issues
+```bash
+vercel logs --follow                        # Live tail
+vercel logs --level error --since 1h        # Recent errors only
+vercel logs --environment production --expand  # Full request details
 ```
 
 ## Architecture Rules

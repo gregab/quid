@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 export default function CreateGroupButton({ userId }: { userId: string }) {
   const router = useRouter();
@@ -36,52 +38,49 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
     router.refresh();
   }
 
+  function handleClose() {
+    setOpen(false);
+    setName("");
+    setError(null);
+  }
+
   // suppress unused warning — userId will be used in future iterations
   void userId;
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="px-4 py-2 bg-black text-white text-sm rounded-md hover:bg-gray-800"
-      >
-        Create group
-      </button>
+      <Button onClick={() => setOpen(true)}>Create group</Button>
 
       {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
-            <h2 className="text-lg font-semibold mb-4">Create a group</h2>
+        <div
+          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+        >
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Create a group</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-1">
                   Group name
                 </label>
-                <input
+                <Input
                   id="groupName"
                   type="text"
                   required
+                  placeholder="e.g. Weekend Trip, Roommates"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                  autoFocus
                 />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setOpen(false); setName(""); setError(null); }}
-                  className="px-4 py-2 text-sm text-gray-600 hover:text-black"
-                >
+              <div className="flex gap-2 justify-end pt-1">
+                <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-black text-white text-sm rounded-md hover:bg-gray-800 disabled:opacity-50"
-                >
-                  {loading ? "Creating..." : "Create"}
-                </button>
+                </Button>
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Creating…" : "Create"}
+                </Button>
               </div>
             </form>
           </div>

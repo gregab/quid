@@ -5,15 +5,11 @@ import { prisma } from "@/lib/prisma/client";
 import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
-import { AddExpenseForm } from "./AddExpenseForm";
-import { ExpenseActions } from "./ExpenseActions";
+import { ExpensesList } from "./ExpensesList";
+import type { ExpenseRow } from "./ExpensesList";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
@@ -68,110 +64,110 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     amountCents: debt.amount,
   }));
 
+  const currentMember = group.members.find((m) => m.userId === user.id);
+  const currentUserDisplayName = currentMember?.user.displayName ?? user.email ?? "You";
+
+  const initialExpenses: ExpenseRow[] = group.expenses.map((expense) => ({
+    id: expense.id,
+    description: expense.description,
+    amountCents: expense.amountCents,
+    date: expense.date.toISOString().split("T")[0]!,
+    paidById: expense.paidById,
+    paidByDisplayName: expense.paidBy.displayName,
+    canEdit: expense.paidById === user.id,
+    canDelete: expense.paidById === user.id || group.createdById === user.id,
+  }));
+
   return (
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-800 mb-2 inline-block">
-          ← Back to groups
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-indigo-600 mb-3 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to groups
         </Link>
-        <h1 className="text-2xl font-semibold">{group.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
       </div>
 
       {/* Balances */}
       <section>
-        <h2 className="text-lg font-semibold mb-3">Balances</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-3">Balances</h2>
         {resolvedDebts.length === 0 ? (
-          <p className="text-gray-500 text-sm">Everyone&apos;s settled up!</p>
+          <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Everyone&apos;s settled up!
+          </div>
         ) : (
-          <Card className="p-4">
-            <ul className="space-y-2">
-              {resolvedDebts.map((debt, i) => {
-                const fromLabel = debt.fromId === user.id ? "You" : debt.fromName;
-                const verb = debt.fromId === user.id ? "owe" : "owes";
-                const toLabel = debt.toId === user.id ? "you" : debt.toName;
-                return (
-                  <li key={i} className="text-sm">
-                    <span className="font-medium">{fromLabel}</span>
+          <Card className="divide-y divide-gray-100">
+            {resolvedDebts.map((debt, i) => {
+              const isCurrentUserOwing = debt.fromId === user.id;
+              const isCurrentUserReceiving = debt.toId === user.id;
+              const fromLabel = isCurrentUserOwing ? "You" : debt.fromName;
+              const verb = isCurrentUserOwing ? "owe" : "owes";
+              const toLabel = isCurrentUserReceiving ? "you" : debt.toName;
+
+              return (
+                <div key={i} className="flex items-center justify-between px-4 py-3">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">{fromLabel}</span>
                     {" "}{verb}{" "}
-                    <span className="font-medium">{toLabel}</span>
-                    {" "}
-                    <span className="font-medium text-black">{formatCents(debt.amountCents)}</span>
-                  </li>
-                );
-              })}
-            </ul>
+                    <span className="font-semibold">{toLabel}</span>
+                  </p>
+                  <span
+                    className={`text-sm font-bold tabular-nums ${
+                      isCurrentUserOwing
+                        ? "text-red-600"
+                        : isCurrentUserReceiving
+                        ? "text-emerald-600"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {formatCents(debt.amountCents)}
+                  </span>
+                </div>
+              );
+            })}
           </Card>
         )}
       </section>
 
-      {/* Expenses */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Expenses</h2>
-          <AddExpenseForm groupId={group.id} />
-        </div>
-        {group.expenses.length === 0 ? (
-          <p className="text-gray-500 text-sm">No expenses yet. Add one to get started.</p>
-        ) : (
-          <ul className="space-y-2">
-            {group.expenses.map((expense) => {
-              const canEdit = expense.paidById === user.id;
-              const canDelete = expense.paidById === user.id || group.createdById === user.id;
-              return (
-                <li key={expense.id}>
-                  <Card className="px-4 py-3 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{expense.description}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Paid by {expense.paidBy.displayName} · {formatDate(expense.date)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-semibold whitespace-nowrap">
-                        {formatCents(expense.amountCents)}
-                      </span>
-                      <ExpenseActions
-                        groupId={group.id}
-                        expense={{
-                          id: expense.id,
-                          description: expense.description,
-                          amountCents: expense.amountCents,
-                          date: expense.date.toISOString().split("T")[0]!,
-                        }}
-                        canEdit={canEdit}
-                        canDelete={canDelete}
-                      />
-                    </div>
-                  </Card>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      {/* Expenses (client component with optimistic updates) */}
+      <ExpensesList
+        groupId={group.id}
+        groupCreatedById={group.createdById}
+        currentUserId={user.id}
+        currentUserDisplayName={currentUserDisplayName}
+        initialExpenses={initialExpenses}
+      />
 
       {/* Members */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Members</h2>
+          <h2 className="text-lg font-bold text-gray-900">Members</h2>
           <AddMemberForm groupId={group.id} />
         </div>
         <ul className="space-y-2">
           {group.members.map((m) => (
             <li key={m.id}>
               <Card className="px-4 py-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
                   {m.user.displayName[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-semibold text-gray-900">
                     {m.user.displayName}
                     {m.userId === user.id && (
                       <span className="ml-1.5 text-xs text-gray-400 font-normal">(you)</span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-500">{m.user.email}</p>
+                  <p className="text-xs text-gray-400">{m.user.email}</p>
                 </div>
               </Card>
             </li>

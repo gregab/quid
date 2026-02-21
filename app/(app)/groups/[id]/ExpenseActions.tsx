@@ -1,35 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-
-interface ExpenseData {
-  id: string;
-  description: string;
-  amountCents: number;
-  date: string; // YYYY-MM-DD
-}
+import type { ExpenseRow } from "./ExpensesList";
 
 interface ExpenseActionsProps {
   groupId: string;
-  expense: ExpenseData;
-  canEdit: boolean;
-  canDelete: boolean;
+  expense: ExpenseRow;
+  onOptimisticDelete: (expenseId: string) => void;
+  onDeleteFailed: (expense: ExpenseRow) => void;
+  onDeleteSettled: () => void;
+  onOptimisticUpdate: (expense: ExpenseRow) => void;
+  onUpdateSettled: () => void;
 }
 
-export function ExpenseActions({ groupId, expense, canEdit, canDelete }: ExpenseActionsProps) {
-  const router = useRouter();
+export function ExpenseActions({
+  groupId,
+  expense,
+  onOptimisticDelete,
+  onDeleteFailed,
+  onDeleteSettled,
+  onOptimisticUpdate,
+  onUpdateSettled,
+}: ExpenseActionsProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState((expense.amountCents / 100).toFixed(2));
   const [date, setDate] = useState(expense.date);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
 
-  if (!canEdit && !canDelete) return null;
+  if (!expense.canEdit && !expense.canDelete) return null;
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
 
@@ -44,8 +47,18 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
     }
 
     const amountCents = Math.round(parsedAmount * 100);
-    setLoading(true);
+    const updatedExpense: ExpenseRow = {
+      ...expense,
+      description,
+      amountCents,
+      date,
+    };
 
+    // Optimistically update
+    setEditOpen(false);
+    onOptimisticUpdate(updatedExpense);
+
+    setEditLoading(true);
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -53,33 +66,36 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
     });
 
     const json = (await res.json()) as { data?: unknown; error?: string };
-    setLoading(false);
+    setEditLoading(false);
 
     if (!res.ok || json.error) {
+      // Revert optimistic update
+      onOptimisticUpdate(expense);
+      setEditOpen(true);
       setError(json.error ?? "Something went wrong.");
       return;
     }
 
-    setEditOpen(false);
-    router.refresh();
+    onUpdateSettled();
   }
 
   async function handleDelete() {
-    setLoading(true);
+    setDeleteConfirm(false);
+    // Optimistically remove
+    onOptimisticDelete(expense.id);
 
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "DELETE",
     });
 
     const json = (await res.json()) as { data?: unknown; error?: string };
-    setLoading(false);
 
     if (!res.ok || json.error) {
-      setDeleteConfirm(false);
+      onDeleteFailed(expense);
       return;
     }
 
-    router.refresh();
+    onDeleteSettled();
   }
 
   function handleEditClose() {
@@ -93,10 +109,11 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
   return (
     <>
       <div className="flex items-center gap-0.5 shrink-0">
-        {canEdit && (
+        {expense.canEdit && (
           <button
             onClick={() => setEditOpen(true)}
-            className="text-gray-300 hover:text-gray-600 p-1 rounded transition-colors"
+            disabled={editLoading}
+            className="text-gray-300 hover:text-indigo-500 p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Edit expense"
           >
             <svg
@@ -115,10 +132,10 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
             </svg>
           </button>
         )}
-        {canDelete && (
+        {expense.canDelete && (
           <button
             onClick={() => setDeleteConfirm(true)}
-            className="text-gray-300 hover:text-red-500 p-1 rounded transition-colors"
+            className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg transition-colors"
             aria-label="Delete expense"
           >
             <svg
@@ -141,9 +158,12 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
 
       {/* Edit modal */}
       {editOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
-            <h2 className="text-lg font-semibold mb-4">Edit expense</h2>
+        <div
+          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) handleEditClose(); }}
+        >
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Edit expense</h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
                 <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1">
@@ -156,6 +176,7 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
                   placeholder="e.g. Dinner, Uber, Groceries"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  autoFocus
                 />
               </div>
               <div>
@@ -185,14 +206,14 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
                   onChange={(e) => setDate(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-gray-500">Splits will be recalculated equally among all current members.</p>
+              <p className="text-xs text-gray-400">Splits will be recalculated equally among all current members.</p>
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex gap-2 justify-end">
+              <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleEditClose}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Saving..." : "Save changes"}
+                <Button type="submit">
+                  Save changes
                 </Button>
               </div>
             </form>
@@ -202,23 +223,21 @@ export function ExpenseActions({ groupId, expense, canEdit, canDelete }: Expense
 
       {/* Delete confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
-            <h2 className="text-lg font-semibold mb-2">Delete expense?</h2>
-            <p className="text-sm text-gray-600 mb-4">
-              &ldquo;{expense.description}&rdquo; will be permanently deleted. This cannot be undone.
+        <div
+          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(false); }}
+        >
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Delete expense?</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              &ldquo;{expense.description}&rdquo; will be permanently deleted.
             </p>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="ghost" onClick={() => setDeleteConfirm(false)} disabled={loading}>
+              <Button type="button" variant="ghost" onClick={() => setDeleteConfirm(false)}>
                 Cancel
               </Button>
-              <Button
-                type="button"
-                disabled={loading}
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                {loading ? "Deleting..." : "Delete"}
+              <Button type="button" variant="danger" onClick={handleDelete}>
+                Delete
               </Button>
             </div>
           </div>

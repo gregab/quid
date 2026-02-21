@@ -57,9 +57,12 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       </Button>
 
       {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm shadow-lg">
-            <h2 className="text-lg font-semibold mb-4">Add a member</h2>
+        <div
+          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+        >
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-4">Add a member</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 mb-1">
@@ -75,13 +78,13 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
                 />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-green-600">{success}</p>}
-              <div className="flex gap-2 justify-end">
+              {success && <p className="text-sm text-emerald-600">{success}</p>}
+              <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Close
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Adding..." : "Add member"}
+                  {loading ? "Adding…" : "Add member"}
                 </Button>
               </div>
             </form>
