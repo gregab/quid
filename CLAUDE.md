@@ -13,6 +13,8 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **This i
 
 For any non-trivial change: understand the codebase first, make the changes, write tests for new behavior, run `npm test`, and finish by committing and pushing to production. The order is flexible — use judgment. The two things that are always true: **tests pass before shipping**, and **every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys).
 
+**This applies to all task types — UI changes, copy edits, styling, refactors, bug fixes — not just logic changes.** Do not wait to be asked. After completing any task, the default action is: run tests (`SKIP_SMOKE_TESTS=1 npm test`), commit, push.
+
 ## Testing After Changes
 Run tests before and after every non-trivial change:
 
