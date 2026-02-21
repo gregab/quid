@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import CreateGroupButton from "./CreateGroupButton";
@@ -35,12 +36,12 @@ export default async function DashboardPage() {
         <ul className="space-y-2">
           {groups.map((group) => (
             <li key={group.id}>
-              <a
+              <Link
                 href={`/groups/${group.id}`}
                 className="block bg-white border border-gray-200 rounded-lg px-5 py-4 hover:border-gray-400 transition-colors"
               >
                 <span className="font-medium">{group.name}</span>
-              </a>
+              </Link>
             </li>
           ))}
         </ul>

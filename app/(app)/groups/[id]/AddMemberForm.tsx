@@ -19,7 +19,7 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     setSuccess(null);
     setLoading(true);
 
-    const res = await fetch(`/api/groups/${groupId}/members`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

@@ -15,7 +15,7 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
     setError(null);
     setLoading(true);
 
-    const res = await fetch("/api/groups", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/groups`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
