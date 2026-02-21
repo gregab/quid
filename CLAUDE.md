@@ -18,6 +18,16 @@ npm test                 # Vitest (run once)
 npx prisma migrate dev   # Run migrations (reads prisma.config.ts → .env.local)
 npx prisma generate      # Regenerate Prisma client → app/generated/prisma/
 npx prisma studio        # Visual DB browser
+vercel logs --follow                   # Stream live production logs
+vercel logs --level error --since 1h   # Recent errors only
+vercel logs --environment production --expand  # Full log details
+vercel ls                              # List recent deployments
+vercel inspect [url|id]                # Deployment details/status
+vercel rollback                        # Quick revert to previous deployment
+vercel promote [url|id]                # Promote preview → production
+vercel redeploy [url|id]               # Rebuild and redeploy
+vercel env pull                        # Sync env vars from Vercel → .env.local
+vercel env ls                          # List all env vars in Vercel project
 ```
 
 ## Environment Variables
