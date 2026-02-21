@@ -19,7 +19,8 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     setSuccess(null);
     setLoading(true);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/groups/${groupId}/members`, {
+    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+    const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),

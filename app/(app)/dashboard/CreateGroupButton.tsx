@@ -15,7 +15,8 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
     setError(null);
     setLoading(true);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/groups`, {
+    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+    const res = await fetch(`${basePath}/api/groups`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),

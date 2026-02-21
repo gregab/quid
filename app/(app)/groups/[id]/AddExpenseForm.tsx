@@ -27,7 +27,8 @@ export function AddExpenseForm({ groupId }: { groupId: string }) {
     const amountCents = Math.round(parsedAmount * 100);
     setLoading(true);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/groups/${groupId}/expenses`, {
+    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ description, amountCents, date }),
