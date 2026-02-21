@@ -135,3 +135,9 @@ These are features that real users will hit immediately and have no workaround f
 #### 19. Mobile responsiveness audit
 - **Why**: The app likely works on mobile (Tailwind is responsive by default) but hasn't been explicitly designed for small screens. Modals, forms, and navigation may need adjustments.
 - **Scope**: Test on various screen sizes, fix any layout issues, ensure touch targets are adequate.
+
+#### 20. Cypress end-to-end tests
+- **Why**: Unit/integration tests (Vitest) cover logic and component rendering in isolation, and smoke tests verify the live API, but there's no coverage of full user flows: filling out a form in the browser, seeing the UI update, navigating between pages. Cypress catches regressions like the optimistic-update bugs that are only visible in a real browser.
+- **Scope**: Set up Cypress with `basePath: /quid` support. Write specs for core flows: login, create group, add member, add expense (verify optimistic update resolves correctly), edit expense, delete expense, view balances.
+- **Files to touch**: Install `cypress`, add `cypress.config.ts`, create `cypress/e2e/` directory with spec files. Add `npm run cypress` / `npm run cypress:open` scripts. Consider a dedicated Cypress test account (separate from the Vitest smoke test account).
+- **Auth**: Cypress can log in via the UI or bypass the UI using `cy.request()` directly against Supabase Auth endpoint to get a session cookie — the same approach used in the smoke test helper (`getAuthCookie`).

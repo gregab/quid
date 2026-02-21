@@ -8,6 +8,7 @@ import type { ExpenseRow } from "./ExpensesList";
 interface ExpenseActionsProps {
   groupId: string;
   expense: ExpenseRow;
+  isPending?: boolean;
   onOptimisticDelete: (expenseId: string) => void;
   onDeleteFailed: (expense: ExpenseRow) => void;
   onDeleteSettled: () => void;
@@ -18,6 +19,7 @@ interface ExpenseActionsProps {
 export function ExpenseActions({
   groupId,
   expense,
+  isPending = false,
   onOptimisticDelete,
   onDeleteFailed,
   onDeleteSettled,
@@ -112,7 +114,7 @@ export function ExpenseActions({
         {expense.canEdit && (
           <button
             onClick={() => setEditOpen(true)}
-            disabled={editLoading}
+            disabled={isPending || editLoading}
             className="text-gray-300 hover:text-indigo-500 p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Edit expense"
           >
@@ -135,7 +137,8 @@ export function ExpenseActions({
         {expense.canDelete && (
           <button
             onClick={() => setDeleteConfirm(true)}
-            className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg transition-colors"
+            disabled={isPending}
+            className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Delete expense"
           >
             <svg

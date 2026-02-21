@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
@@ -47,6 +47,16 @@ export function ExpensesList({
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+
+  // When router.refresh() delivers fresh server data, replace any pending items.
+  // useState(initialExpenses) only uses the prop as the initial value and ignores
+  // subsequent changes, so we need this effect to reconcile optimistic ghosts.
+  useEffect(() => {
+    setExpenses((prev) => {
+      if (!prev.some((e) => e.isPending)) return prev;
+      return initialExpenses;
+    });
+  }, [initialExpenses]);
 
   const handleOptimisticAdd = useCallback((expense: ExpenseRow) => {
     setExpenses((prev) => [expense, ...prev]);
@@ -133,26 +143,25 @@ export function ExpensesList({
                   <span className="text-sm font-bold text-indigo-700 whitespace-nowrap">
                     {formatCents(expense.amountCents)}
                   </span>
-                  {!expense.isPending && (
-                    <ExpenseActions
-                      groupId={groupId}
-                      expense={{
-                        id: expense.id,
-                        description: expense.description,
-                        amountCents: expense.amountCents,
-                        date: expense.date,
-                        paidById: expense.paidById,
-                        paidByDisplayName: expense.paidByDisplayName,
-                        canEdit: expense.canEdit,
-                        canDelete: expense.canDelete,
-                      }}
-                      onOptimisticDelete={handleOptimisticDelete}
-                      onDeleteFailed={handleDeleteFailed}
-                      onDeleteSettled={handleDeleteSettled}
-                      onOptimisticUpdate={handleOptimisticUpdate}
-                      onUpdateSettled={handleUpdateSettled}
-                    />
-                  )}
+                  <ExpenseActions
+                    groupId={groupId}
+                    expense={{
+                      id: expense.id,
+                      description: expense.description,
+                      amountCents: expense.amountCents,
+                      date: expense.date,
+                      paidById: expense.paidById,
+                      paidByDisplayName: expense.paidByDisplayName,
+                      canEdit: expense.canEdit,
+                      canDelete: expense.canDelete,
+                    }}
+                    isPending={expense.isPending}
+                    onOptimisticDelete={handleOptimisticDelete}
+                    onDeleteFailed={handleDeleteFailed}
+                    onDeleteSettled={handleDeleteSettled}
+                    onOptimisticUpdate={handleOptimisticUpdate}
+                    onUpdateSettled={handleUpdateSettled}
+                  />
                 </div>
               </Card>
             </li>
