@@ -1,6 +1,6 @@
 # Quid — Expense Splitting App
 
-Splitwise-style app: create groups, add expenses, get simplified debts. Portfolio project with real users.
+Splitwise-style app: create groups, add expenses, get simplified debts. **This is a live production app with real users — treat it accordingly.** Security, correctness, and reliability matter; abuse prevention matters. Don't cut corners that would be fine for a demo but unacceptable in production.
 
 ## Tech Stack & Versions
 - **Next.js 16** (App Router, React 19, TypeScript strict)
@@ -122,6 +122,16 @@ GET  /api/groups/[id]/balances      — Simplified debts with display names
 4. **REST API is mobile-ready.** Routes are resource-oriented, not page-specific.
 5. **Zod validates at API boundaries.** Schemas defined inline in route handlers currently.
 
+## Security Requirements
+This app handles real user data and financial records. These are non-negotiable:
+
+- **SSL certificate verification must be enabled.** `rejectUnauthorized: true` on all DB connections. Never disable cert verification as a convenience workaround — find the real fix.
+- **All API routes must verify auth.** Every route handler checks the Supabase session server-side. No route should trust client-supplied user IDs without validating session ownership.
+- **Users may only access their own data.** All Prisma queries must scope to the authenticated user's groups/expenses. Never return data the user isn't a member of.
+- **Validate all input at API boundaries.** Use Zod schemas before any DB write. Reject unexpected fields.
+- **No raw SQL with user input.** Use Prisma's parameterized queries only.
+- **Rate limiting is not yet implemented** — a known gap. Avoid adding endpoints that could be trivially abused without first considering mitigations.
+
 ## Gotchas & Patterns
 
 ### Next.js 16 specifics
@@ -134,6 +144,13 @@ GET  /api/groups/[id]/balances      — Simplified debts with display names
 - Uses `@prisma/adapter-pg` with a `pg.Pool` — no direct Prisma connection string at runtime.
 - Generated output: `app/generated/prisma/` (not node_modules). `npm run build` runs `prisma generate` automatically.
 - `prisma.config.ts` loads `.env.local` via dotenv so the CLI can find `DATABASE_URL`.
+
+### SSL / Supabase DB connection
+Supabase uses a private root CA ("Supabase Root 2021 CA") not in the system trust store. The correct fix is **not** `rejectUnauthorized: false` — that disables all cert verification. Instead, `lib/prisma/client.ts` bundles the Supabase Root CA cert inline and uses `ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA }`.
+
+Two issues had to be solved simultaneously:
+1. **Bundled CA cert**: inlined in `client.ts` as a constant (it's public — the same cert for all Supabase projects using this CA).
+2. **Strip `sslmode` from the connection string**: `pg-connection-string` parses `sslmode=require` from the `DATABASE_URL` and currently treats it as `verify-full`, overriding the `ssl` config passed to `pg.Pool`. We strip it with `url.searchParams.delete("sslmode")` before passing to the pool.
 
 ### Expense splitting
 - Equal split: total divided evenly, remainder distributed 1 cent at a time to first N members.
