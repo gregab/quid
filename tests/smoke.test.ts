@@ -1,28 +1,27 @@
 /**
- * Production smoke tests for gregbigelow.com/quid
+ * Smoke tests for quid — run against production or a local dev server.
  *
- * These tests hit the live site and verify that the app is reachable and
- * behaving correctly after a deployment. Run them with:
- *
+ * Against production (default):
  *   npm test tests/smoke.test.ts
  *
- * They do NOT require local env vars — they test the deployed site directly.
+ * Against a local dev server (vercel dev or npm run dev):
+ *   SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts
  *
- * Authenticated tests require three additional env vars in .env.local:
+ * Authenticated tests require these env vars in .env.local:
  *   SMOKE_TEST_EMAIL     — email of a real test account
  *   SMOKE_TEST_PASSWORD  — password for that account
  *   NEXT_PUBLIC_SUPABASE_URL (already required by the app)
  *   NEXT_PUBLIC_SUPABASE_ANON_KEY (already required by the app)
  *
- * Skip all smoke tests in CI with no internet access:
+ * Skip all smoke tests (e.g. in CI with no network):
  *   SKIP_SMOKE_TESTS=1
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
 
-// The canonical domain (gregbigelow.com) redirects to www — use it directly.
-const BASE = "https://www.gregbigelow.com/quid";
+const BASE = process.env.SMOKE_TEST_BASE_URL ?? "https://www.gregbigelow.com/quid";
 const API = `${BASE}/api`;
+const isLocal = BASE.startsWith("http://localhost") || BASE.startsWith("http://127.");
 
 const skipAll = process.env.SKIP_SMOKE_TESTS === "1";
 
@@ -144,15 +143,17 @@ describe.skipIf(skipAll)("auth-protected pages redirect unauthenticated users to
 // 404 so any regression immediately shows up as a broken client action.
 // ---------------------------------------------------------------------------
 
-describe.skipIf(skipAll)("basePath sanity: routes only exist under /quid, not at root", () => {
+describe.skipIf(skipAll || isLocal)("basePath sanity: routes only exist under /quid, not at root", () => {
   const ROOT = "https://www.gregbigelow.com";
 
   const rootPaths = [
     { method: "GET",  path: "/api/groups" },
     { method: "POST", path: "/api/groups" },
-    { method: "POST", path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
-    { method: "POST", path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses" },
-    { method: "GET",  path: "/api/groups/00000000-0000-0000-0000-000000000001/balances" },
+    { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
+    { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses" },
+    { method: "PUT",    path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
+    { method: "DELETE", path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
+    { method: "GET",    path: "/api/groups/00000000-0000-0000-0000-000000000001/balances" },
   ];
 
   for (const { method, path } of rootPaths) {
@@ -184,7 +185,16 @@ describe.skipIf(skipAll)("API endpoints: unauthenticated requests return 401", (
     {
       method: "POST",
       path: "/groups/00000000-0000-0000-0000-000000000001/expenses",
-      body: { description: "smoke", amountCents: 100, date: "2026-01-01", paidByEmail: "nobody@example.com" },
+      body: { description: "smoke", amountCents: 100, date: "2026-01-01" },
+    },
+    {
+      method: "PUT",
+      path: "/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002",
+      body: { description: "smoke edited", amountCents: 200, date: "2026-01-01" },
+    },
+    {
+      method: "DELETE",
+      path: "/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002",
     },
     { method: "GET", path: "/groups/00000000-0000-0000-0000-000000000001/balances" },
   ];
@@ -207,6 +217,7 @@ describe.skipIf(skipAll || !hasTestCredentials)(
   () => {
     let authCookie: string;
     let createdGroupId: string | undefined;
+    let createdExpenseId: string | undefined;
 
     beforeAll(async () => {
       authCookie = await getAuthCookie();
@@ -273,6 +284,50 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       expect(Array.isArray(body.data)).toBe(true);
       // New empty group has no expenses → no debts
       expect(body.data).toHaveLength(0);
+    });
+
+    it("POST /api/groups/:id/expenses → 201, creates expense", async () => {
+      if (!createdGroupId) return;
+      const res = await callApi(
+        "POST",
+        `/groups/${createdGroupId}/expenses`,
+        { description: "[smoke test expense]", amountCents: 1000, date: "2026-01-01" },
+        { Cookie: authCookie }
+      );
+      expect(res.status).toBe(201);
+      const body = await res.json() as { data: { id: string; description: string; amountCents: number } | null; error: unknown };
+      expect(body.error).toBeNull();
+      expect(body.data?.description).toBe("[smoke test expense]");
+      expect(body.data?.amountCents).toBe(1000);
+      createdExpenseId = body.data?.id;
+    });
+
+    it("PUT /api/groups/:id/expenses/:expenseId → 200, updates expense", async () => {
+      if (!createdGroupId || !createdExpenseId) return;
+      const res = await callApi(
+        "PUT",
+        `/groups/${createdGroupId}/expenses/${createdExpenseId}`,
+        { description: "[smoke test expense — edited]", amountCents: 2000, date: "2026-01-02" },
+        { Cookie: authCookie }
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: { description: string; amountCents: number } | null; error: unknown };
+      expect(body.error).toBeNull();
+      expect(body.data?.description).toBe("[smoke test expense — edited]");
+      expect(body.data?.amountCents).toBe(2000);
+    });
+
+    it("DELETE /api/groups/:id/expenses/:expenseId → 200, deletes expense", async () => {
+      if (!createdGroupId || !createdExpenseId) return;
+      const res = await callApi(
+        "DELETE",
+        `/groups/${createdGroupId}/expenses/${createdExpenseId}`,
+        undefined,
+        { Cookie: authCookie }
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: null; error: unknown };
+      expect(body.error).toBeNull();
     });
 
     it("GET /api/groups/:id/balances → 403 for a group user is not a member of", async () => {
