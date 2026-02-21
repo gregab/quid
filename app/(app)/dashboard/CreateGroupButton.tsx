@@ -49,15 +49,20 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Create group</Button>
+      <Button onClick={() => setOpen(true)}>+ New group</Button>
 
       {open && (
         <div
-          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Create a group</h2>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Form a new group</h2>
+              <p className="text-sm text-gray-400 mt-0.5">
+                Who's in your next financial friendship?
+              </p>
+            </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -67,7 +72,7 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
                   id="groupName"
                   type="text"
                   required
-                  placeholder="e.g. Weekend Trip, Roommates"
+                  placeholder="e.g. The Italy Situation, Dinner Club, Who Got the Uber?"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus

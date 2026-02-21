@@ -3,13 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
 import CreateGroupButton from "./CreateGroupButton";
 
+// Deterministic emoji per group so it doesn't flicker
+function groupEmoji(id: string): string {
+  const emojis = ["🍕", "🏖️", "🏡", "🎉", "✈️", "🎮", "🍺", "🏔️", "🎸", "🚗", "🌮", "🎲", "🎭", "🏄", "🧳"];
+  const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % emojis.length;
+  return emojis[index];
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // user is guaranteed by layout, but TypeScript needs this check
   if (!user) return null;
 
   const memberships = await prisma.groupMember.findMany({
@@ -20,30 +26,85 @@ export default async function DashboardPage() {
 
   const groups = memberships.map((m) => m.group);
 
+  const displayName =
+    (user.user_metadata?.display_name as string | undefined) ??
+    user.email?.split("@")[0] ??
+    "friend";
+
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Your groups</h1>
-        <CreateGroupButton userId={user.id} />
+    <div className="space-y-8">
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-8 text-white shadow-xl">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-14 -right-6 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-64 -translate-x-1/2 rounded-full bg-violet-300/10 blur-2xl" />
+
+        <div className="relative z-10">
+          <div className="mb-4 text-5xl">🤝</div>
+          <h1 className="mb-2 text-3xl font-black tracking-tight">
+            Hey {displayName}.
+          </h1>
+          <p className="max-w-md text-lg leading-snug text-indigo-100">
+            <em>Quid pro quo</em> — but make it a vibe.
+          </p>
+          <p className="mt-2 text-sm text-indigo-200/70">
+            Because nothing says "I love you" like remembering who got the last round.
+          </p>
+        </div>
       </div>
 
-      {groups.length === 0 ? (
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-5xl mb-4">💸</div>
-          <p className="text-lg font-medium text-gray-600 mb-1">No groups yet</p>
-          <p className="text-sm">Create a group to start splitting expenses.</p>
+      {/* Groups section */}
+      <div>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Your groups</h2>
+            <p className="mt-0.5 text-sm text-gray-500">
+              {groups.length === 0
+                ? "None yet — you're either incredibly generous or very new here."
+                : groups.length === 1
+                ? "1 circle of trust (financially speaking)"
+                : `${groups.length} circles of trust (financially speaking)`}
+            </p>
+          </div>
+          <CreateGroupButton userId={user.id} />
         </div>
-      ) : (
-        <ul className="space-y-2">
-          {groups.map((group) => (
-            <li key={group.id}>
+
+        {groups.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-20 text-center">
+            <div className="mb-4 text-6xl">🫰</div>
+            <p className="mb-2 text-xl font-bold text-gray-700">No groups yet</p>
+            <p className="mx-auto mb-3 max-w-sm text-gray-500">
+              Are you just picking up every tab like some kind of benevolent monarch?
+              Chaotic good. Or maybe just create a group.
+            </p>
+            <p className="text-sm italic text-gray-400">
+              "quid pro quo" — Latin for "stop covering for people who never Venmo back"
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {groups.map((group) => (
               <Link
+                key={group.id}
                 href={`/groups/${group.id}`}
-                className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-4 hover:border-indigo-300 hover:shadow-md transition-all duration-150 group"
+                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
               >
-                <span className="font-semibold text-gray-900">{group.name}</span>
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 text-2xl shadow-inner">
+                  {groupEmoji(group.id)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-gray-900">{group.name}</p>
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    since{" "}
+                    {new Date(group.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
                 <svg
-                  className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors"
+                  className="h-4 w-4 flex-shrink-0 text-gray-300 transition-colors group-hover:text-indigo-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -51,9 +112,16 @@ export default async function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
-            </li>
-          ))}
-        </ul>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer quip — only when there are groups */}
+      {groups.length > 0 && (
+        <p className="pb-2 text-center text-xs italic text-gray-400">
+          Pro tip: the real quid pro quo was the friends we meticulously tracked along the way. 💸
+        </p>
       )}
     </div>
   );
