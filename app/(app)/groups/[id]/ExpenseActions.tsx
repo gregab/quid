@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import type { ExpenseRow } from "./ExpensesList";
+import type { ExpenseRow, Member } from "./ExpensesList";
 
 interface ExpenseActionsProps {
   groupId: string;
   expense: ExpenseRow;
+  members: Member[];
   isPending?: boolean;
   onOptimisticDelete: (expenseId: string) => void;
   onDeleteFailed: (expense: ExpenseRow) => void;
@@ -19,6 +20,7 @@ interface ExpenseActionsProps {
 export function ExpenseActions({
   groupId,
   expense,
+  members,
   isPending = false,
   onOptimisticDelete,
   onDeleteFailed,
@@ -31,12 +33,28 @@ export function ExpenseActions({
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState((expense.amountCents / 100).toFixed(2));
   const [date, setDate] = useState(expense.date);
+  const [paidByUserId, setPaidByUserId] = useState(expense.paidById);
+  const [participantIds, setParticipantIds] = useState<Set<string>>(
+    new Set(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
+  );
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
   if (!expense.canEdit && !expense.canDelete) return null;
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+
+  function toggleParticipant(userId: string) {
+    setParticipantIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  }
 
   async function handleEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,12 +66,21 @@ export function ExpenseActions({
       return;
     }
 
+    if (participantIds.size === 0) {
+      setError("At least one participant must be selected.");
+      return;
+    }
+
     const amountCents = Math.round(parsedAmount * 100);
+    const paidByMember = members.find((m) => m.userId === paidByUserId);
     const updatedExpense: ExpenseRow = {
       ...expense,
       description,
       amountCents,
       date,
+      paidById: paidByUserId,
+      paidByDisplayName: paidByMember?.displayName ?? expense.paidByDisplayName,
+      participantIds: [...participantIds],
     };
 
     // Optimistically update
@@ -64,7 +91,13 @@ export function ExpenseActions({
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description, amountCents, date }),
+      body: JSON.stringify({
+        description,
+        amountCents,
+        date,
+        paidById: paidByUserId,
+        participantIds: [...participantIds],
+      }),
     });
 
     const json = (await res.json()) as { data?: unknown; error?: string };
@@ -105,6 +138,10 @@ export function ExpenseActions({
     setDescription(expense.description);
     setAmount((expense.amountCents / 100).toFixed(2));
     setDate(expense.date);
+    setPaidByUserId(expense.paidById);
+    setParticipantIds(
+      new Set(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
+    );
     setError(null);
   }
 
@@ -209,7 +246,39 @@ export function ExpenseActions({
                   onChange={(e) => setDate(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-gray-400">Splits will be recalculated equally among all current members.</p>
+              <div>
+                <label htmlFor="editPaidBy" className="block text-sm font-medium text-gray-700 mb-1">
+                  Paid by
+                </label>
+                <select
+                  id="editPaidBy"
+                  value={paidByUserId}
+                  onChange={(e) => setPaidByUserId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  {members.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="block text-sm font-medium text-gray-700 mb-2">Split between</p>
+                <div className="space-y-1.5">
+                  {members.map((m) => (
+                    <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={participantIds.has(m.userId)}
+                        onChange={() => toggleParticipant(m.userId)}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-gray-700">{m.displayName}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleEditClose}>

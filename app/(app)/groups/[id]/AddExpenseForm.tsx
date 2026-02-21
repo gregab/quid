@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import type { ExpenseRow } from "./ExpensesList";
+import type { ExpenseRow, Member } from "./ExpensesList";
 
 interface AddExpenseFormProps {
   groupId: string;
   currentUserId: string;
   currentUserDisplayName: string;
+  members: Member[];
   onOptimisticAdd: (expense: ExpenseRow) => void;
   onSettled: () => void;
 }
@@ -17,15 +18,32 @@ export function AddExpenseForm({
   groupId,
   currentUserId,
   currentUserDisplayName,
+  members,
   onOptimisticAdd,
   onSettled,
 }: AddExpenseFormProps) {
+  const allMemberIds = members.map((m) => m.userId);
+
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]!);
+  const [paidByUserId, setPaidByUserId] = useState(currentUserId);
+  const [participantIds, setParticipantIds] = useState<Set<string>>(new Set(allMemberIds));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function toggleParticipant(userId: string) {
+    setParticipantIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,15 +55,23 @@ export function AddExpenseForm({
       return;
     }
 
+    if (participantIds.size === 0) {
+      setError("At least one participant must be selected.");
+      return;
+    }
+
     const amountCents = Math.round(parsedAmount * 100);
     const submittedDescription = description;
     const submittedDate = date;
+    const submittedPaidByUserId = paidByUserId;
+    const submittedParticipantIds = [...participantIds];
+
+    const paidByMember = members.find((m) => m.userId === submittedPaidByUserId);
+    const paidByDisplayName = paidByMember?.displayName ?? currentUserDisplayName;
 
     // Close modal and clear form immediately (optimistic)
     setOpen(false);
-    setDescription("");
-    setAmount("");
-    setDate(new Date().toISOString().split("T")[0]!);
+    resetForm();
 
     // Add optimistic expense to the list
     const pendingId = `pending-${Date.now()}`;
@@ -54,20 +80,27 @@ export function AddExpenseForm({
       description: submittedDescription,
       amountCents,
       date: submittedDate,
-      paidById: currentUserId,
-      paidByDisplayName: currentUserDisplayName,
-      canEdit: true,
-      canDelete: true, // current user is always the payer, so canDelete is always true
+      paidById: submittedPaidByUserId,
+      paidByDisplayName,
+      participantIds: submittedParticipantIds,
+      canEdit: submittedPaidByUserId === currentUserId,
+      canDelete: submittedPaidByUserId === currentUserId,
       isPending: true,
     });
 
     setLoading(true);
 
     const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
-    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
+    await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ description: submittedDescription, amountCents, date: submittedDate }),
+      body: JSON.stringify({
+        description: submittedDescription,
+        amountCents,
+        date: submittedDate,
+        paidById: submittedPaidByUserId,
+        participantIds: submittedParticipantIds,
+      }),
     });
 
     setLoading(false);
@@ -76,12 +109,18 @@ export function AddExpenseForm({
     onSettled();
   }
 
-  function handleClose() {
-    setOpen(false);
+  function resetForm() {
     setDescription("");
     setAmount("");
     setDate(new Date().toISOString().split("T")[0]!);
+    setPaidByUserId(currentUserId);
+    setParticipantIds(new Set(allMemberIds));
     setError(null);
+  }
+
+  function handleClose() {
+    setOpen(false);
+    resetForm();
   }
 
   return (
@@ -139,7 +178,44 @@ export function AddExpenseForm({
                   onChange={(e) => setDate(e.target.value)}
                 />
               </div>
-              <p className="text-xs text-gray-400">Split equally among all group members. You are marked as the payer.</p>
+              <div>
+                <label htmlFor="expensePaidBy" className="block text-sm font-medium text-gray-700 mb-1">
+                  Paid by
+                </label>
+                <select
+                  id="expensePaidBy"
+                  value={paidByUserId}
+                  onChange={(e) => setPaidByUserId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  {members.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <p className="block text-sm font-medium text-gray-700 mb-2">Split between</p>
+                <div className="space-y-1.5">
+                  {members.map((m) => (
+                    <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={participantIds.has(m.userId)}
+                        onChange={() => toggleParticipant(m.userId)}
+                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {m.displayName}
+                        {m.userId === currentUserId && (
+                          <span className="ml-1 text-xs text-gray-400">(you)</span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>

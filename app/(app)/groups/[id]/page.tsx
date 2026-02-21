@@ -6,7 +6,7 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
 import { ExpensesList } from "./ExpensesList";
-import type { ExpenseRow } from "./ExpensesList";
+import type { ExpenseRow, Member } from "./ExpensesList";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -67,6 +67,11 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const currentMember = group.members.find((m) => m.userId === user.id);
   const currentUserDisplayName = currentMember?.user.displayName ?? user.email ?? "You";
 
+  const members: Member[] = group.members.map((m) => ({
+    userId: m.userId,
+    displayName: m.user.displayName,
+  }));
+
   const initialExpenses: ExpenseRow[] = group.expenses.map((expense) => ({
     id: expense.id,
     description: expense.description,
@@ -74,6 +79,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     date: expense.date.toISOString().split("T")[0]!,
     paidById: expense.paidById,
     paidByDisplayName: expense.paidBy.displayName,
+    participantIds: expense.splits.map((s) => s.userId),
     canEdit: expense.paidById === user.id,
     canDelete: expense.paidById === user.id || group.createdById === user.id,
   }));
@@ -145,6 +151,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         currentUserId={user.id}
         currentUserDisplayName={currentUserDisplayName}
         initialExpenses={initialExpenses}
+        members={members}
       />
 
       {/* Members */}

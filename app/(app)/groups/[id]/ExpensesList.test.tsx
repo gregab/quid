@@ -16,6 +16,7 @@ const BASE_PROPS = {
   groupCreatedById: "creator-1",
   currentUserId: "user-1",
   currentUserDisplayName: "Alice",
+  members: [{ userId: "user-1", displayName: "Alice" }],
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
@@ -26,6 +27,7 @@ function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
     date: "2024-01-15",
     paidById: "user-1",
     paidByDisplayName: "Alice",
+    participantIds: ["user-1"],
     canEdit: true,
     canDelete: true,
     ...overrides,

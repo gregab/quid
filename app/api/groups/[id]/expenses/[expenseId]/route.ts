@@ -7,6 +7,8 @@ const updateExpenseSchema = z.object({
   description: z.string().min(1).max(200),
   amountCents: z.number().int().positive("Amount must be greater than zero"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  paidById: z.string().uuid().optional(),
+  participantIds: z.array(z.string().uuid()).min(1).optional(),
 });
 
 export async function PUT(
@@ -63,15 +65,31 @@ export async function PUT(
     );
   }
 
-  const { description, amountCents, date } = parsed.data;
+  const { description, amountCents, date, paidById: rawPaidById, participantIds: rawParticipantIds } = parsed.data;
 
-  // Recompute equal splits among current members
-  const members = expense.group.members;
-  const memberCount = members.length;
-  const baseAmount = Math.floor(amountCents / memberCount);
-  const remainder = amountCents % memberCount;
+  const allMembers = expense.group.members;
+  const memberIds = new Set(allMembers.map((m) => m.userId));
 
-  const splitData = members.map((member, i) => ({
+  const newPaidById = rawPaidById ?? expense.paidById;
+  if (!memberIds.has(newPaidById)) {
+    return NextResponse.json({ data: null, error: "Payer is not a member of this group" }, { status: 400 });
+  }
+
+  let participants = allMembers;
+  if (rawParticipantIds) {
+    const invalidIds = rawParticipantIds.filter((id) => !memberIds.has(id));
+    if (invalidIds.length > 0) {
+      return NextResponse.json({ data: null, error: "One or more participants are not group members" }, { status: 400 });
+    }
+    participants = allMembers.filter((m) => rawParticipantIds.includes(m.userId));
+  }
+
+  // Recompute equal splits among participants, distributing remainder 1 cent at a time
+  const participantCount = participants.length;
+  const baseAmount = Math.floor(amountCents / participantCount);
+  const remainder = amountCents % participantCount;
+
+  const splitData = participants.map((member, i) => ({
     userId: member.userId,
     amountCents: baseAmount + (i < remainder ? 1 : 0),
   }));
@@ -79,7 +97,7 @@ export async function PUT(
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.expense.update({
       where: { id: expenseId },
-      data: { description, amountCents, date: new Date(date) },
+      data: { description, amountCents, date: new Date(date), paidById: newPaidById },
     });
 
     await tx.expenseSplit.deleteMany({ where: { expenseId } });

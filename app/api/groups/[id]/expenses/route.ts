@@ -7,6 +7,8 @@ const createExpenseSchema = z.object({
   description: z.string().min(1).max(200),
   amountCents: z.number().int().positive("Amount must be greater than zero"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  paidById: z.string().uuid().optional(),
+  participantIds: z.array(z.string().uuid()).min(1).optional(),
 });
 
 export async function POST(
@@ -45,14 +47,32 @@ export async function POST(
     );
   }
 
-  const { description, amountCents, date } = parsed.data;
+  const { description, amountCents, date, paidById: rawPaidById, participantIds: rawParticipantIds } = parsed.data;
 
-  // Compute equal splits, distributing remainder 1 cent at a time
-  const memberCount = members.length;
-  const baseAmount = Math.floor(amountCents / memberCount);
-  const remainder = amountCents % memberCount;
+  const memberIds = new Set(members.map((m) => m.userId));
 
-  const splitData = members.map((member, i) => ({
+  const paidById = rawPaidById ?? user.id;
+  if (!memberIds.has(paidById)) {
+    return NextResponse.json({ data: null, error: "Payer is not a member of this group" }, { status: 400 });
+  }
+
+  const participants = rawParticipantIds
+    ? members.filter((m) => rawParticipantIds.includes(m.userId))
+    : members;
+
+  if (rawParticipantIds) {
+    const invalidIds = rawParticipantIds.filter((id) => !memberIds.has(id));
+    if (invalidIds.length > 0) {
+      return NextResponse.json({ data: null, error: "One or more participants are not group members" }, { status: 400 });
+    }
+  }
+
+  // Compute equal splits among participants, distributing remainder 1 cent at a time
+  const participantCount = participants.length;
+  const baseAmount = Math.floor(amountCents / participantCount);
+  const remainder = amountCents % participantCount;
+
+  const splitData = participants.map((member, i) => ({
     userId: member.userId,
     amountCents: baseAmount + (i < remainder ? 1 : 0),
   }));
@@ -61,7 +81,7 @@ export async function POST(
     const created = await tx.expense.create({
       data: {
         groupId,
-        paidById: user.id,
+        paidById,
         description,
         amountCents,
         date: new Date(date),

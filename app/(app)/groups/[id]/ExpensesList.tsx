@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
 import { ExpenseActions } from "./ExpenseActions";
 
+export interface Member {
+  userId: string;
+  displayName: string;
+}
+
 export interface ExpenseRow {
   id: string;
   description: string;
@@ -13,6 +18,7 @@ export interface ExpenseRow {
   date: string; // YYYY-MM-DD
   paidById: string;
   paidByDisplayName: string;
+  participantIds: string[];
   canEdit: boolean;
   canDelete: boolean;
   isPending?: boolean;
@@ -24,6 +30,7 @@ interface ExpensesListProps {
   currentUserId: string;
   currentUserDisplayName: string;
   initialExpenses: ExpenseRow[];
+  members: Member[];
 }
 
 function formatCents(cents: number): string {
@@ -43,6 +50,7 @@ export function ExpensesList({
   currentUserId,
   currentUserDisplayName,
   initialExpenses,
+  members,
 }: ExpensesListProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -114,6 +122,7 @@ export function ExpensesList({
           groupId={groupId}
           currentUserId={currentUserId}
           currentUserDisplayName={currentUserDisplayName}
+          members={members}
           onOptimisticAdd={handleOptimisticAdd}
           onSettled={handleAddSettled}
         />
@@ -145,16 +154,8 @@ export function ExpensesList({
                   </span>
                   <ExpenseActions
                     groupId={groupId}
-                    expense={{
-                      id: expense.id,
-                      description: expense.description,
-                      amountCents: expense.amountCents,
-                      date: expense.date,
-                      paidById: expense.paidById,
-                      paidByDisplayName: expense.paidByDisplayName,
-                      canEdit: expense.canEdit,
-                      canDelete: expense.canDelete,
-                    }}
+                    expense={expense}
+                    members={members}
                     isPending={expense.isPending}
                     onOptimisticDelete={handleOptimisticDelete}
                     onDeleteFailed={handleDeleteFailed}
