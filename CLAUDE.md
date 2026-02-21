@@ -154,3 +154,12 @@ GET  /api/groups/[id]/balances      — Simplified debts with display names
 ## Reference Files
 - **PLANNING.md** — Architecture decisions with rationale, open design questions, future roadmap. Consult before structural changes.
 - **TODOS.md** — What's done, what's in progress, what's in the backlog.
+
+## Keeping Docs Current
+After completing any non-trivial task, update these files if the work warrants it:
+
+- **CLAUDE.md** — Update when: new patterns or gotchas are discovered, stack versions change, project structure changes, new env vars are added, new commands are needed, or existing instructions become inaccurate.
+- **PLANNING.md** — Update when: an architectural decision is made or changed, a design question is resolved, or new open questions arise.
+- **TODOS.md** — Update when: a task is completed (mark done), a new task is identified, or the scope/status of a backlog item changes.
+
+Only update when the change is clearly relevant and accurate — don't pad these files with minor notes.
