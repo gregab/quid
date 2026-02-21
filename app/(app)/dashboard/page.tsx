@@ -11,26 +11,30 @@ function groupEmoji(id: string): string {
 }
 
 const STATUS_MESSAGES = [
-  "Reticulating expenses.",
-  "Propagating debt through the social graph.",
-  "Reconciling the vibe with the tab.",
-  "Triangulating who ordered the appetizer.",
-  "Normalizing split ambiguity.",
-  "Cross-referencing who said 'I'll get next time.'",
-  "Computing equitable distribution.",
-  "Amortizing friendship overhead.",
-  "Defragmenting the group ledger.",
-  "Parsing the 'I'll Venmo you' queue.",
-  "Rendering the ledger of trust.",
-  "Indexing shared expenses.",
-  "Simulating optimal tab allocation.",
-  "Balancing the ledger.",
-  "Compiling outstanding IOUs.",
-  "Calibrating generosity offsets.",
-  "Resolving pending obligations.",
-  "Auditing spontaneous rounds.",
-  "Distributing remainder cents.",
-  "Optimizing brunch allocation.",
+  "Reticulate expenses.",
+  "Propagate debt through the social graph.",
+  "Reconcile the vibe with the tab.",
+  "Triangulate who ordered the appetizer.",
+  "Amortize friendship overhead.",
+  "Defragment the group ledger.",
+  "Parse the 'I'll Venmo you' queue.",
+  "Render the ledger of trust.",
+  "Simulate optimal tab allocation.",
+  "Calibrate generosity offsets.",
+  "Audit spontaneous rounds.",
+  "Distribute remainder cents.",
+  "Flush the 'we're basically even' cache.",
+  "Garbage collect unresolved tabs.",
+  "Patch the 'I'll pay you back' memory leak.",
+  "Assert fairness across all known dimensions.",
+  "Rollback the 'I got last time' exception.",
+  "Quantify the vibe tax.",
+  "Normalize Venmo anxiety.",
+  "Estimate the guac upcharge.",
+  "Invoke the round-up protocol.",
+  "Deprecate the spreadsheet.",
+  "Document who got the last Uber.",
+  "Enumerate the appetizer claimants.",
 ];
 
 export default async function DashboardPage() {
@@ -137,7 +141,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400">
-          the friends we meticulously tracked along the way. 💸
+          Maybe the real financial independence is the friends we... 💸
         </p>
       )}
     </div>
