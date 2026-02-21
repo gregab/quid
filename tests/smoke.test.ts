@@ -136,6 +136,38 @@ describe.skipIf(skipAll)("auth-protected pages redirect unauthenticated users to
 });
 
 // ---------------------------------------------------------------------------
+// basePath sanity — routes must not exist at the root domain (without /quid)
+//
+// Next.js serves the app under basePath: "/quid". Client-side code that uses
+// raw fetch("/api/...") or <a href="/groups/..."> bypasses this and hits the
+// root domain instead. These tests verify that the root-level paths return
+// 404 so any regression immediately shows up as a broken client action.
+// ---------------------------------------------------------------------------
+
+describe.skipIf(skipAll)("basePath sanity: routes only exist under /quid, not at root", () => {
+  const ROOT = "https://www.gregbigelow.com";
+
+  const rootPaths = [
+    { method: "GET",  path: "/api/groups" },
+    { method: "POST", path: "/api/groups" },
+    { method: "POST", path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
+    { method: "POST", path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses" },
+    { method: "GET",  path: "/api/groups/00000000-0000-0000-0000-000000000001/balances" },
+  ];
+
+  for (const { method, path } of rootPaths) {
+    it(`${method} ${ROOT}${path} → 404 (no route exists without basePath)`, async () => {
+      const res = await fetch(`${ROOT}${path}`, {
+        method,
+        redirect: "manual",
+        headers: { "Content-Type": "application/json" },
+      });
+      expect(res.status).toBe(404);
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // API endpoints — unauthenticated
 // proxy.ts only protects page routes; /api/* routes check auth themselves.
 // ---------------------------------------------------------------------------
@@ -201,6 +233,27 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       expect(body.data).toBeDefined();
       expect(body.data?.name).toBe("[smoke test — safe to delete]");
       createdGroupId = body.data?.id;
+    });
+
+    it("dashboard HTML group links contain /quid/ basePath prefix", async () => {
+      const res = await fetch(`${BASE}/dashboard`, {
+        headers: { Cookie: authCookie },
+        redirect: "follow",
+      });
+      expect(res.status).toBe(200);
+      const html = await res.text();
+
+      // Extract all href values from the rendered HTML
+      const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!);
+      const groupHrefs = hrefs.filter((h) => /\/groups\/[0-9a-f-]{36}/.test(h));
+
+      // If the dashboard shows groups (it will after the create test above),
+      // every group link must start with /quid/ — not /groups/ (bare path).
+      if (groupHrefs.length > 0) {
+        for (const href of groupHrefs) {
+          expect(href).toMatch(/^\/quid\/groups\//);
+        }
+      }
     });
 
     it("GET /api/groups/:id/balances → 200 for own group", async () => {
