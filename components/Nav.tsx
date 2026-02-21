@@ -16,12 +16,9 @@ export default function Nav({ email }: { email: string }) {
   return (
     <nav className="border-b border-gray-200 bg-white/80 shadow-sm backdrop-blur-sm">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-            Quid
-          </span>
-          <span className="hidden text-xs text-gray-400 sm:block italic">pro quo</span>
-        </div>
+        <span className="font-black text-xl tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+          Quid
+        </span>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-500 hidden sm:block">{email}</span>
           <button

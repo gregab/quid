@@ -10,6 +10,29 @@ function groupEmoji(id: string): string {
   return emojis[index];
 }
 
+const STATUS_MESSAGES = [
+  "Reticulating expenses.",
+  "Propagating debt through the social graph.",
+  "Reconciling the vibe with the tab.",
+  "Triangulating who ordered the appetizer.",
+  "Normalizing split ambiguity.",
+  "Cross-referencing who said 'I'll get next time.'",
+  "Computing equitable distribution.",
+  "Amortizing friendship overhead.",
+  "Defragmenting the group ledger.",
+  "Parsing the 'I'll Venmo you' queue.",
+  "Rendering the ledger of trust.",
+  "Indexing shared expenses.",
+  "Simulating optimal tab allocation.",
+  "Balancing the ledger.",
+  "Compiling outstanding IOUs.",
+  "Calibrating generosity offsets.",
+  "Resolving pending obligations.",
+  "Auditing spontaneous rounds.",
+  "Distributing remainder cents.",
+  "Optimizing brunch allocation.",
+];
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -31,6 +54,8 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ??
     "friend";
 
+  const statusMessage = STATUS_MESSAGES[Math.floor(Math.random() * STATUS_MESSAGES.length)]!;
+
   return (
     <div className="space-y-8">
       {/* Hero */}
@@ -42,15 +67,10 @@ export default async function DashboardPage() {
 
         <div className="relative z-10">
           <div className="mb-4 text-5xl">🤝</div>
-          <h1 className="mb-2 text-3xl font-black tracking-tight">
+          <h1 className="mb-3 text-3xl font-black tracking-tight">
             Hey {displayName}.
           </h1>
-          <p className="max-w-md text-lg leading-snug text-indigo-100">
-            <em>Quid pro quo</em> — but make it a vibe.
-          </p>
-          <p className="mt-2 text-sm text-indigo-200/70">
-            Because nothing says "I love you" like remembering who got the last round.
-          </p>
+          <p className="text-sm text-indigo-200/80 font-mono">{statusMessage}</p>
         </div>
       </div>
 
@@ -74,12 +94,9 @@ export default async function DashboardPage() {
           <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-20 text-center">
             <div className="mb-4 text-6xl">🫰</div>
             <p className="mb-2 text-xl font-bold text-gray-700">No groups yet</p>
-            <p className="mx-auto mb-3 max-w-sm text-gray-500">
+            <p className="mx-auto max-w-sm text-gray-500">
               Are you just picking up every tab like some kind of benevolent monarch?
               Chaotic good. Or maybe just create a group.
-            </p>
-            <p className="text-sm italic text-gray-400">
-              "quid pro quo" — Latin for "stop covering for people who never Venmo back"
             </p>
           </div>
         ) : (
@@ -120,7 +137,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400">
-          Pro tip: the real quid pro quo was the friends we meticulously tracked along the way. 💸
+          the friends we meticulously tracked along the way. 💸
         </p>
       )}
     </div>
