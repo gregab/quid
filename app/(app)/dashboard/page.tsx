@@ -141,7 +141,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400">
-          Maybe the real financial independence is the friends we... 💸
+          Maybe the real financial independence is the friends we meticulously tracked along the way. 💸
         </p>
       )}
     </div>
