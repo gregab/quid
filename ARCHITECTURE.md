@@ -120,7 +120,8 @@ ActivityLog
   groupId       String    → Group (cascade delete)
   actorId       String    → User
   action        String    // "expense_added" | "expense_edited" | "expense_deleted"
-  payload       Json      // { description, amountCents, paidByDisplayName }
+  payload       Json      // { description, amountCents, previousAmountCents?, paidByDisplayName }
+                         //   previousAmountCents present on expense_edited when amount changed
   createdAt     DateTime  @default(now())
 ```
 
@@ -281,6 +282,76 @@ Plan: Hard delete. Cascade deletes handle all cleanup. No soft delete until audi
 
 ### Member removal (not yet implemented)
 Plan: Block removal if member has non-zero balance. Self-removal allowed if debts are settled.
+
+## Testing
+
+**Stack:** Vitest 4 + `@testing-library/react` 16 + happy-dom. No `@testing-library/user-event` — use `fireEvent` for interactions.
+
+### File conventions
+- Component tests: `ComponentName.test.tsx` co-located with the component
+- Hook/utility tests: `name.test.ts` co-located with the source file
+- Smoke tests: `tests/smoke.test.ts` (hits live production)
+
+### Test file boilerplate (component)
+```tsx
+// @vitest-environment happy-dom
+
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import { MyComponent } from "./MyComponent";
+
+afterEach(cleanup); // required — DOM persists across tests otherwise
+```
+
+### Mocking `next/navigation`
+All components that call `useRouter()` need this mock:
+```ts
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+```
+
+### Mocking `fetch` for API calls
+```ts
+import { beforeEach, afterEach, vi } from "vitest";
+
+beforeEach(() => {
+  vi.spyOn(global, "fetch").mockResolvedValue({
+    ok: true,
+    json: async () => ({ data: {}, error: null }),
+  } as Response);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+```
+
+### Form submission gotcha
+**`fireEvent.click` on a submit button does NOT trigger `onSubmit` in happy-dom.** Use `fireEvent.submit` on the `<form>` element instead:
+```ts
+import { fireEvent, act } from "@testing-library/react";
+
+const form = screen.getByRole("button", { name: /save/i }).closest("form")!;
+await act(async () => {
+  fireEvent.submit(form);
+});
+```
+Wrap in `await act(async () => { ... })` when the handler is async (e.g. calls fetch) to flush all state updates.
+
+### What to test
+| Layer | Test what |
+|---|---|
+| Pure functions | All logic branches; use plain Vitest `describe/it/expect` |
+| React components | Rendering, conditional display, class names for state flags, DOM order for lists |
+| Optimistic updates | Use `rerender()` to simulate `router.refresh()` delivering new props |
+| Interactions | `fireEvent.click` for buttons, `fireEvent.change` for inputs, `fireEvent.submit` for forms |
+| API routes | Smoke tests for auth/routing concerns that can't be unit-tested |
+
+### What NOT to test
+- Implementation details (internal state, private functions)
+- Styles/classnames beyond the minimum needed to verify behavior (e.g. `opacity-60` for pending state is fine)
+- Things that are already covered by the framework (Next.js routing, Prisma query syntax)
 
 ## Open Questions
 

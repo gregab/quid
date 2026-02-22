@@ -56,16 +56,26 @@ vercel logs --follow                    # Stream live production logs
 - No raw SQL with user input — Prisma parameterized queries only
 
 ## Testing
+
+**Write tests for every bug fix and every new feature.** A bug fix without a test can regress silently. A new feature without a test has no documented contract.
+
 ```
-lib/balances/simplify.test.ts                   — 14 unit tests (debt simplification)
-lib/supabase/supabase.test.ts                   — Env var + Supabase key validation
-app/(app)/groups/[id]/ExpensesList.test.tsx      — Expense list rendering
-app/(app)/groups/[id]/ActivityFeed.test.tsx      — Activity feed rendering
-app/(app)/groups/[id]/useActivityLogs.test.ts    — Activity log hook
-tests/smoke.test.ts                              — Production smoke tests (auth + API)
+lib/balances/simplify.test.ts                   — unit tests (debt simplification)
+lib/supabase/supabase.test.ts                   — env var + Supabase key validation
+app/(app)/groups/[id]/ExpensesList.test.tsx      — expense list rendering + interactions
+app/(app)/groups/[id]/ActivityFeed.test.tsx      — activity feed rendering
+app/(app)/groups/[id]/useActivityLogs.test.ts    — activity log hook
+tests/smoke.test.ts                              — production smoke tests (auth + API)
 ```
 
+**Where to add tests:**
+- New UI behavior or rendering logic → add to the relevant `*.test.tsx` co-located with the component
+- New pure function → co-locate a `*.test.ts` next to it
+- New API route behavior → smoke test if it can't be covered by unit/integration tests
+
 Run smoke tests after changing: `proxy.ts`, auth routes, API routes, or env vars.
+
+See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and gotchas.
 
 ## Code Conventions
 - TypeScript strict. No `any`. `async/await`, not `.then()`.

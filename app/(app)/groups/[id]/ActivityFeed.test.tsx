@@ -65,3 +65,64 @@ describe("ActivityFeed", () => {
     expect(screen.getAllByText("Alice")).toHaveLength(2);
   });
 });
+
+describe("ActivityFeed — expense_edited amount display", () => {
+  it("shows old → new amount when the amount changed", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: { description: "Dinner", amountCents: 3000, previousAmountCents: 2500, paidByDisplayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
+  });
+
+  it("shows only the new amount when the amount did not change (description-only edit)", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: { description: "Dinner", amountCents: 2500, previousAmountCents: 2500, paidByDisplayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.queryByText(/→/)).toBeNull();
+    expect(screen.getByText(/\$25\.00/)).toBeDefined();
+  });
+
+  it("shows only the amount when previousAmountCents is absent (older log entries)", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: { description: "Dinner", amountCents: 2500, paidByDisplayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.queryByText(/→/)).toBeNull();
+    expect(screen.getByText(/\$25\.00/)).toBeDefined();
+  });
+
+  it("does not show an arrow for expense_added even with a prior amount in payload", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: { description: "Dinner", amountCents: 3000, previousAmountCents: 2500, paidByDisplayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    // Arrow only shows for expense_edited
+    expect(screen.queryByText(/→/)).toBeNull();
+  });
+});

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { ExpensesList, type ExpenseRow } from "./ExpensesList";
 
 // Without cleanup, rendered DOM accumulates across tests in the same file.
@@ -137,5 +137,89 @@ describe("ExpensesList — optimistic add: pending item resolved after prop upda
 
     expect(screen.getAllByText("Old expense")).toHaveLength(1);
     expect(screen.getAllByText("New expense")).toHaveLength(1);
+  });
+});
+
+// ----------------------------
+// Auto-reorder on date edit
+// ----------------------------
+
+describe("ExpensesList — auto-reorder when expense date is edited", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: {}, error: null }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("moves an expense to the end when its date is changed to be older than others", async () => {
+    const newer = makeExpense({ id: "exp-b", description: "Newer", date: "2024-01-20", amountCents: 2000 });
+    const older = makeExpense({ id: "exp-a", description: "Older", date: "2024-01-10", amountCents: 1000 });
+
+    // Server delivers newest-first: [Newer, Older]
+    const { container } = render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[newer, older]}
+        onOptimisticActivity={vi.fn()}
+      />
+    );
+
+    // Verify initial order
+    let items = container.querySelectorAll("li");
+    expect(items[0]!.textContent).toContain("Newer");
+    expect(items[1]!.textContent).toContain("Older");
+
+    // Open edit modal for "Newer" (first edit button)
+    const editButtons = screen.getAllByRole("button", { name: /edit expense/i });
+    fireEvent.click(editButtons[0]!);
+
+    // Change its date to be earlier than "Older"
+    const dateInput = screen.getByLabelText("Date");
+    fireEvent.change(dateInput, { target: { value: "2024-01-05" } });
+
+    // Submit via the form (fireEvent.click on a submit button doesn't trigger onSubmit in happy-dom)
+    const form = screen.getByRole("button", { name: /save changes/i }).closest("form")!;
+    await act(async () => {
+      fireEvent.submit(form);
+    });
+
+    // "Older" (2024-01-10) now has the newer date, so it goes first
+    items = container.querySelectorAll("li");
+    expect(items[0]!.textContent).toContain("Older");
+    expect(items[1]!.textContent).toContain("Newer");
+  });
+
+  it("keeps the list order when the edited date stays more recent than others", async () => {
+    const newer = makeExpense({ id: "exp-b", description: "Newer", date: "2024-01-20", amountCents: 2000 });
+    const older = makeExpense({ id: "exp-a", description: "Older", date: "2024-01-10", amountCents: 1000 });
+
+    const { container } = render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[newer, older]}
+        onOptimisticActivity={vi.fn()}
+      />
+    );
+
+    // Edit "Newer" but give it an even more recent date — order should not change
+    const editButtons = screen.getAllByRole("button", { name: /edit expense/i });
+    fireEvent.click(editButtons[0]!);
+
+    const dateInput = screen.getByLabelText("Date");
+    fireEvent.change(dateInput, { target: { value: "2024-01-25" } });
+
+    const form2 = screen.getByRole("button", { name: /save changes/i }).closest("form")!;
+    await act(async () => {
+      fireEvent.submit(form2);
+    });
+
+    const items = container.querySelectorAll("li");
+    expect(items[0]!.textContent).toContain("Newer");
+    expect(items[1]!.textContent).toContain("Older");
   });
 });
