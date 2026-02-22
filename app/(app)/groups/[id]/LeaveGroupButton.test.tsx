@@ -61,7 +61,7 @@ describe("LeaveGroupButton", () => {
   it("shows error message when API returns an error", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: false,
-      json: async () => ({ data: null, error: "Cannot leave group: you have an unsettled balance" }),
+      json: async () => ({ data: null, error: "Cannot leave group: you owe $15. Please settle up first." }),
     } as Response);
 
     render(<LeaveGroupButton groupId="g1" />);
@@ -71,7 +71,7 @@ describe("LeaveGroupButton", () => {
       fireEvent.click(screen.getByText("Leave"));
     });
 
-    expect(screen.getByText("Cannot leave group: you have an unsettled balance")).toBeDefined();
+    expect(screen.getByText("Cannot leave group: you owe $15. Please settle up first.")).toBeDefined();
     expect(mockPush).not.toHaveBeenCalled();
   });
 });
