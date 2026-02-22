@@ -25,7 +25,7 @@ export default async function LandingPage() {
                 </h1>
                 <p className="text-sm text-stone-200">
                   Split expenses with your group. Track who owes what, settle up
-                  simply, and stop arguing about money.
+                  simply, and enjoy your life.
                 </p>
               </div>
             </div>
