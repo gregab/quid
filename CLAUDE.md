@@ -1,4 +1,4 @@
-# Quid — Expense Splitting App
+# Aviary — Expense Splitting App
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 

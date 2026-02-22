@@ -4,7 +4,7 @@ import CreateGroupButton from "./CreateGroupButton";
 
 // Deterministic emoji per group so it doesn't flicker
 function groupEmoji(id: string): string {
-  const emojis = ["🌿", "🌞", "✨", "🏔️", "☁️", "🌊", "🍃", "🌸", "🌙", "🪴", "🌻", "🦋", "🌾", "🐚", "🌅"];
+  const emojis = ["🐦", "🪶", "🦅", "🕊️", "🦉", "🌙", "☀️", "⭐", "🌿", "🪴", "🌾", "🦆", "🌞", "🐧", "✨"];
   const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % emojis.length;
   return emojis[index];
 }
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
         {groups.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-5 py-12 sm:px-6 sm:py-20 text-center dark:border-gray-600 dark:bg-gray-800/50">
-            <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">🫰</div>
+            <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">🪺</div>
             <p className="mb-2 text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
             <p className="mx-auto max-w-sm text-sm sm:text-base text-gray-500 dark:text-gray-400">
               Are you just picking up every tab like some kind of benevolent monarch?
@@ -84,9 +84,9 @@ export default async function DashboardPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500"
+                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-amber-500"
               >
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 text-2xl shadow-inner dark:from-indigo-900 dark:to-violet-800">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
                   {groupEmoji(group.id)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -100,7 +100,7 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <svg
-                  className="h-4 w-4 flex-shrink-0 text-gray-300 transition-colors group-hover:text-indigo-400"
+                  className="h-4 w-4 flex-shrink-0 text-gray-300 transition-colors group-hover:text-amber-600"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -116,7 +116,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
-          Maybe the real financial independence is the friends we meticulously tracked along the way. 💸
+          Maybe the real financial independence is the friends we meticulously tracked along the way. 🪶
         </p>
       )}
     </div>

@@ -13,9 +13,9 @@ describe("navigation", () => {
     cy.login();
   });
 
-  it("nav bar shows the 'Quid' brand and the logged-in user's email", () => {
+  it("nav bar shows the 'Aviary' brand and the logged-in user's email", () => {
     cy.visit("/dashboard");
-    cy.get("nav").contains("Quid").should("be.visible");
+    cy.get("nav").contains("Aviary").should("be.visible");
     const email = Cypress.env("SMOKE_TEST_EMAIL") as string;
     cy.get("nav").contains(email).should("be.visible");
   });

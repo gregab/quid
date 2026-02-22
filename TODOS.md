@@ -1,4 +1,4 @@
-# Quid — Todos
+# Aviary — Todos
 
 ## Done
 - Auth flow: login, signup, logout, email confirmation callback

@@ -1,4 +1,4 @@
-# Quid — Architecture
+# Aviary — Architecture
 
 Deep reference for how the app works. For workflow and commands, see CLAUDE.md.
 

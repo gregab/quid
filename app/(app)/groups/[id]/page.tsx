@@ -7,9 +7,9 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 
 // Unique emoji per member slot (by join order → guaranteed no duplicates within a group)
 const MEMBER_EMOJIS = [
-  "🦊", "🐼", "🌺", "🧙", "🦋", "🌵", "🦄", "🐬", "🍄", "🦁",
-  "🐙", "🦜", "🐢", "🌙", "⚡", "🎨", "🐧", "🦩", "🌻", "🦝",
-  "🍀", "🐻", "🌸", "🦚", "🎯",
+  "🦉", "🐦", "🕊️", "🦅", "🪶", "🦆", "🐧", "🦜", "🦩", "🦢",
+  "🌙", "☀️", "⭐", "🌞", "✨", "🪴", "🌿", "🌾", "🍃", "🍀",
+  "☁️", "🏔️", "🌊", "⚡", "🐚",
 ];
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
@@ -87,7 +87,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       <div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-indigo-600 mb-3 transition-colors py-1"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-amber-700 mb-3 transition-colors py-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -104,7 +104,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               title={m.User?.email ?? undefined}
               className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 m.userId === user.id
-                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
+                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
                   : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
               }`}
             >
