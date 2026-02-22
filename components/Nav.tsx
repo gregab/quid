@@ -23,7 +23,7 @@ export default function Nav({ email }: { email: string }) {
           <span className="text-sm text-gray-500 hidden sm:block dark:text-gray-400">{email}</span>
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors dark:text-gray-400 dark:hover:text-white"
+            className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer dark:text-gray-400 dark:hover:text-white"
           >
             Log out
           </button>

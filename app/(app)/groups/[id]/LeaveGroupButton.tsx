@@ -35,7 +35,7 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
     <>
       <button
         onClick={() => { setConfirmOpen(true); setError(null); }}
-        className="text-xs text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+        className="text-sm text-gray-500 hover:text-red-500 transition-colors cursor-pointer dark:text-gray-400"
         aria-label="Leave group"
       >
         Leave group
