@@ -273,7 +273,7 @@ export function AddMemberForm({
                 )}
 
                 {/* Reserved space for dropdown results — fixed height so modal doesn't resize */}
-                <div className="h-11 mt-2">
+                <div className="h-14 mt-2">
                   {showResults && !selectedUser && (
                     <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-700 overflow-hidden max-h-40 overflow-y-auto">
                       {results.length > 0 ? (
