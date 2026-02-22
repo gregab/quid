@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma/client";
 import CreateGroupButton from "./CreateGroupButton";
 
 // Deterministic emoji per group so it doesn't flicker
@@ -45,13 +44,16 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const memberships = await prisma.groupMember.findMany({
-    where: { userId: user.id },
-    include: { group: true },
-    orderBy: { group: { createdAt: "desc" } },
-  });
+  // Fetch groups the user is a member of, with the Group relation
+  const { data: memberships } = await supabase
+    .from("GroupMember")
+    .select("*, Group(*)")
+    .eq("userId", user.id);
 
-  const groups = memberships.map((m) => m.group);
+  // Sort by group createdAt descending (Supabase doesn't support ordering by joined relation)
+  const groups = (memberships ?? [])
+    .map((m) => m.Group!)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??

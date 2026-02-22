@@ -4,22 +4,19 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "test:e2e": "cypress run"
+    "test:e2e": "cypress run",
+    "db:types": "supabase gen types typescript --linked > lib/supabase/database.types.ts"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.4.1",
-    "@prisma/client": "^7.4.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
     "next": "16.1.6",
-    "pg": "^8.18.0",
-    "prisma": "^7.4.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^4.3.6"
@@ -29,7 +26,6 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
-    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
@@ -38,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "happy-dom": "^20.7.0",
+    "supabase": "^2.76.12",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"

@@ -4,7 +4,7 @@ export type ActivityLog = {
   id: string;
   action: string;
   payload: unknown;
-  createdAt: Date;
+  createdAt: Date | string;
   actor: { displayName: string };
   isPending?: boolean;
 };
@@ -29,9 +29,10 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatRelativeTime(date: Date): string {
+function formatRelativeTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
   const now = Date.now();
-  const diffMs = now - date.getTime();
+  const diffMs = now - d.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);
   const diffHours = Math.floor(diffMins / 60);
@@ -42,7 +43,7 @@ function formatRelativeTime(date: Date): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function formatNameList(names: string[]): string {

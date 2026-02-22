@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 
 const createGroupSchema = z.object({
@@ -29,15 +28,18 @@ export async function POST(request: NextRequest) {
 
   const { name } = parsed.data;
 
-  const group = await prisma.group.create({
-    data: {
-      name,
-      createdById: user.id,
-      members: {
-        create: { userId: user.id },
-      },
-    },
-  });
+  const { data: groupId, error } = await supabase.rpc("create_group", { _name: name });
+
+  if (error) {
+    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  }
+
+  // Fetch the created group to return it
+  const { data: group } = await supabase
+    .from("Group")
+    .select("*")
+    .eq("id", groupId)
+    .single();
 
   return NextResponse.json({ data: group, error: null }, { status: 201 });
 }
@@ -52,12 +54,14 @@ export async function GET() {
     return NextResponse.json({ data: null, error: "Unauthorized" }, { status: 401 });
   }
 
-  const memberships = await prisma.groupMember.findMany({
-    where: { userId: user.id },
-    include: { group: true },
-    orderBy: { group: { createdAt: "desc" } },
-  });
+  const { data: memberships } = await supabase
+    .from("GroupMember")
+    .select("*, Group(*)")
+    .eq("userId", user.id);
 
-  const groups = memberships.map((m) => m.group);
+  const groups = (memberships ?? [])
+    .map((m) => m.Group!)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
   return NextResponse.json({ data: groups, error: null });
 }

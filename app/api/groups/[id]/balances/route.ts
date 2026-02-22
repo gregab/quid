@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 import { simplifyDebts } from "@/lib/balances/simplify";
 
@@ -19,30 +18,36 @@ export async function GET(
   const { id: groupId } = await params;
 
   // Verify the requesting user is a member
-  const isMember = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId: user.id } },
-  });
+  const { data: isMember } = await supabase
+    .from("GroupMember")
+    .select("id")
+    .eq("groupId", groupId)
+    .eq("userId", user.id)
+    .maybeSingle();
 
   if (!isMember) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
   }
 
-  const [members, expenses] = await Promise.all([
-    prisma.groupMember.findMany({
-      where: { groupId },
-      include: { user: true },
-    }),
-    prisma.expense.findMany({
-      where: { groupId },
-      include: { splits: true },
-    }),
+  const [membersResult, expensesResult] = await Promise.all([
+    supabase
+      .from("GroupMember")
+      .select("*, User(*)")
+      .eq("groupId", groupId),
+    supabase
+      .from("Expense")
+      .select("*, ExpenseSplit(*)")
+      .eq("groupId", groupId),
   ]);
 
-  const userMap = new Map(members.map((m) => [m.userId, m.user]));
+  const members = membersResult.data ?? [];
+  const expenses = expensesResult.data ?? [];
+
+  const userMap = new Map(members.map((m) => [m.userId, m.User!]));
 
   // Build raw debts: each split creates a debt from the split user to the payer
   const rawDebts = expenses.flatMap((expense) =>
-    expense.splits
+    (expense.ExpenseSplit ?? [])
       .filter((split) => split.userId !== expense.paidById)
       .map((split) => ({
         from: split.userId,

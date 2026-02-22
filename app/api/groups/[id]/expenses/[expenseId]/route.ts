@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 
 const updateExpenseSchema = z.object({
@@ -26,30 +25,35 @@ export async function PUT(
 
   const { id: groupId, expenseId } = await params;
 
-  // Fetch expense with group, current members (needed to recompute splits), paidBy, and splits (needed to diff participants)
-  const expense = await prisma.expense.findUnique({
-    where: { id: expenseId },
-    include: {
-      paidBy: { select: { displayName: true } },
-      splits: {
-        include: { user: { select: { id: true, displayName: true } } },
-      },
-      group: {
-        include: {
-          members: {
-            include: { user: { select: { displayName: true } } },
-            orderBy: { joinedAt: "asc" },
-          },
-        },
-      },
-    },
-  });
+  // Fetch expense with paidBy user
+  const { data: expense } = await supabase
+    .from("Expense")
+    .select("*, User!paidById(displayName)")
+    .eq("id", expenseId)
+    .single();
 
   if (!expense || expense.groupId !== groupId) {
     return NextResponse.json({ data: null, error: "Expense not found" }, { status: 404 });
   }
 
-  const isMember = expense.group.members.some((m) => m.userId === user.id);
+  // Fetch splits with user display names
+  const { data: splits } = await supabase
+    .from("ExpenseSplit")
+    .select("userId, amountCents, User(id, displayName)")
+    .eq("expenseId", expenseId);
+
+  // Fetch group members
+  const { data: allMembers } = await supabase
+    .from("GroupMember")
+    .select("userId, User(displayName)")
+    .eq("groupId", groupId)
+    .order("joinedAt", { ascending: true });
+
+  if (!allMembers) {
+    return NextResponse.json({ data: null, error: "Group not found" }, { status: 404 });
+  }
+
+  const isMember = allMembers.some((m) => m.userId === user.id);
   if (!isMember) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
   }
@@ -66,7 +70,6 @@ export async function PUT(
 
   const { description, amountCents, date, paidById: rawPaidById, participantIds: rawParticipantIds } = parsed.data;
 
-  const allMembers = expense.group.members;
   const memberIds = new Set(allMembers.map((m) => m.userId));
 
   const newPaidById = rawPaidById ?? expense.paidById;
@@ -85,16 +88,6 @@ export async function PUT(
     participants = allMembers.filter((m) => rawParticipantIds.includes(m.userId));
   }
 
-  // Recompute equal splits among participants, distributing remainder 1 cent at a time
-  const participantCount = participants.length;
-  const baseAmount = Math.floor(amountCents / participantCount);
-  const remainder = amountCents % participantCount;
-
-  const splitData = participants.map((member, i) => ({
-    userId: member.userId,
-    amountCents: baseAmount + (i < remainder ? 1 : 0),
-  }));
-
   // Detect what changed for the activity log
   const changes: {
     amount?: { from: number; to: number };
@@ -110,56 +103,50 @@ export async function PUT(
   if (expense.description !== description) {
     changes.description = { from: expense.description, to: description };
   }
-  const oldDateStr = expense.date.toISOString().split("T")[0];
+  // Supabase returns dates as ISO strings — extract YYYY-MM-DD
+  const oldDateStr = expense.date.split("T")[0];
   if (oldDateStr !== date) {
     changes.date = { from: oldDateStr, to: date };
   }
   if (expense.paidById !== newPaidById) {
-    changes.paidBy = { from: expense.paidBy.displayName, to: newPaidByMember.user.displayName };
+    changes.paidBy = { from: expense.User!.displayName, to: newPaidByMember.User!.displayName };
   }
-  const oldParticipantIds = new Set(expense.splits.map((s) => s.userId));
+  const oldParticipantIds = new Set((splits ?? []).map((s) => s.userId));
   const newParticipantIds = new Set(participants.map((m) => m.userId));
   const addedParticipants = participants
     .filter((m) => !oldParticipantIds.has(m.userId))
-    .map((m) => m.user.displayName);
-  const removedParticipants = expense.splits
+    .map((m) => m.User!.displayName);
+  const removedParticipants = (splits ?? [])
     .filter((s) => !newParticipantIds.has(s.userId))
-    .map((s) => s.user.displayName);
+    .map((s) => s.User!.displayName);
   if (addedParticipants.length > 0 || removedParticipants.length > 0) {
     changes.participants = { added: addedParticipants, removed: removedParticipants };
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.expense.update({
-      where: { id: expenseId },
-      data: { description, amountCents, date: new Date(date), paidById: newPaidById },
-    });
+  const participantIds = participants.map((m) => m.userId);
 
-    await tx.expenseSplit.deleteMany({ where: { expenseId } });
-    await tx.expenseSplit.createMany({
-      data: splitData.map((s) => ({
-        expenseId,
-        userId: s.userId,
-        amountCents: s.amountCents,
-      })),
-    });
-
-    await tx.activityLog.create({
-      data: {
-        groupId,
-        actorId: user.id,
-        action: "expense_edited",
-        payload: {
-          description,
-          amountCents,
-          paidByDisplayName: newPaidByMember.user.displayName,
-          changes,
-        },
-      },
-    });
-
-    return result;
+  const { error } = await supabase.rpc("update_expense", {
+    _expense_id: expenseId,
+    _group_id: groupId,
+    _description: description,
+    _amount_cents: amountCents,
+    _date: date,
+    _paid_by_id: newPaidById,
+    _participant_ids: participantIds,
+    _paid_by_display_name: newPaidByMember.User!.displayName,
+    _changes: changes,
   });
+
+  if (error) {
+    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  }
+
+  // Fetch the updated expense to return it
+  const { data: updated } = await supabase
+    .from("Expense")
+    .select("*")
+    .eq("id", expenseId)
+    .single();
 
   return NextResponse.json({ data: updated, error: null });
 }
@@ -180,40 +167,39 @@ export async function DELETE(
   const { id: groupId, expenseId } = await params;
 
   // Fetch expense with paidBy for activity log payload
-  const expense = await prisma.expense.findUnique({
-    where: { id: expenseId },
-    include: { paidBy: { select: { displayName: true } } },
-  });
+  const { data: expense } = await supabase
+    .from("Expense")
+    .select("*, User!paidById(displayName)")
+    .eq("id", expenseId)
+    .single();
 
   if (!expense || expense.groupId !== groupId) {
     return NextResponse.json({ data: null, error: "Expense not found" }, { status: 404 });
   }
 
   // Verify user is a member of the group
-  const membership = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId: user.id } },
-  });
+  const { data: membership } = await supabase
+    .from("GroupMember")
+    .select("id")
+    .eq("groupId", groupId)
+    .eq("userId", user.id)
+    .maybeSingle();
 
   if (!membership) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.activityLog.create({
-      data: {
-        groupId,
-        actorId: user.id,
-        action: "expense_deleted",
-        payload: {
-          description: expense.description,
-          amountCents: expense.amountCents,
-          paidByDisplayName: expense.paidBy.displayName,
-        },
-      },
-    });
-
-    await tx.expense.delete({ where: { id: expenseId } });
+  const { error } = await supabase.rpc("delete_expense", {
+    _expense_id: expenseId,
+    _group_id: groupId,
+    _description: expense.description,
+    _amount_cents: expense.amountCents,
+    _paid_by_display_name: expense.User!.displayName,
   });
+
+  if (error) {
+    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ data: null, error: null });
 }

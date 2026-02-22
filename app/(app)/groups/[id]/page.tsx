@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma/client";
 import { AddMemberForm } from "./AddMemberForm";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
@@ -23,49 +22,61 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   if (!user) redirect("/login");
 
-  const [group, activityLogs] = await Promise.all([
-    prisma.group.findUnique({
-      where: { id },
-      include: {
-        members: {
-          include: { user: true },
-          orderBy: { joinedAt: "asc" },
-        },
-        expenses: {
-          include: { paidBy: true, splits: true },
-          orderBy: { date: "desc" },
-        },
-      },
-    }),
-    prisma.activityLog.findMany({
-      where: { groupId: id },
-      include: { actor: { select: { displayName: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-  ]);
+  // Fetch group with members (and their User data)
+  const { data: group } = await supabase
+    .from("Group")
+    .select("*, GroupMember(*, User(*))")
+    .eq("id", id)
+    .single();
 
   if (!group) redirect("/dashboard");
 
-  const isMember = group.members.some((m) => m.userId === user.id);
+  // Sort members by joinedAt
+  const groupMembers = (group.GroupMember ?? []).sort(
+    (a, b) => a.joinedAt.localeCompare(b.joinedAt)
+  );
+
+  const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
-  const currentMember = group.members.find((m) => m.userId === user.id);
-  const currentUserDisplayName = currentMember?.user.displayName ?? user.email ?? "You";
+  // Fetch expenses with paidBy user and splits
+  const { data: expenses } = await supabase
+    .from("Expense")
+    .select("*, User!paidById(*), ExpenseSplit(*)")
+    .eq("groupId", id)
+    .order("date", { ascending: false });
 
-  const members: Member[] = group.members.map((m) => ({
-    userId: m.userId,
-    displayName: m.user.displayName,
+  // Fetch activity logs with actor
+  const { data: activityLogs } = await supabase
+    .from("ActivityLog")
+    .select("*, User!actorId(displayName)")
+    .eq("groupId", id)
+    .order("createdAt", { ascending: false })
+    .limit(50);
+
+  // Transform activity logs to match the shape expected by GroupInteractive
+  // (Prisma returned { actor: { displayName } }, Supabase returns { User: { displayName } })
+  const transformedLogs = (activityLogs ?? []).map((log) => ({
+    ...log,
+    actor: log.User!,
   }));
 
-  const initialExpenses: ExpenseRow[] = group.expenses.map((expense) => ({
+  const currentMember = groupMembers.find((m) => m.userId === user.id);
+  const currentUserDisplayName = currentMember?.User?.displayName ?? user.email ?? "You";
+
+  const members: Member[] = groupMembers.map((m) => ({
+    userId: m.userId,
+    displayName: m.User!.displayName,
+  }));
+
+  const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => ({
     id: expense.id,
     description: expense.description,
     amountCents: expense.amountCents,
-    date: expense.date.toISOString().split("T")[0]!,
+    date: expense.date.split("T")[0]!,
     paidById: expense.paidById,
-    paidByDisplayName: expense.paidBy.displayName,
-    participantIds: expense.splits.map((s) => s.userId),
+    paidByDisplayName: expense.User!.displayName,
+    participantIds: (expense.ExpenseSplit ?? []).map((s) => s.userId),
     canEdit: isMember,
     canDelete: isMember,
   }));
@@ -87,10 +98,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Member chips */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {group.members.map((m, i) => (
+          {groupMembers.map((m, i) => (
             <div
               key={m.id}
-              title={m.user.email ?? undefined}
+              title={m.User?.email ?? undefined}
               className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 m.userId === user.id
                   ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
@@ -98,7 +109,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               }`}
             >
               <span className="text-sm leading-none">{MEMBER_EMOJIS[i % MEMBER_EMOJIS.length]}</span>
-              <span>{m.user.displayName}</span>
+              <span>{m.User!.displayName}</span>
               {m.userId === user.id && <span className="opacity-50">· you</span>}
             </div>
           ))}
@@ -116,7 +127,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         currentUserId={user.id}
         currentUserDisplayName={currentUserDisplayName}
         initialExpenses={initialExpenses}
-        initialLogs={activityLogs}
+        initialLogs={transformedLogs}
         members={members}
       />
     </div>

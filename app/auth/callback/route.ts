@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma/client";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -12,21 +11,20 @@ export async function GET(request: Request) {
       data: { user },
     } = await supabase.auth.exchangeCodeForSession(code);
 
-    // Ensure a User row exists in Prisma as soon as the email is confirmed.
+    // Ensure a User row exists as soon as the email is confirmed.
     // Without this, the user can't be added as a group member until they've
     // visited the app at least once (which triggers the upsert in app layout).
     if (user) {
-      await prisma.user.upsert({
-        where: { id: user.id },
-        create: {
+      await supabase.from("User").upsert(
+        {
           id: user.id,
           email: user.email!,
           displayName:
             (user.user_metadata?.display_name as string | undefined) ??
             user.email!.split("@")[0]!,
         },
-        update: {},
-      });
+        { onConflict: "id", ignoreDuplicates: true }
+      );
     }
   }
 

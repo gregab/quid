@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 
 const createExpenseSchema = z.object({
@@ -26,12 +25,16 @@ export async function POST(
 
   const { id: groupId } = await params;
 
-  // Verify the requesting user is a member of the group
-  const members = await prisma.groupMember.findMany({
-    where: { groupId },
-    include: { user: { select: { displayName: true } } },
-    orderBy: { joinedAt: "asc" },
-  });
+  // Fetch group members (also verifies group exists)
+  const { data: members } = await supabase
+    .from("GroupMember")
+    .select("userId, User(displayName)")
+    .eq("groupId", groupId)
+    .order("joinedAt", { ascending: true });
+
+  if (!members || members.length === 0) {
+    return NextResponse.json({ data: null, error: "Group not found" }, { status: 404 });
+  }
 
   const isMember = members.some((m) => m.userId === user.id);
   if (!isMember) {
@@ -70,50 +73,28 @@ export async function POST(
     }
   }
 
-  // Compute equal splits among participants, distributing remainder 1 cent at a time
-  const participantCount = participants.length;
-  const baseAmount = Math.floor(amountCents / participantCount);
-  const remainder = amountCents % participantCount;
+  const participantIds = participants.map((m) => m.userId);
 
-  const splitData = participants.map((member, i) => ({
-    userId: member.userId,
-    amountCents: baseAmount + (i < remainder ? 1 : 0),
-  }));
-
-  const expense = await prisma.$transaction(async (tx) => {
-    const created = await tx.expense.create({
-      data: {
-        groupId,
-        paidById,
-        description,
-        amountCents,
-        date: new Date(date),
-      },
-    });
-
-    await tx.expenseSplit.createMany({
-      data: splitData.map((s) => ({
-        expenseId: created.id,
-        userId: s.userId,
-        amountCents: s.amountCents,
-      })),
-    });
-
-    await tx.activityLog.create({
-      data: {
-        groupId,
-        actorId: user.id,
-        action: "expense_added",
-        payload: {
-          description,
-          amountCents,
-          paidByDisplayName: paidByMember.user.displayName,
-        },
-      },
-    });
-
-    return created;
+  const { data: expenseId, error } = await supabase.rpc("create_expense", {
+    _group_id: groupId,
+    _description: description,
+    _amount_cents: amountCents,
+    _date: date,
+    _paid_by_id: paidById,
+    _participant_ids: participantIds,
+    _paid_by_display_name: paidByMember.User!.displayName,
   });
+
+  if (error) {
+    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  }
+
+  // Fetch the created expense to return it
+  const { data: expense } = await supabase
+    .from("Expense")
+    .select("*")
+    .eq("id", expenseId)
+    .single();
 
   return NextResponse.json({ data: expense, error: null }, { status: 201 });
 }

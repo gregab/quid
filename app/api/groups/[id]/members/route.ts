@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 
 const addMemberSchema = z.object({
@@ -23,9 +22,12 @@ export async function POST(
   const { id: groupId } = await params;
 
   // Verify the requesting user is a member of the group
-  const requestingMember = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId: user.id } },
-  });
+  const { data: requestingMember } = await supabase
+    .from("GroupMember")
+    .select("id")
+    .eq("groupId", groupId)
+    .eq("userId", user.id)
+    .maybeSingle();
 
   if (!requestingMember) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
@@ -44,7 +46,11 @@ export async function POST(
   const { email } = parsed.data;
 
   // Look up the user by email
-  const targetUser = await prisma.user.findUnique({ where: { email } });
+  const { data: targetUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   if (!targetUser) {
     return NextResponse.json(
@@ -54,9 +60,12 @@ export async function POST(
   }
 
   // Check if already a member
-  const existing = await prisma.groupMember.findUnique({
-    where: { groupId_userId: { groupId, userId: targetUser.id } },
-  });
+  const { data: existing } = await supabase
+    .from("GroupMember")
+    .select("id")
+    .eq("groupId", groupId)
+    .eq("userId", targetUser.id)
+    .maybeSingle();
 
   if (existing) {
     return NextResponse.json(
@@ -65,10 +74,15 @@ export async function POST(
     );
   }
 
-  const member = await prisma.groupMember.create({
-    data: { groupId, userId: targetUser.id },
-    include: { user: true },
-  });
+  const { data: member, error } = await supabase
+    .from("GroupMember")
+    .insert({ groupId, userId: targetUser.id })
+    .select("*, User(*)")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  }
 
   return NextResponse.json({ data: member, error: null }, { status: 201 });
 }

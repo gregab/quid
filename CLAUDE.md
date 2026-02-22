@@ -2,7 +2,7 @@
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 
-**Tech:** Next.js 16 (App Router, React 19, TS strict), Prisma 7, Supabase Auth, Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/quid`.
+**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/quid`.
 
 ## Workflow
 
@@ -13,13 +13,16 @@ For any change: understand the code first, make changes, write tests, run tests,
 ## Commands
 ```bash
 npm run dev                             # Dev server (localhost:3000/quid)
-npm run build                           # Production build (prisma generate + next build)
+npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
-npx prisma migrate dev                  # Run migrations
-npx prisma generate                     # Regenerate client → app/generated/prisma/
+npm run db:types                        # Regenerate Supabase types → lib/supabase/database.types.ts
 git push origin main                    # Deploy to production
 vercel logs --follow                    # Stream live production logs
+
+# Database migrations (via Supabase CLI)
+npx supabase db push                    # Apply migrations in supabase/migrations/
+npx supabase migration new <name>       # Create new migration file
 
 # E2E tests (requires: npm run dev running in another terminal)
 npm run cy:open                         # Cypress interactive GUI
@@ -38,8 +41,8 @@ npm run cy:run                          # Cypress headless (CI)
 | **Members** (add/list) | `AddMemberForm.tsx` (in `app/(app)/groups/[id]/`), `app/api/groups/[id]/members/route.ts` |
 | **Balance/debt calculation** | `lib/balances/simplify.ts` (pure function, zero deps, 14 tests) |
 | **API routes** | `app/api/groups/` — see ARCHITECTURE.md for full route reference |
-| **Database schema** | `prisma/schema.prisma` (6 models), then `npx prisma migrate dev` |
-| **Database connection** | `lib/prisma/client.ts` (singleton, SSL config, adapter pattern) |
+| **Database schema / RLS / RPC** | `supabase/migrations/`, then `npx supabase db push` + `npm run db:types` |
+| **Supabase types** | `lib/supabase/database.types.ts` (auto-generated, don't edit manually) |
 | **Shared UI components** | `components/ui/Button.tsx`, `Card.tsx`, `Input.tsx` |
 | **Nav bar** | `components/Nav.tsx` |
 | **Auth middleware** (route protection) | `proxy.ts` (**not** `middleware.ts` — Next.js 16 convention) |
@@ -52,17 +55,17 @@ npm run cy:run                          # Cypress headless (CI)
 2. **Auth middleware is `proxy.ts`**, not `middleware.ts`
 3. **Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`** — causes CORS bugs. Use root-relative paths: `fetch(\`/quid/api/...\`)`
 4. **Money is always integers (cents).** Never floats. Display formatting converts at UI layer.
-5. **Prisma import**: `import { prisma } from "@/lib/prisma/client"` (named export)
-6. **Auth = Supabase, Data = Prisma.** Never query data through Supabase JS client.
-7. **`pg.Pool` must be created with `max: 1`** in `lib/prisma/client.ts`. Each serverless function instance should hold at most one connection to the transaction pooler. Tested in `lib/prisma/client.test.ts`.
-8. **`DATABASE_URL` = transaction pooler, `DIRECT_URL` = direct connection.** Runtime queries go through the pooler (port 6543). Only migrations use the direct connection (port 5432). Never swap these.
+5. **Supabase returns dates as ISO strings**, not `Date` objects. No `.toISOString()` needed — use `.split("T")[0]` directly.
+6. **Supabase relation names match table names**, not Prisma relation names. E.g. `expense.User` (not `expense.paidBy`), `member.User` (not `member.user`), `expense.ExpenseSplit` (not `expense.splits`).
+7. **Atomic mutations use RPC functions** (`create_expense`, `update_expense`, `delete_expense`, `create_group`). These are `SECURITY DEFINER` PL/pgSQL functions that bypass RLS and do their own auth checks.
+8. **RLS is enabled on all 6 tables.** The `is_group_member()` helper checks membership via `auth.uid()`. All table access through the JS client is scoped by RLS policies automatically.
 
 ## Security Rules
-- SSL cert verification always enabled (`rejectUnauthorized: true`)
 - All API routes verify Supabase session server-side
-- All queries scope to authenticated user's groups (never return other users' data)
+- RLS policies enforce data access at the database layer (defense in depth)
 - Zod validates all input at API boundaries
-- No raw SQL with user input — Prisma parameterized queries only
+- No raw SQL with user input — Supabase parameterized queries only
+- RPC functions are `SECURITY DEFINER` with `SET search_path = public` to prevent search_path attacks
 
 ## Testing
 
@@ -72,7 +75,6 @@ npm run cy:run                          # Cypress headless (CI)
 ```
 lib/balances/simplify.test.ts                   — unit tests (debt simplification)
 lib/supabase/supabase.test.ts                   — env var + Supabase key validation
-lib/prisma/client.test.ts                       — pool config (max: 1) + singleton invariants
 app/(app)/groups/[id]/ExpensesList.test.tsx      — expense list rendering + interactions
 app/(app)/groups/[id]/ActivityFeed.test.tsx      — activity feed rendering
 app/(app)/groups/[id]/useActivityLogs.test.ts    — activity log hook
@@ -110,8 +112,6 @@ See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress d
 
 ## Environment Variables
 All in `.env.local` (see `.env.local.example`):
-- `DATABASE_URL` — Supabase transaction pooler URL (port 6543, used at runtime by serverless functions)
-- `DIRECT_URL` — Direct (non-pooled) Supabase Postgres connection string (port 5432, used only for migrations)
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, `http://localhost:3000/quid` in dev
