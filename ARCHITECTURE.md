@@ -120,8 +120,7 @@ ActivityLog
   groupId       String    → Group (cascade delete)
   actorId       String    → User
   action        String    // "expense_added" | "expense_edited" | "expense_deleted"
-  payload       Json      // { description, amountCents, previousAmountCents?, paidByDisplayName }
-                         //   previousAmountCents present on expense_edited when amount changed
+  payload       Json      // See "Activity Log System" section below for full payload shape
   createdAt     DateTime  @default(now())
 ```
 
@@ -250,6 +249,62 @@ The Prisma client is a module-level singleton. It creates a `pg.Pool` and passes
 **Atomic creation**: Every expense mutation (create, edit, delete) runs inside `prisma.$transaction()`, which handles the expense record, all split records, and the activity log entry in a single database transaction.
 
 **Payer selection**: The expense creator can choose any group member as the payer (defaults to self). Participant filtering lets you exclude members from the split.
+
+## Activity Log System
+
+The activity log records every expense mutation (add, edit, delete) with enough data to render a human-readable description without additional DB queries.
+
+### Files involved
+| File | Role |
+|---|---|
+| `app/api/groups/[id]/expenses/route.ts` | Creates `expense_added` log inside the expense creation transaction |
+| `app/api/groups/[id]/expenses/[expenseId]/route.ts` | Creates `expense_edited` and `expense_deleted` logs |
+| `app/(app)/groups/[id]/ActivityFeed.tsx` | Renders logs; contains `buildEditInfo()` for rich edit descriptions |
+| `app/(app)/groups/[id]/useActivityLogs.ts` | Hook: manages optimistic log state and server reconciliation |
+| `app/(app)/groups/[id]/ExpenseActions.tsx` | Computes and fires optimistic activity log entry on edit/delete |
+| `app/(app)/groups/[id]/GroupInteractive.tsx` | Wires `useActivityLogs` to both `ExpensesList` and `ActivityFeed` |
+
+### Payload shapes
+
+**`expense_added`** and **`expense_deleted`**:
+```json
+{ "description": "Dinner", "amountCents": 3000, "paidByDisplayName": "Alice" }
+```
+
+**`expense_edited`** (current format):
+```json
+{
+  "description": "Dinner",
+  "amountCents": 3000,
+  "paidByDisplayName": "Alice",
+  "changes": {
+    "amount":       { "from": 2500, "to": 3000 },
+    "date":         { "from": "2024-01-05", "to": "2024-01-06" },
+    "description":  { "from": "Old Name", "to": "New Name" },
+    "paidBy":       { "from": "Bob", "to": "Alice" },
+    "participants": { "added": ["Greg", "Alex"], "removed": ["Bob"] }
+  }
+}
+```
+Only the keys that actually changed are present. An empty `changes` object means nothing detectably changed. Old logs (before the `changes` key was added) have no `changes` field — `buildEditInfo()` handles this via backward-compat branch that checks `previousAmountCents`.
+
+### How edit logs are built in the API (PUT handler)
+The PUT handler fetches the expense with `paidBy`, `splits` (with user display names), and `group.members`. After parsing the request body and resolving new values, it compares old vs new fields to build the `changes` object, then writes it in the atomic transaction. Key detail: `expense.date` comes from Prisma as a `Date` object — convert to `"YYYY-MM-DD"` with `expense.date.toISOString().split("T")[0]` before comparing.
+
+### How edit logs are built optimistically in the client (ExpenseActions)
+`handleEdit()` in `ExpenseActions.tsx` computes the same `changes` object client-side by comparing the current `expense` prop against the form state. It uses `members` (the Member[] prop) to look up display names for participant ID diffs. Note: `expense.participantIds` can be empty when all members participate — use the same default logic as the form's initial state (`expense.participantIds.length > 0 ? expense.participantIds : members.map(m => m.userId)`).
+
+### Rendering (ActivityFeed)
+`buildEditInfo(payload)` returns `{ verbAndPrep, showExpenseName, detail }`:
+- **Single participant add**: `"added Greg to"` (preposition "to")
+- **Single participant remove**: `"removed Bob from"` (preposition "from")
+- **Mixed add+remove or any other combination**: preposition "on"
+- **Rename only**: `verbAndPrep = "renamed"`, `showExpenseName = false`, detail shows `"Old → New"`
+- **Multiple change types**: joined with `" and "` → `"changed the price and changed the date on"`
+- **No `changes` key (old logs)**: falls back to `"edited"` with old `previousAmountCents` logic
+
+### Prisma JSON type gotcha
+When writing to a `Json` field in Prisma, `Record<string, unknown>` is **not** assignable to `InputJsonValue`. Use a specific typed struct (all leaf values must be `string | number | boolean | string[] | ...`). See the `changes` variable in `expenses/[expenseId]/route.ts` for the pattern.
 
 ## Design Decisions
 
