@@ -1,5 +1,5 @@
 /**
- * Smoke tests for quid — run against production or a local dev server.
+ * Smoke tests for Aviary — run against production or a local dev server.
  *
  * Against production (default):
  *   npm test tests/smoke.test.ts
