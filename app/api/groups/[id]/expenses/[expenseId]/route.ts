@@ -26,10 +26,14 @@ export async function PUT(
 
   const { id: groupId, expenseId } = await params;
 
-  // Fetch expense with group and current members (needed to recompute splits)
+  // Fetch expense with group, current members (needed to recompute splits), paidBy, and splits (needed to diff participants)
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
     include: {
+      paidBy: { select: { displayName: true } },
+      splits: {
+        include: { user: { select: { id: true, displayName: true } } },
+      },
       group: {
         include: {
           members: {
@@ -91,6 +95,34 @@ export async function PUT(
     amountCents: baseAmount + (i < remainder ? 1 : 0),
   }));
 
+  // Detect what changed for the activity log
+  const changes: Record<string, unknown> = {};
+
+  if (expense.amountCents !== amountCents) {
+    changes.amount = { from: expense.amountCents, to: amountCents };
+  }
+  if (expense.description !== description) {
+    changes.description = { from: expense.description, to: description };
+  }
+  const oldDateStr = expense.date.toISOString().split("T")[0];
+  if (oldDateStr !== date) {
+    changes.date = { from: oldDateStr, to: date };
+  }
+  if (expense.paidById !== newPaidById) {
+    changes.paidBy = { from: expense.paidBy.displayName, to: newPaidByMember.user.displayName };
+  }
+  const oldParticipantIds = new Set(expense.splits.map((s) => s.userId));
+  const newParticipantIds = new Set(participants.map((m) => m.userId));
+  const addedParticipants = participants
+    .filter((m) => !oldParticipantIds.has(m.userId))
+    .map((m) => m.user.displayName);
+  const removedParticipants = expense.splits
+    .filter((s) => !newParticipantIds.has(s.userId))
+    .map((s) => s.user.displayName);
+  if (addedParticipants.length > 0 || removedParticipants.length > 0) {
+    changes.participants = { added: addedParticipants, removed: removedParticipants };
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.expense.update({
       where: { id: expenseId },
@@ -114,8 +146,8 @@ export async function PUT(
         payload: {
           description,
           amountCents,
-          previousAmountCents: expense.amountCents,
           paidByDisplayName: newPaidByMember.user.displayName,
+          changes,
         },
       },
     });

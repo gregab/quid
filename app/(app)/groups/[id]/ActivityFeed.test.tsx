@@ -126,3 +126,204 @@ describe("ActivityFeed — expense_edited amount display", () => {
     expect(screen.queryByText(/→/)).toBeNull();
   });
 });
+
+describe("ActivityFeed — expense_edited rich descriptions", () => {
+  it("shows 'changed the price on' for amount change", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              paidByDisplayName: "Alice",
+              changes: { amount: { from: 2500, to: 3000 } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/changed the price on/)).toBeDefined();
+    expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
+  });
+
+  it("shows 'changed the date on' for date change", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { date: { from: "2024-01-05", to: "2024-01-06" } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/changed the date on/)).toBeDefined();
+    expect(screen.getByText(/Jan 5 → Jan 6/)).toBeDefined();
+  });
+
+  it("shows 'added [name] to' for a single participant addition", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { participants: { added: ["Bob"], removed: [] } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/added Bob to/)).toBeDefined();
+  });
+
+  it("shows 'added [names] to' for multiple participant additions", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { participants: { added: ["Greg", "Alex"], removed: [] } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/added Greg and Alex to/)).toBeDefined();
+  });
+
+  it("shows 'removed [name] from' for a participant removal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { participants: { added: [], removed: ["Bob"] } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/removed Bob from/)).toBeDefined();
+  });
+
+  it("shows 'added X, removed Y on' when both adding and removing participants", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { participants: { added: ["Greg"], removed: ["Bob"] } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/added Greg, removed Bob on/)).toBeDefined();
+  });
+
+  it("shows 'renamed' with old→new names for a description-only change", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Uber",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { description: { from: "Taxi", to: "Uber" } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/renamed/)).toBeDefined();
+    expect(screen.getByText(/Taxi → Uber/)).toBeDefined();
+  });
+
+  it("shows 'changed the payer on' for a paidBy change", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: { paidBy: { from: "Bob", to: "Alice" } },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/changed the payer on/)).toBeDefined();
+    expect(screen.getByText(/Bob → Alice/)).toBeDefined();
+  });
+
+  it("combines multiple change types joined by 'and'", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              paidByDisplayName: "Alice",
+              changes: {
+                amount: { from: 2500, to: 3000 },
+                date: { from: "2024-01-05", to: "2024-01-06" },
+              },
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/changed the price and changed the date on/)).toBeDefined();
+    expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
+    expect(screen.getByText(/Jan 5 → Jan 6/)).toBeDefined();
+  });
+
+  it("falls back to 'edited' when changes object is empty", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 2500,
+              paidByDisplayName: "Alice",
+              changes: {},
+            },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("edited")).toBeDefined();
+  });
+});

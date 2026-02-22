@@ -90,13 +90,40 @@ export function ExpenseActions({
 
     const paidByDisplayName = paidByMember?.displayName ?? expense.paidByDisplayName;
 
+    // Compute what changed for the optimistic activity log
+    const changes: Record<string, unknown> = {};
+    if (expense.amountCents !== amountCents) {
+      changes.amount = { from: expense.amountCents, to: amountCents };
+    }
+    if (expense.description !== description) {
+      changes.description = { from: expense.description, to: description };
+    }
+    if (expense.date !== date) {
+      changes.date = { from: expense.date, to: date };
+    }
+    if (expense.paidById !== paidByUserId) {
+      const oldPayer = members.find((m) => m.userId === expense.paidById)?.displayName ?? expense.paidByDisplayName;
+      changes.paidBy = { from: oldPayer, to: paidByDisplayName };
+    }
+    const oldEffectiveIds = new Set(
+      expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId)
+    );
+    const addedIds = [...participantIds].filter((id) => !oldEffectiveIds.has(id));
+    const removedIds = [...oldEffectiveIds].filter((id) => !participantIds.has(id));
+    if (addedIds.length > 0 || removedIds.length > 0) {
+      changes.participants = {
+        added: addedIds.map((id) => members.find((m) => m.userId === id)?.displayName ?? id),
+        removed: removedIds.map((id) => members.find((m) => m.userId === id)?.displayName ?? id),
+      };
+    }
+
     // Optimistically update expense and activity log
     setEditOpen(false);
     onOptimisticUpdate(updatedExpense);
     onOptimisticActivity({
       id: `activity-pending-${Date.now()}`,
       action: "expense_edited",
-      payload: { description, amountCents, previousAmountCents: expense.amountCents, paidByDisplayName },
+      payload: { description, amountCents, paidByDisplayName, changes },
       createdAt: new Date(),
       actor: { displayName: currentUserDisplayName },
       isPending: true,
