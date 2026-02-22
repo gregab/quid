@@ -133,11 +133,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               {m.userId === user.id && <span className="opacity-50">· you</span>}
             </div>
           ))}
-          <AddMemberForm
-            groupId={group.id}
-            buttonClassName="!rounded-full !py-1 !px-2.5 !text-xs border-dashed"
-          />
-          <LeaveGroupButton groupId={group.id} />
+          <AddMemberForm groupId={group.id} />
         </div>
       </div>
 
@@ -151,6 +147,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         initialLogs={transformedLogs}
         members={members}
       />
+
+      <div className="pt-4">
+        <LeaveGroupButton groupId={group.id} />
+      </div>
     </div>
   );
 }

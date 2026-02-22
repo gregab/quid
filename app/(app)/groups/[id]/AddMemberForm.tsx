@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
-export function AddMemberForm({ groupId, buttonClassName }: { groupId: string; buttonClassName?: string }) {
+export function AddMemberForm({ groupId }: { groupId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -52,9 +52,12 @@ export function AddMemberForm({ groupId, buttonClassName }: { groupId: string; b
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)} className={buttonClassName ?? "text-sm"}>
+      <button
+        onClick={() => setOpen(true)}
+        className="rounded-full border border-dashed border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 dark:border-gray-600 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+      >
         + add member
-      </Button>
+      </button>
 
       {open && (
         <div
