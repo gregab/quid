@@ -196,6 +196,7 @@ export function AddExpenseForm({
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
+                  className="appearance-none"
                 />
               </div>
               <div>
