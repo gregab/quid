@@ -25,14 +25,15 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gregbigelow.com/aviary"),
+  metadataBase: new URL("https://www.gregbigelow.com/aviary"),
   title: "Aviary",
   description: "Expense splitting made simple",
   openGraph: {
     title: "Aviary",
     description: "Expense splitting made simple",
-    url: "https://gregbigelow.com/aviary",
+    url: "https://www.gregbigelow.com/aviary",
     siteName: "Aviary",
+    locale: "en_US",
     images: [
       {
         url: "/og-image.jpg",
@@ -47,7 +48,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Aviary",
     description: "Expense splitting made simple",
-    images: ["/og-image.jpg"],
+    images: [
+      {
+        url: "/og-image.jpg",
+        alt: "Aviary — Expense splitting made simple",
+      },
+    ],
   },
 };
 
