@@ -28,8 +28,9 @@ app/
       page.tsx                           # Group detail: fetches members, expenses, splits, activity logs
                                          #   via Prisma; computes balances; renders server HTML then hands
                                          #   interactive sections to GroupInteractive
-      GroupInteractive.tsx               # Client wrapper: combines ExpensesList + ActivityFeed,
-                                         #   passes server-fetched data as initial props
+      GroupInteractive.tsx               # Client wrapper: manages expense state, computes
+                                         #   optimistic balances, renders Balances section,
+                                         #   ExpensesList, and ActivityFeed
       ExpensesList.tsx                   # Renders expense cards with optimistic add/edit/delete;
                                          #   manages pending state and animations
       AddExpenseForm.tsx                 # Modal: description, amount, date, payer dropdown,
@@ -195,7 +196,7 @@ Browser → proxy.ts (auth check) → Page or Route Handler
 ## Client-Side Patterns
 
 ### Optimistic Updates
-The expense list and activity feed both use optimistic updates:
+The expense list, activity feed, and balances all use optimistic updates:
 
 1. User triggers action (add/edit/delete expense)
 2. Client immediately updates local state with `isPending: true` flag
@@ -205,18 +206,20 @@ The expense list and activity feed both use optimistic updates:
 
 Pending items render with fade animations. The `isPending` flag prevents user interaction with in-flight items.
 
-**Key files**: `ExpensesList.tsx` manages expense optimistic state. `useActivityLogs.ts` manages activity log optimistic state. `GroupInteractive.tsx` coordinates both.
+**Key files**: `ExpensesList.tsx` manages expense optimistic state and fires `onExpensesChange` callback after every state update. `GroupInteractive.tsx` holds `balancesExpenses` state (kept in sync via that callback) and recomputes simplified debts with `useMemo` — so balances update synchronously with expense changes, before the server responds. `useActivityLogs.ts` manages activity log optimistic state.
+
+**Client-side balance computation:** `GroupInteractive` replicates the server's equal-split formula (`base = floor(amountCents / n)`, remainder distributed 1 cent at a time to first N participants) to derive raw debts from `ExpenseRow[]`, then passes them through `simplifyDebts`. The result is approximate for existing expenses (split order may differ from DB creation order) but corrects to authoritative values after `router.refresh()`.
 
 ### Component Hierarchy (Group Detail Page)
 ```
 page.tsx (server)                    ← Fetches all data via Prisma
-  └─ GroupInteractive (client)       ← Manages expense + activity state
-       ├─ AddExpenseForm             ← Modal for new expenses
+  └─ GroupInteractive (client)       ← Manages expense, activity, and balance state
+       ├─ Balances section           ← Client-rendered; recomputes on every expense change
        ├─ ExpensesList               ← Renders expenses with optimistic updates
+       │    ├─ AddExpenseForm        ← Modal for new expenses
        │    └─ ExpenseActions (×N)   ← Edit/delete per expense
        └─ ActivityFeed               ← Renders activity log
   └─ AddMemberForm (client)          ← Separate: manages its own state
-  └─ Balances section (server HTML)  ← Static render of simplified debts
   └─ Members list (server HTML)      ← Static render of group members
 ```
 
