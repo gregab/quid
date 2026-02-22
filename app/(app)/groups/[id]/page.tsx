@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddMemberForm } from "./AddMemberForm";
+import { CopyInviteLinkButton } from "./CopyInviteLinkButton";
 import { LeaveGroupButton } from "./LeaveGroupButton";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
@@ -134,6 +135,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             </div>
           ))}
           <AddMemberForm groupId={group.id} existingMemberIds={groupMembers.map((m) => m.userId)} />
+          <CopyInviteLinkButton inviteToken={group.inviteToken} />
         </div>
       </div>
 

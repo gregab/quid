@@ -200,18 +200,21 @@ export type Database = {
           createdAt: string
           createdById: string
           id: string
+          inviteToken: string
           name: string
         }
         Insert: {
           createdAt?: string
           createdById: string
           id?: string
+          inviteToken?: string
           name: string
         }
         Update: {
           createdAt?: string
           createdById?: string
           id?: string
+          inviteToken?: string
           name?: string
         }
         Relationships: [
@@ -312,7 +315,9 @@ export type Database = {
         }
         Returns: undefined
       }
+      get_group_by_invite_token: { Args: { _token: string }; Returns: Json }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
+      join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }
       update_expense: {
         Args: {

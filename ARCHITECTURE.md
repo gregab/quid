@@ -186,7 +186,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 
 ### RPC Functions
 
-5 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally.
+7 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally.
 
 | Function | Purpose | Called from |
 |----------|---------|------------|
@@ -195,6 +195,8 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `update_expense(...)` | Updates expense + replaces splits + activity log | `PUT /api/groups/[id]/expenses/[expenseId]` |
 | `delete_expense(...)` | Activity log + deletes expense (cascade handles splits) | `DELETE /api/groups/[id]/expenses/[expenseId]` |
 | `leave_group(_group_id)` | Verifies membership, blocks if |balance| > $2, deletes member row, logs `member_left`, deletes group if last member | `DELETE /api/groups/[id]/members` |
+| `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
+| `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
 
 Split computation (integer division + remainder distribution) is replicated in PL/pgSQL to match the JS logic exactly.
 
@@ -237,6 +239,10 @@ Deletes an expense (via `delete_expense` RPC). Cascade delete handles splits.
 ### `GET /api/groups/[id]/balances`
 Computes simplified debts from all expenses and splits in the group. Uses the greedy algorithm in `lib/balances/simplify.ts`.
 - Returns: `{ data: [{ fromId, fromName, toId, toName, amountCents }] }`
+
+### `POST /api/invite/[token]/join`
+Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member).
+- Returns: `{ data: { groupId, alreadyMember }, error: null }`
 
 ## Data Flow
 

@@ -39,11 +39,13 @@ export async function proxy(request: NextRequest) {
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/groups") ||
-    pathname.startsWith("/settings");
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/invite");
 
   if (isAppRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
