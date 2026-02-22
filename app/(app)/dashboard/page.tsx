@@ -2,12 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
-// Deterministic emoji per group so it doesn't flicker
-function groupEmoji(id: string): string {
-  const emojis = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
-  const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % emojis.length;
-  return emojis[index];
-}
+// One emoji per group, assigned by list position (no duplicates)
+const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -79,14 +75,14 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {groups.map((group) => (
+            {groups.map((group, i) => (
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
                 className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-amber-500"
               >
                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
-                  {groupEmoji(group.id)}
+                  {GROUP_EMOJIS[i % GROUP_EMOJIS.length]}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</p>

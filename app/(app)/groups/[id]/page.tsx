@@ -7,9 +7,10 @@ import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
 // Unique emoji per member slot (by join order → guaranteed no duplicates within a group)
+// None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
   "🦊", "🐼", "🧙", "🦄", "🐬", "🦁", "🐙", "🐢", "🦝", "🐻",
-  "🦚", "🐺", "🐲", "🦈", "🐸", "🦇", "🐿️", "🐨", "🐯", "🦦",
+  "🐺", "🐲", "🦈", "🐸", "🦇", "🐿️", "🐨", "🐯", "🦦",
   "🦥", "🦔", "🐵", "🦋", "🐱",
 ];
 
