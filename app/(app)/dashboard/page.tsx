@@ -4,37 +4,10 @@ import CreateGroupButton from "./CreateGroupButton";
 
 // Deterministic emoji per group so it doesn't flicker
 function groupEmoji(id: string): string {
-  const emojis = ["🍕", "🏖️", "🏡", "🎉", "✈️", "🎮", "🍺", "🏔️", "🎸", "🚗", "🌮", "🎲", "🎭", "🏄", "🧳"];
+  const emojis = ["🌿", "🌞", "✨", "🏔️", "☁️", "🌊", "🍃", "🌸", "🌙", "🪴", "🌻", "🦋", "🌾", "🐚", "🌅"];
   const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % emojis.length;
   return emojis[index];
 }
-
-const STATUS_MESSAGES = [
-  "Reticulate expenses.",
-  "Propagate debt through the social graph.",
-  "Triangulate who ordered the appetizer.",
-  "Amortize friendship overhead.",
-  "Defragment the group ledger.",
-  "Assert fairness across all known dimensions.",
-  "Garbage collect unresolved tabs.",
-  "Enumerate the appetizer claimants.",
-  "Deprecate the spreadsheet.",
-  "Distribute remainder cents.",
-  "Collapse the superposition of who paid.",
-  "Solve for the path of least resentment.",
-  "Compute the moral hazard index.",
-  "Reduce the guilt surface area.",
-  "Traverse the expense graph depth-first.",
-  "Invert the obligation matrix.",
-  "Prune the liability tree.",
-  "Find the eigenvector of who owes what.",
-  "Decompose the guilt tensor.",
-  "Integrate generosity over time.",
-  "Project expenses onto the accountability plane.",
-  "Approximate the equilibrium.",
-  "Align incentives across the friendship graph.",
-  "Normalize the asymmetric gratitude field.",
-];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -60,23 +33,23 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ??
     "friend";
 
-  const statusMessage = STATUS_MESSAGES[Math.floor(Math.random() * STATUS_MESSAGES.length)]!;
-
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 sm:p-8 text-white shadow-xl">
-        {/* Decorative blobs */}
-        <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-14 -right-6 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
-        <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-64 -translate-x-1/2 rounded-full bg-violet-300/10 blur-2xl" />
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
+        {/* Bird painting background */}
+        <img
+          src="/quid/birds.jpg"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        {/* Warm overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
 
-        <div className="relative z-10">
-          <div className="mb-3 sm:mb-4 text-4xl sm:text-5xl">🤝</div>
-          <h1 className="mb-2 sm:mb-3 text-2xl sm:text-3xl font-black tracking-tight">
+        <div className="relative z-10 p-6 sm:p-8 pt-16 sm:pt-24">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
             Hey {displayName}.
           </h1>
-          <p className="text-xs sm:text-sm text-indigo-200/80 font-mono">{statusMessage}</p>
         </div>
       </div>
 
