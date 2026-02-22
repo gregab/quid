@@ -96,7 +96,13 @@ export async function PUT(
   }));
 
   // Detect what changed for the activity log
-  const changes: Record<string, unknown> = {};
+  const changes: {
+    amount?: { from: number; to: number };
+    date?: { from: string; to: string };
+    description?: { from: string; to: string };
+    paidBy?: { from: string; to: string };
+    participants?: { added: string[]; removed: string[] };
+  } = {};
 
   if (expense.amountCents !== amountCents) {
     changes.amount = { from: expense.amountCents, to: amountCents };
