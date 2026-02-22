@@ -7,9 +7,9 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 
 // Unique emoji per member slot (by join order → guaranteed no duplicates within a group)
 const MEMBER_EMOJIS = [
-  "🦉", "🐦", "🕊️", "🦅", "🪶", "🦆", "🐧", "🦜", "🦩", "🦢",
-  "🌙", "☀️", "⭐", "🌞", "✨", "🪴", "🌿", "🌾", "🍃", "🍀",
-  "☁️", "🏔️", "🌊", "⚡", "🐚",
+  "🦊", "🐼", "🧙", "🦄", "🐬", "🦁", "🐙", "🐢", "🦝", "🐻",
+  "🦚", "🐺", "🐲", "🦈", "🐸", "🦇", "🐿️", "🐨", "🐯", "🦦",
+  "🦥", "🦔", "🐵", "🦋", "🐱",
 ];
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
