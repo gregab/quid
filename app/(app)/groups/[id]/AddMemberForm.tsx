@@ -1,23 +1,161 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { createClient } from "@/lib/supabase/client";
 
-export function AddMemberForm({ groupId }: { groupId: string }) {
+interface UserResult {
+  id: string;
+  email: string;
+  displayName: string;
+}
+
+export function AddMemberForm({
+  groupId,
+  existingMemberIds,
+}: {
+  groupId: string;
+  existingMemberIds: string[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UserResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const search = useCallback(
+    async (q: string) => {
+      if (q.length < 2) {
+        setResults([]);
+        setShowDropdown(false);
+        return;
+      }
+
+      setSearching(true);
+      const supabase = createClient();
+      const escaped = q.replace(/%/g, "\\%").replace(/_/g, "\\_");
+
+      // Build the "not in" filter for existing members
+      const notInFilter =
+        existingMemberIds.length > 0
+          ? `(${existingMemberIds.join(",")})`
+          : null;
+
+      let queryBuilder = supabase
+        .from("User")
+        .select("id, email, displayName")
+        .or(`displayName.ilike.%${escaped}%,email.ilike.%${escaped}%`)
+        .limit(5);
+
+      if (notInFilter) {
+        queryBuilder = queryBuilder.not("id", "in", notInFilter);
+      }
+
+      const { data } = await queryBuilder;
+      setResults(data ?? []);
+      setShowDropdown(true);
+      setHighlightedIndex(-1);
+      setSearching(false);
+    },
+    [existingMemberIds],
+  );
+
+  function handleInputChange(value: string) {
+    setQuery(value);
+    setError(null);
+
+    if (selectedUser) {
+      setSelectedUser(null);
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(value), 300);
+  }
+
+  function selectUser(user: UserResult) {
+    setSelectedUser(user);
+    setQuery("");
+    setResults([]);
+    setShowDropdown(false);
+    setError(null);
+  }
+
+  function clearSelection() {
+    setSelectedUser(null);
+    setQuery("");
+    setError(null);
+    // Focus back on input after clearing
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!showDropdown || results.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev < results.length - 1 ? prev + 1 : 0,
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((prev) =>
+        prev > 0 ? prev - 1 : results.length - 1,
+      );
+    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+      e.preventDefault();
+      selectUser(results[highlightedIndex]!);
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+    }
+  }
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // Determine the email to submit
+    const email = selectedUser?.email ?? query.trim();
+
+    if (!email) {
+      setError("Please search for a user or enter an email address.");
+      return;
+    }
+
+    // Basic email validation for raw input (not selected from dropdown)
+    if (!selectedUser && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Please select a user from the search results or enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
-    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
+    const basePath = new URL(
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary",
+    ).pathname;
     const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,15 +175,22 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     }
 
     setOpen(false);
-    setEmail("");
-    setError(null);
+    resetState();
     router.refresh();
+  }
+
+  function resetState() {
+    setQuery("");
+    setResults([]);
+    setShowDropdown(false);
+    setSelectedUser(null);
+    setError(null);
+    setHighlightedIndex(-1);
   }
 
   function handleClose() {
     setOpen(false);
-    setEmail("");
-    setError(null);
+    resetState();
   }
 
   return (
@@ -60,28 +205,102 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       {open && (
         <div
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleClose();
+          }}
         >
           <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add a member</h2>
-              <p className="text-sm text-gray-400 mt-0.5">Invite someone by their email address.</p>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Add a member
+              </h2>
+              <p className="text-sm text-gray-400 mt-0.5">
+                Search by name or email address.
+              </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-                  Email address
+                <label
+                  htmlFor="memberSearch"
+                  className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300"
+                >
+                  Name or email
                 </label>
-                <Input
-                  id="memberEmail"
-                  type="email"
-                  required
-                  placeholder="flamingo@flamboyance.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+
+                {selectedUser ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                      {selectedUser.displayName}
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                        className="ml-0.5 hover:text-amber-600 dark:hover:text-amber-200 cursor-pointer"
+                        aria-label="Clear selection"
+                      >
+                        ×
+                      </button>
+                    </span>
+                    <span className="text-xs text-gray-400 truncate">
+                      {selectedUser.email}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="relative" ref={dropdownRef}>
+                    <input
+                      id="memberSearch"
+                      type="text"
+                      autoComplete="off"
+                      placeholder="Search by name or email…"
+                      value={query}
+                      onChange={(e) => handleInputChange(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => {
+                        if (results.length > 0) setShowDropdown(true);
+                      }}
+                      ref={inputRef}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+                    />
+
+                    {showDropdown && (
+                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700 overflow-hidden">
+                        {results.length > 0 ? (
+                          results.map((user, i) => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              className={`w-full px-3 py-2 text-left cursor-pointer transition-colors ${
+                                i === highlightedIndex
+                                  ? "bg-amber-50 dark:bg-amber-900/30"
+                                  : "hover:bg-gray-50 dark:hover:bg-gray-600"
+                              }`}
+                              onMouseEnter={() => setHighlightedIndex(i)}
+                              onClick={() => selectUser(user)}
+                            >
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {user.displayName}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                {user.email}
+                              </div>
+                            </button>
+                          ))
+                        ) : searching ? (
+                          <div className="px-3 py-2 text-sm text-gray-400">
+                            Searching…
+                          </div>
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-400">
+                            No users found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
               {error && <p className="text-sm text-red-600">{error}</p>}
+
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel

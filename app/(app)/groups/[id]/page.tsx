@@ -133,7 +133,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               {m.userId === user.id && <span className="opacity-50">· you</span>}
             </div>
           ))}
-          <AddMemberForm groupId={group.id} />
+          <AddMemberForm groupId={group.id} existingMemberIds={groupMembers.map((m) => m.userId)} />
         </div>
       </div>
 
