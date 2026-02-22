@@ -143,7 +143,7 @@ export default async function DashboardPage() {
             rel="noopener noreferrer"
             className="hover:text-amber-700 dark:hover:text-amber-400"
           >
-            Like Aviary? Buy this bird a coffee. ☕
+            Like Aviary? Buy me a coffee. 🙏
           </a>
         </p>
         <p>
