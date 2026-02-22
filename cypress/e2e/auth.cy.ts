@@ -18,6 +18,16 @@ describe("authentication", () => {
       cy.contains("No account?").should("be.visible");
     });
 
+    it("shows Google sign-in button on /login", () => {
+      cy.visit("/login");
+      cy.contains("Continue with Google").should("be.visible");
+    });
+
+    it("shows Google sign-in button on /signup", () => {
+      cy.visit("/signup");
+      cy.contains("Continue with Google").should("be.visible");
+    });
+
     it("redirects /dashboard to /login", () => {
       cy.visit("/dashboard", { failOnStatusCode: false });
       cy.url().should("include", "/login");
