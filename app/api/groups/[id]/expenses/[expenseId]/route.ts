@@ -114,6 +114,7 @@ export async function PUT(
         payload: {
           description,
           amountCents,
+          previousAmountCents: expense.amountCents,
           paidByDisplayName: newPaidByMember.user.displayName,
         },
       },

@@ -12,6 +12,7 @@ export type ActivityLog = {
 type Payload = {
   description?: string;
   amountCents?: number;
+  previousAmountCents?: number;
   paidByDisplayName?: string;
 };
 
@@ -56,6 +57,10 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
             const payload = log.payload as Payload;
             const verb = actionLabel(log.action);
             const hasAmount = typeof payload.amountCents === "number";
+            const amountChanged =
+              log.action === "expense_edited" &&
+              typeof payload.previousAmountCents === "number" &&
+              payload.previousAmountCents !== payload.amountCents;
 
             return (
               <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
@@ -66,7 +71,11 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                     <span className="font-medium">{payload.description}</span>
                   )}
                   {hasAmount && (
-                    <span className="text-gray-500"> ({formatCents(payload.amountCents!)})</span>
+                    <span className="text-gray-500">
+                      {" "}({amountChanged
+                        ? `${formatCents(payload.previousAmountCents!)} → ${formatCents(payload.amountCents!)}`
+                        : formatCents(payload.amountCents!)})
+                    </span>
                   )}
                 </p>
                 <span className="text-xs text-gray-400 shrink-0 mt-0.5">

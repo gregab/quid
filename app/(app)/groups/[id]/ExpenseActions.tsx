@@ -96,7 +96,7 @@ export function ExpenseActions({
     onOptimisticActivity({
       id: `activity-pending-${Date.now()}`,
       action: "expense_edited",
-      payload: { description, amountCents, paidByDisplayName },
+      payload: { description, amountCents, previousAmountCents: expense.amountCents, paidByDisplayName },
       createdAt: new Date(),
       actor: { displayName: currentUserDisplayName },
       isPending: true,

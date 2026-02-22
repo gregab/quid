@@ -112,7 +112,11 @@ export function ExpensesList({
   }, [router]);
 
   const handleOptimisticUpdate = useCallback((updated: ExpenseRow) => {
-    setExpenses((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+    setExpenses((prev) =>
+      prev
+        .map((e) => (e.id === updated.id ? updated : e))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
   }, []);
 
   const handleUpdateSettled = useCallback(() => {
