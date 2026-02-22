@@ -10,13 +10,11 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     setLoading(true);
 
     const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
@@ -38,8 +36,9 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       return;
     }
 
-    setSuccess(`${json.data?.user.displayName ?? email} added to the group.`);
+    setOpen(false);
     setEmail("");
+    setError(null);
     router.refresh();
   }
 
@@ -47,7 +46,6 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     setOpen(false);
     setEmail("");
     setError(null);
-    setSuccess(null);
   }
 
   return (
@@ -61,11 +59,14 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
 
       {open && (
         <div
-          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 dark:text-white">Add a member</h2>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add a member</h2>
+              <p className="text-sm text-gray-400 mt-0.5">Invite someone by their email address.</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
@@ -81,10 +82,9 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
                 />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-emerald-600">{success}</p>}
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>
-                  Close
+                  Cancel
                 </Button>
                 <Button type="submit" disabled={loading}>
                   {loading ? "Adding…" : "Add member"}

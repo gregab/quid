@@ -151,11 +151,14 @@ export function AddExpenseForm({
 
       {open && (
         <div
-          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl overflow-hidden dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 mb-4 dark:text-white">Add an expense</h2>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add an expense</h2>
+              <p className="text-sm text-gray-400 mt-0.5">Who paid for what?</p>
+            </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="expenseDescription" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
@@ -207,7 +210,7 @@ export function AddExpenseForm({
                   id="expensePaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>

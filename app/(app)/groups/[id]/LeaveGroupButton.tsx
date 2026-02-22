@@ -43,10 +43,10 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
 
       {confirmOpen && (
         <div
-          className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget && !loading) setConfirmOpen(false); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl overflow-hidden dark:bg-gray-800">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
             <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">Leave group?</h2>
             <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
               You&apos;ll no longer see this group or its expenses. If you&apos;re the last member, the group will be deleted.
