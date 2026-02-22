@@ -134,11 +134,23 @@ export default async function DashboardPage() {
         </p>
       )}
 
-      {/* Legal links */}
-      <div className="pb-4 text-center text-xs text-gray-400 dark:text-gray-500">
-        <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy Policy</Link>
-        <span className="mx-2">&middot;</span>
-        <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms of Service</Link>
+      {/* Support + Legal links */}
+      <div className="pb-4 text-center text-xs text-gray-400 dark:text-gray-500 space-y-1">
+        <p>
+          <a
+            href="https://buymeacoffee.com/gregbigelow"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-amber-700 dark:hover:text-amber-400"
+          >
+            Like Aviary? Buy this bird a coffee. ☕
+          </a>
+        </p>
+        <p>
+          <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy Policy</Link>
+          <span className="mx-2">&middot;</span>
+          <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );
