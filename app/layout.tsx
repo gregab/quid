@@ -25,8 +25,30 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://gregbigelow.com/aviary"),
   title: "Aviary",
   description: "Expense splitting made simple",
+  openGraph: {
+    title: "Aviary",
+    description: "Expense splitting made simple",
+    url: "https://gregbigelow.com/aviary",
+    siteName: "Aviary",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Aviary — Expense splitting made simple",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aviary",
+    description: "Expense splitting made simple",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({
