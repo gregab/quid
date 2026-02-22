@@ -86,8 +86,8 @@ export function AddExpenseForm({
       paidById: submittedPaidByUserId,
       paidByDisplayName,
       participantIds: submittedParticipantIds,
-      canEdit: submittedPaidByUserId === currentUserId,
-      canDelete: submittedPaidByUserId === currentUserId,
+      canEdit: true,
+      canDelete: true,
       isPending: true,
     });
 
