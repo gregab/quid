@@ -38,6 +38,7 @@ app/
       ExpenseActions.tsx                 # Per-expense edit/delete: inline buttons, edit modal,
                                          #   delete confirmation dialog
       AddMemberForm.tsx                  # Modal: add member by email; POSTs to members API
+      LeaveGroupButton.tsx               # Leave group: confirmation dialog, DELETE call, redirect
       ActivityFeed.tsx                   # Renders activity log entries with relative timestamps
       useActivityLogs.ts                 # Hook: manages activity log state with optimistic additions
                                          #   and server reconciliation
@@ -117,7 +118,7 @@ ActivityLog
   id            String    @id @default(uuid)
   groupId       String    → Group (cascade delete)
   actorId       String    → User
-  action        String    // "expense_added" | "expense_edited" | "expense_deleted"
+  action        String    // "expense_added" | "expense_edited" | "expense_deleted" | "member_left"
   payload       Json      // See "Activity Log System" section below for full payload shape
   createdAt     DateTime  @default(now())
 ```
@@ -178,14 +179,14 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 |-------|--------|--------|--------|--------|
 | **User** | Any authenticated user | Own record only | Own record only | — |
 | **Group** | Members only | Any authenticated | — | — |
-| **GroupMember** | Fellow group members | Group members | — | — |
+| **GroupMember** | Fellow group members | Group members | — | Self only (`userId = auth.uid()`) |
 | **Expense** | Group members | Group members | Group members | Group members |
 | **ExpenseSplit** | Via expense→group membership | Via expense→group membership | — | Via expense→group membership |
 | **ActivityLog** | Group members | Group members | — | — |
 
 ### RPC Functions
 
-4 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally.
+5 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally.
 
 | Function | Purpose | Called from |
 |----------|---------|------------|
@@ -193,6 +194,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `create_expense(...)` | Creates expense + splits + activity log | `POST /api/groups/[id]/expenses` |
 | `update_expense(...)` | Updates expense + replaces splits + activity log | `PUT /api/groups/[id]/expenses/[expenseId]` |
 | `delete_expense(...)` | Activity log + deletes expense (cascade handles splits) | `DELETE /api/groups/[id]/expenses/[expenseId]` |
+| `leave_group(_group_id)` | Verifies membership, blocks if |balance| > $2, deletes member row, logs `member_left`, deletes group if last member | `DELETE /api/groups/[id]/members` |
 
 Split computation (integer division + remainder distribution) is replicated in PL/pgSQL to match the JS logic exactly.
 
@@ -212,6 +214,10 @@ Creates a group and auto-adds the creator as a member (via `create_group` RPC).
 Adds a member by email. If the user doesn't exist yet (hasn't signed up), this will fail — the target must have an account.
 - Body: `{ email: string }`
 - Returns: 201, or 409 if already a member, 404 if user not found
+
+### `DELETE /api/groups/[id]/members`
+Leaves the group (self-removal via `leave_group` RPC). Blocked if the caller's absolute balance exceeds $2.
+- Returns: `{ data: { deletedGroup: boolean }, error: null }` — `deletedGroup` is true when the last member left
 
 ### `POST /api/groups/[id]/expenses`
 Creates an expense with equal split among participants (via `create_expense` RPC).
@@ -290,6 +296,7 @@ page.tsx (server)                    ← Fetches all data via Supabase
        │    └─ ExpenseActions (×N)   ← Edit/delete per expense
        └─ ActivityFeed               ← Renders activity log
   └─ AddMemberForm (client)          ← Separate: manages its own state
+  └─ LeaveGroupButton (client)       ← Confirmation dialog, DELETE call, redirect
   └─ Members list (server HTML)      ← Static render of group members
 ```
 
@@ -332,6 +339,11 @@ The activity log records every expense mutation (add, edit, delete) with enough 
 **`expense_added`** and **`expense_deleted`**:
 ```json
 { "description": "Dinner", "amountCents": 3000, "paidByDisplayName": "Alice" }
+```
+
+**`member_left`**:
+```json
+{ "displayName": "Alice" }
 ```
 
 **`expense_edited`** (current format):
@@ -395,8 +407,8 @@ Plan: Record settlements as special expenses (description = "Settlement", single
 ### Group deletion (not yet implemented)
 Plan: Hard delete. Cascade deletes handle all cleanup. No soft delete until audit trail is needed.
 
-### Member removal (not yet implemented)
-Plan: Block removal if member has non-zero balance. Self-removal allowed if debts are settled.
+### Member self-removal (leave group)
+Implemented via `leave_group` RPC. Members can leave if their absolute balance is ≤ $2 (200 cents). When the last member leaves, the group is cascade-deleted. Activity log records `member_left` with the leaver's display name.
 
 ## Testing
 

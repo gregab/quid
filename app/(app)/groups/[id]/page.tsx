@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddMemberForm } from "./AddMemberForm";
+import { LeaveGroupButton } from "./LeaveGroupButton";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
@@ -117,6 +118,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             groupId={group.id}
             buttonClassName="!rounded-full !py-1 !px-2.5 !text-xs border-dashed"
           />
+          <LeaveGroupButton groupId={group.id} />
         </div>
       </div>
 

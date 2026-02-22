@@ -66,6 +66,42 @@ describe("ActivityFeed", () => {
   });
 });
 
+describe("ActivityFeed — member_left", () => {
+  it("renders 'left the group' for member_left action", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "member_left",
+            payload: { displayName: "Alice" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("Alice")).toBeDefined();
+    expect(screen.getByText("left the group")).toBeDefined();
+  });
+
+  it("applies opacity class to pending member_left log", () => {
+    const { container } = render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            id: "pending-left",
+            action: "member_left",
+            payload: { displayName: "Bob" },
+            actor: { displayName: "Bob" },
+            isPending: true,
+          }),
+        ]}
+      />
+    );
+    const row = container.querySelector(".opacity-60");
+    expect(row, "pending member_left log should have opacity-60 class").not.toBeNull();
+  });
+});
+
 describe("ActivityFeed — expense_edited amount display", () => {
   it("shows old → new amount when the amount changed", () => {
     render(

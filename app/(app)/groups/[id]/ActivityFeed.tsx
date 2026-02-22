@@ -178,6 +178,20 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
               );
             }
 
+            if (log.action === "member_left") {
+              return (
+                <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
+                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <span className="font-semibold">{log.actor.displayName}</span>
+                    {" "}left the group
+                  </p>
+                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    {formatRelativeTime(log.createdAt)}
+                  </span>
+                </div>
+              );
+            }
+
             const verb =
               log.action === "expense_added" ? "added" :
               log.action === "expense_deleted" ? "deleted" :

@@ -17,6 +17,7 @@
 - Component tests: ExpensesList, ActivityFeed, useActivityLogs
 - Cypress E2E tests — auth, dashboard, group detail, navigation specs
 - **Migrate from Prisma to Supabase JS client** — RLS on all tables, RPC functions for atomic ops, removed Prisma/pg deps entirely
+- **Leave group** — Members can leave groups (blocked if |balance| > $2); last member leaving deletes the group
 
 ## In Progress
 <!-- Move items here when actively working on them -->
@@ -25,7 +26,7 @@
 
 ### P0: Core Gaps
 - **Delete groups** — `DELETE /api/groups/[id]`, creator-only, cascade handles cleanup
-- **Remove members** — `DELETE /api/groups/[id]/members/[userId]`, block if unsettled debts
+- ~~**Remove members** — `DELETE /api/groups/[id]/members/[userId]`, block if unsettled debts~~ ✓ Done (self-removal via "Leave group")
 - **Settle up** — Record payments as special expenses (description = "Settlement", single split to creditor)
 
 ### P1: UX Polish

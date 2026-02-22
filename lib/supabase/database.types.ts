@@ -313,6 +313,7 @@ export type Database = {
         Returns: undefined
       }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
+      leave_group: { Args: { _group_id: string }; Returns: Json }
       update_expense: {
         Args: {
           _amount_cents: number

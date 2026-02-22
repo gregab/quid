@@ -49,7 +49,7 @@ npm run cy:run                          # Cypress headless (CI)
 | **Group detail page** (layout, data fetching) | `app/(app)/groups/[id]/page.tsx` (server component — fetches all data) |
 | **Expenses** (list, add, edit, delete) | `ExpensesList.tsx`, `AddExpenseForm.tsx`, `ExpenseActions.tsx` (all in `app/(app)/groups/[id]/`) |
 | **Activity feed** | `ActivityFeed.tsx`, `useActivityLogs.ts` (in `app/(app)/groups/[id]/`) |
-| **Members** (add/list) | `AddMemberForm.tsx` (in `app/(app)/groups/[id]/`), `app/api/groups/[id]/members/route.ts` |
+| **Members** (add/list/leave) | `AddMemberForm.tsx`, `LeaveGroupButton.tsx` (in `app/(app)/groups/[id]/`), `app/api/groups/[id]/members/route.ts` |
 | **Balance/debt calculation** | `lib/balances/simplify.ts` (pure function, zero deps, 14 tests) |
 | **API routes** | `app/api/groups/` — see ARCHITECTURE.md for full route reference |
 | **Database schema / RLS / RPC** | `supabase/migrations/`, then `npx supabase db push` + `npm run db:types` |
