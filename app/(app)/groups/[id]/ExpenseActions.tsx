@@ -278,7 +278,7 @@ export function ExpenseActions({
                   id="editDescription"
                   type="text"
                   required
-                  placeholder="e.g. Dinner, Uber, Groceries"
+                  placeholder="e.g. Birdseed, Field Guide, Binoculars"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   autoFocus

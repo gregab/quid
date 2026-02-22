@@ -87,9 +87,9 @@ export default function SignupPage() {
           <div className="pointer-events-none absolute left-1/2 top-0 h-24 w-48 -translate-x-1/2 rounded-full bg-stone-300/10 blur-2xl" />
           <div className="relative z-10">
             <div className="mb-3 text-4xl">🪶</div>
-            <h1 className="mb-2 text-2xl font-black tracking-tight">Join the ledger.</h1>
+            <h1 className="mb-2 text-2xl font-black tracking-tight">Join the flock.</h1>
             <p className="font-mono text-xs text-stone-300/80">
-              A new node enters the expense graph.
+              A new bird joins the wire.
             </p>
           </div>
         </div>

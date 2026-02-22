@@ -165,7 +165,7 @@ export function AddExpenseForm({
                   id="expenseDescription"
                   type="text"
                   required
-                  placeholder="e.g. Dinner, Uber, Groceries"
+                  placeholder="e.g. Birdseed, Field Guide, Binoculars"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   autoFocus

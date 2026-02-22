@@ -151,7 +151,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
     <section>
       <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Activity</h2>
       {logs.length === 0 ? (
-        <p className="text-sm text-gray-400">No activity yet.</p>
+        <p className="text-sm text-gray-400">No wingbeats yet.</p>
       ) : (
         <Card className="divide-y divide-gray-100 dark:divide-gray-700">
           {logs.map((log) => {

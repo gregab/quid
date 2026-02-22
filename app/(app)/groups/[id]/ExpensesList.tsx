@@ -146,7 +146,7 @@ export function ExpensesList({
       </div>
 
       {expenses.length === 0 ? (
-        <p className="text-gray-400 text-sm">No expenses yet. Add one to get started.</p>
+        <p className="text-gray-400 text-sm">No expenses yet. Log the first forage.</p>
       ) : (
         <ul className="space-y-2">
           {expenses.map((expense) => (

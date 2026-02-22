@@ -72,7 +72,7 @@ export function AddMemberForm({ groupId, buttonClassName }: { groupId: string; b
                   id="memberEmail"
                   type="email"
                   required
-                  placeholder="friend@example.com"
+                  placeholder="flamingo@flamboyance.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
