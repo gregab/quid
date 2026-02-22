@@ -30,6 +30,6 @@ export async function GET(request: Request) {
 
   // Redirect to dashboard after confirming email.
   // Use NEXT_PUBLIC_SITE_URL so the redirect stays on the production domain.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary";
   return NextResponse.redirect(`${siteUrl}/dashboard`);
 }

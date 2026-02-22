@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/quid",
+      "destination": "/aviary",
       "permanent": true
     }
   ]

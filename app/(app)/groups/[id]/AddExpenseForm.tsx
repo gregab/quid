@@ -103,7 +103,7 @@ export function AddExpenseForm({
 
     setLoading(true);
 
-    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
     await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

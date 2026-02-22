@@ -47,7 +47,7 @@ describe("dashboard", () => {
     cy.contains(groupName).should("be.visible");
   });
 
-  it("group card links include the /quid basePath prefix", () => {
+  it("group card links include the /aviary basePath prefix", () => {
     // Create a group so there is definitely at least one card
     const groupName = `[cypress] BasePath ${Date.now()}`;
     cy.contains("+ New group").click();
@@ -55,11 +55,11 @@ describe("dashboard", () => {
     cy.contains("Create").click();
     cy.get(".modal-content").should("not.exist");
 
-    // The Link's rendered href must start with /quid/groups/
+    // The Link's rendered href must start with /aviary/groups/
     cy.contains(groupName)
       .closest("a")
       .should("have.attr", "href")
-      .and("match", /^\/quid\/groups\//);
+      .and("match", /^\/aviary\/groups\//);
   });
 
   it("clicking a group card navigates to the group detail page", () => {

@@ -5,7 +5,7 @@
  *   npm test tests/smoke.test.ts
  *
  * Against a local dev server (vercel dev or npm run dev):
- *   SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts
+ *   SMOKE_TEST_BASE_URL=http://localhost:3000/aviary npm test tests/smoke.test.ts
  *
  * Authenticated tests require these env vars in .env.local:
  *   SMOKE_TEST_EMAIL     — email of a real test account
@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 
-const BASE = process.env.SMOKE_TEST_BASE_URL ?? "https://www.gregbigelow.com/quid";
+const BASE = process.env.SMOKE_TEST_BASE_URL ?? "https://www.gregbigelow.com/aviary";
 const API = `${BASE}/api`;
 const isLocal = BASE.startsWith("http://localhost") || BASE.startsWith("http://127.");
 
@@ -135,15 +135,15 @@ describe.skipIf(skipAll)("auth-protected pages redirect unauthenticated users to
 });
 
 // ---------------------------------------------------------------------------
-// basePath sanity — routes must not exist at the root domain (without /quid)
+// basePath sanity — routes must not exist at the root domain (without /aviary)
 //
-// Next.js serves the app under basePath: "/quid". Client-side code that uses
+// Next.js serves the app under basePath: "/aviary". Client-side code that uses
 // raw fetch("/api/...") or <a href="/groups/..."> bypasses this and hits the
 // root domain instead. These tests verify that the root-level paths return
 // 404 so any regression immediately shows up as a broken client action.
 // ---------------------------------------------------------------------------
 
-describe.skipIf(skipAll || isLocal)("basePath sanity: routes only exist under /quid, not at root", () => {
+describe.skipIf(skipAll || isLocal)("basePath sanity: routes only exist under /aviary, not at root", () => {
   const ROOT = "https://www.gregbigelow.com";
 
   const rootPaths = [
@@ -251,7 +251,7 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       createdGroupId = body.data?.id;
     });
 
-    it("dashboard HTML group links contain /quid/ basePath prefix", async () => {
+    it("dashboard HTML group links contain /aviary/ basePath prefix", async () => {
       const res = await fetch(`${BASE}/dashboard`, {
         headers: { Cookie: authCookie },
         redirect: "follow",
@@ -264,10 +264,10 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       const groupHrefs = hrefs.filter((h) => /\/groups\/[0-9a-f-]{36}/.test(h));
 
       // If the dashboard shows groups (it will after the create test above),
-      // every group link must start with /quid/ — not /groups/ (bare path).
+      // every group link must start with /aviary/ — not /groups/ (bare path).
       if (groupHrefs.length > 0) {
         for (const href of groupHrefs) {
-          expect(href).toMatch(/^\/quid\/groups\//);
+          expect(href).toMatch(/^\/aviary\/groups\//);
         }
       }
     });

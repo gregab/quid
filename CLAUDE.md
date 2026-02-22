@@ -2,7 +2,7 @@
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 
-**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/quid`.
+**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/aviary`.
 
 ## Design Philosophy
 
@@ -23,7 +23,7 @@ For any change: understand the code first, make changes, write tests, run tests,
 
 ## Commands
 ```bash
-npm run dev                             # Dev server (localhost:3000/quid)
+npm run dev                             # Dev server (localhost:3000/aviary)
 npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
@@ -64,7 +64,7 @@ npm run cy:run                          # Cypress headless (CI)
 
 1. **`params` is a Promise** in Next.js 16: `const { id } = await params`
 2. **Auth middleware is `proxy.ts`**, not `middleware.ts`
-3. **Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`** — causes CORS bugs. Use root-relative paths: `fetch(\`/quid/api/...\`)`
+3. **Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`** — causes CORS bugs. Use root-relative paths: `fetch(\`/aviary/api/...\`)`
 4. **Money is always integers (cents).** Never floats. Display formatting converts at UI layer.
 5. **Supabase returns dates as ISO strings**, not `Date` objects. No `.toISOString()` needed — use `.split("T")[0]` directly.
 6. **Supabase relation names match table names**, not Prisma relation names. E.g. `expense.User` (not `expense.paidBy`), `member.User` (not `member.user`), `expense.ExpenseSplit` (not `expense.splits`).
@@ -125,7 +125,7 @@ See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress d
 All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
-- `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, `http://localhost:3000/quid` in dev
+- `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/aviary` in prod, `http://localhost:3000/aviary` in dev
 - `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for authenticated smoke tests + Cypress
 
 ## Reference Docs

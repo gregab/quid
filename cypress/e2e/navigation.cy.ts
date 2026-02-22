@@ -51,7 +51,7 @@ describe("navigation", () => {
   });
 
   it("404 paths outside basePath do not reach app routes", () => {
-    // /api/groups without /quid prefix should 404
+    // /api/groups without /aviary prefix should 404
     cy.request({
       method: "GET",
       url: "http://localhost:3000/api/groups",

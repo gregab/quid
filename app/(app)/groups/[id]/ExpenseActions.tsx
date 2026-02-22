@@ -47,7 +47,7 @@ export function ExpenseActions({
 
   if (!expense.canEdit && !expense.canDelete) return null;
 
-  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
 
   const parsedAmountCents = Math.round(parseFloat(amount) * 100);
   const originalParticipantIds = new Set(

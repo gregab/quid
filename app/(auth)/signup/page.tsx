@@ -24,7 +24,7 @@ export default function SignupPage() {
     }
 
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary";
     const { error } = await supabase.auth.signUp({
       email,
       password,

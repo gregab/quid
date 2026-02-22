@@ -53,7 +53,7 @@ export default async function DashboardPage() {
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
         {/* Bird painting background */}
         <img
-          src="/quid/birds.jpg"
+          src="/aviary/birds.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
