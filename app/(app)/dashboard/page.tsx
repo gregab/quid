@@ -2,8 +2,24 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
-// One emoji per group, assigned by list position (no duplicates)
 const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
+
+// Hash-based emoji assignment: each group gets a unique emoji derived from its ID.
+// Sorted by hash before assigning so collision resolution is stable regardless of input order.
+function assignGroupEmojis(groupIds: string[]): Map<string, string> {
+  const hash = (id: string) =>
+    id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const sorted = [...groupIds].sort((a, b) => hash(a) - hash(b));
+  const used = new Set<number>();
+  const result = new Map<string, string>();
+  for (const id of sorted) {
+    let idx = hash(id) % GROUP_EMOJIS.length;
+    while (used.has(idx)) idx = (idx + 1) % GROUP_EMOJIS.length;
+    used.add(idx);
+    result.set(id, GROUP_EMOJIS[idx]!);
+  }
+  return result;
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -28,6 +44,8 @@ export default async function DashboardPage() {
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "friend";
+
+  const emojiMap = assignGroupEmojis(groups.map((g) => g.id));
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -75,14 +93,14 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {groups.map((group, i) => (
+            {groups.map((group) => (
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
                 className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-amber-500"
               >
                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
-                  {GROUP_EMOJIS[i % GROUP_EMOJIS.length]}
+                  {emojiMap.get(group.id)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</p>
