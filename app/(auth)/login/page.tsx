@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const next = searchParams.get("next");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,59 +26,69 @@ function LoginForm() {
       setError(error.message);
       setLoading(false);
     } else {
-      const next = searchParams.get("next");
       router.push(next ?? "/dashboard");
       router.refresh();
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label
+            htmlFor="email"
+            className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+          >
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="password"
+            className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+          >
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+        </div>
+        {error && (
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600">{error}</p>
+        )}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-xl bg-stone-800 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-stone-700 disabled:opacity-50"
         >
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
-        />
-      </div>
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+          {loading ? "Signing in..." : "Sign in →"}
+        </button>
+      </form>
+      <p className="mt-5 text-center text-xs text-gray-400">
+        No account?{" "}
+        <Link
+          href={next ? `/signup?next=${encodeURIComponent(next)}` : "/signup"}
+          className="font-semibold text-stone-700 transition-colors hover:text-amber-700"
         >
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
-        />
-      </div>
-      {error && (
-        <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600">{error}</p>
-      )}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded-xl bg-stone-800 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-stone-700 disabled:opacity-50"
-      >
-        {loading ? "Signing in..." : "Sign in →"}
-      </button>
-    </form>
+          Sign up
+        </Link>
+      </p>
+    </>
   );
 }
 
@@ -105,15 +116,6 @@ export default function LoginPage() {
           <Suspense>
             <LoginForm />
           </Suspense>
-          <p className="mt-5 text-center text-xs text-gray-400">
-            No account?{" "}
-            <Link
-              href="/signup"
-              className="font-semibold text-stone-700 transition-colors hover:text-amber-700"
-            >
-              Sign up
-            </Link>
-          </p>
         </div>
       </div>
     </div>

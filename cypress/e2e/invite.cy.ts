@@ -1,17 +1,19 @@
 /**
  * Invite flow E2E tests.
  *
- * Covers unauthenticated redirects (with ?next= preservation), invalid-token
- * error UI, and the already-member server-side redirect.
+ * Covers unauthenticated redirects (with ?next= preservation), the ?next=
+ * forwarding through the signup link, invalid-token error UI, and the
+ * already-member server-side redirect.
  *
- * Note: testing the full "non-member joins via invite" flow requires a second
- * user account. That path is covered by unit tests in InviteJoinForm.test.tsx.
+ * New-user sign-up path: unauthenticated user visits /invite/[token] →
+ * redirected to /login?next=/invite/[token] → "Sign up" link carries ?next=
+ * to /signup?next=/invite/[token] → emailRedirectTo includes ?next= → after
+ * email confirmation the callback auto-joins the group and redirects to
+ * /groups/[id]. The email-confirmation step can't be exercised here; it's
+ * covered by unit tests in app/auth/callback/route.test.ts.
  *
- * Note: new users who don't yet have an account are redirected to /login with
- * ?next= preserved. The login page respects ?next= and returns them to the
- * invite page after sign-in. However, the "Sign up" link on the login page
- * does NOT forward ?next=, so users who sign up fresh lose the invite context
- * and land on /dashboard. This is a known limitation — see TODOS.md.
+ * Testing the full "non-member joins via invite" flow requires a second user
+ * account. That path is covered by unit tests in InviteJoinForm.test.tsx.
  *
  * Requires a running dev server: npm run dev
  * Requires cypress.env.json with SMOKE_TEST_EMAIL and SMOKE_TEST_PASSWORD.
@@ -24,6 +26,19 @@ describe("invite flow", () => {
       cy.url().should("include", "/login");
       cy.url().should("include", "next=");
       cy.url().should("include", "invite");
+    });
+
+    it("'Sign up' link on the login page forwards ?next= to the signup page", () => {
+      cy.visit("/invite/fake-token", { failOnStatusCode: false });
+      cy.url().should("include", "/login");
+
+      // The signup link must carry the same ?next= so new users end up back
+      // at the invite page (and get auto-joined) after email confirmation.
+      cy.contains("Sign up")
+        .should("have.attr", "href")
+        .and("include", "/signup")
+        .and("include", "next=")
+        .and("include", "invite");
     });
 
     it("returns to the invite page after logging in via the ?next= redirect", () => {
