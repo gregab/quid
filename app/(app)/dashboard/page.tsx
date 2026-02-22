@@ -133,6 +133,13 @@ export default async function DashboardPage() {
           Maybe the real financial independence is the friends we meticulously tracked along the way. 🪶
         </p>
       )}
+
+      {/* Legal links */}
+      <div className="pb-4 text-center text-xs text-gray-400 dark:text-gray-500">
+        <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy Policy</Link>
+        <span className="mx-2">&middot;</span>
+        <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms of Service</Link>
+      </div>
     </div>
   );
 }
