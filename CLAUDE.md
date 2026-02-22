@@ -1,70 +1,44 @@
 # Quid — Expense Splitting App
 
-Splitwise-style app: create groups, add expenses, get simplified debts. **This is a live production app with real users — treat it accordingly.** Security, correctness, and reliability matter; abuse prevention matters. Don't cut corners that would be fine for a demo but unacceptable in production.
+Splitwise-style app: create groups, add expenses, get simplified debts. **This is a live production app with real users — treat it accordingly.** Security, correctness, and reliability matter. Don't cut corners that would be fine for a demo but unacceptable in production.
 
-## Tech Stack & Versions
+## Tech Stack
 - **Next.js 16** (App Router, React 19, TypeScript strict)
 - **PostgreSQL** via Supabase (data host) + **Prisma 7** (ORM, driver adapter pattern)
-- **Supabase Auth** (email/password; Google OAuth planned)
-- **Tailwind CSS 4**, **Zod 4** (validation), **Vitest 4** (testing)
+- **Supabase Auth** (email/password)
+- **Tailwind CSS 4**, **Zod 4**, **Vitest 4**
 - **Deployed on Vercel** at `https://gregbigelow.com/quid`
 
-## Default Workflow for Changes
+## Default Workflow
 
-For any non-trivial change: understand the codebase first, make the changes, write tests for new behavior, run `npm test`, and finish by committing and pushing to production. The order is flexible — use judgment. The two things that are always true: **tests pass before shipping**, and **every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys).
+For any change: understand the codebase, make changes, write tests for new behavior, run tests, commit, push. **Tests pass before shipping. Every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys).
 
-**This applies to all task types — UI changes, copy edits, styling, refactors, bug fixes — not just logic changes.** Do not wait to be asked. After completing any task, the default action is: run tests (`SKIP_SMOKE_TESTS=1 npm test`), commit, push.
+This applies to all task types — UI, copy, styling, refactors, bug fixes. Do not wait to be asked.
 
-## Testing After Changes
-Run tests before and after every non-trivial change:
-
+## Commands
 ```bash
-npm test                              # All unit + integration tests (fast, no network)
-npm test tests/smoke.test.ts          # Smoke tests against live production site
-SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # Against local server
-```
+# Development
+npm run dev                # Dev server (localhost:3000/quid)
+vercel dev                 # Mirrors Vercel prod env (preferred for debugging)
+npm run build              # Production build (runs prisma generate first)
+npm run lint               # ESLint
 
-**Test files:**
-- `lib/balances/simplify.test.ts` — 14 unit tests for debt simplification logic
-- `lib/supabase/supabase.test.ts` — Validates env vars + Supabase anon key works
-- `tests/smoke.test.ts` — Production smoke tests (unauthenticated + optional authenticated)
+# Testing
+SKIP_SMOKE_TESTS=1 npm test                    # Unit + integration (fast, no network)
+npm test                                        # All tests including smoke (hits production)
+npm test tests/smoke.test.ts                    # Smoke tests only (against production)
+SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # Smoke against local
 
-**Smoke test setup:**
-- Unauthenticated tests run with no extra config — they hit `www.gregbigelow.com/quid`
-- Authenticated tests require `SMOKE_TEST_EMAIL` and `SMOKE_TEST_PASSWORD` in `.env.local` (a dedicated test account in Supabase)
-- Skip all smoke tests in environments without internet: `SKIP_SMOKE_TESTS=1 npm test`
+# Database
+npx prisma migrate dev     # Run migrations (reads prisma.config.ts → .env.local)
+npx prisma generate        # Regenerate Prisma client → app/generated/prisma/
+npx prisma studio          # Visual DB browser
 
-**What the smoke tests verify:**
-1. Login and signup pages are publicly reachable and render HTML
-2. Auth-protected pages (`/dashboard`, `/groups/:id`) redirect unauthenticated users to `/login`
-3. All API endpoints return `401` when called without a session
-4. (Authenticated) `GET /api/groups` returns `{ data: [], error: null }` shape
-5. (Authenticated) `POST /api/groups` creates a group and returns `201`
-6. (Authenticated) `GET /api/groups/:id/balances` returns simplified debts for own group
-
-**Always run smoke tests after:** changing `proxy.ts`, auth routes, API routes, or env var handling.
-
-## Quick Start
-```bash
-npm run dev              # Dev server (localhost:3000/quid)
-vercel dev               # Local dev server that mirrors Vercel production environment
-npm run build            # Production build (runs prisma generate first)
-npm run lint             # ESLint
-npm test                 # Vitest (run once)
-SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # Smoke tests against local server
-npx prisma migrate dev   # Run migrations (reads prisma.config.ts → .env.local)
-npx prisma generate      # Regenerate Prisma client → app/generated/prisma/
-npx prisma studio        # Visual DB browser
-git push origin main                   # Deploy to production (Vercel auto-builds on push)
-vercel logs --follow                   # Stream live production logs
-vercel logs --level error --since 1h   # Recent errors only
-vercel logs --environment production --expand  # Full log details
-vercel ls                              # List recent deployments
-vercel inspect [url|id]                # Deployment details/status
-vercel rollback                        # Quick revert to previous deployment
-vercel redeploy [url|id]               # Rebuild and redeploy (use sparingly; prefer git push)
-vercel env pull                        # Sync env vars from Vercel → .env.local
-vercel env ls                          # List all env vars in Vercel project
+# Deployment & Monitoring
+git push origin main                              # Deploy (Vercel auto-builds)
+vercel logs --follow                              # Live production logs
+vercel logs --level error --since 1h              # Recent errors
+vercel rollback                                   # Revert to previous deployment
 ```
 
 ## Environment Variables
@@ -73,155 +47,167 @@ All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, falls back to `http://localhost:3000/quid` in dev
-- `SMOKE_TEST_EMAIL` — (optional) Email for a dedicated test account used by authenticated smoke tests
-- `SMOKE_TEST_PASSWORD` — (optional) Password for the smoke test account
+- `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Dedicated test account for authenticated smoke tests
 
 ## Project Structure
 No `src/` directory — all code at repo root.
 ```
 app/
-  (auth)/login|signup/       # Public auth pages (client components)
-  auth/callback/route.ts     # Email confirmation → session exchange → redirect
-  (app)/layout.tsx           # Auth guard wrapper (redirects unauthed to /login)
-  (app)/dashboard/           # Group list + create group modal
-  (app)/groups/[id]/         # Group detail: members, expenses, balances + forms
-  api/groups/                # REST API (see API Routes below)
-  generated/prisma/          # Auto-generated — do NOT edit
-  layout.tsx                 # Root layout (fonts, metadata)
-  page.tsx                   # Root redirect (authed → dashboard, else → login)
+  layout.tsx                        # Root layout (fonts, metadata)
+  page.tsx                          # Root redirect (authed → dashboard, else → login)
+  globals.css                       # Tailwind + custom animations
+
+  (auth)/login/page.tsx             # Login page (client component)
+  (auth)/signup/page.tsx            # Signup page with "check email" state (client)
+  auth/callback/route.ts            # Email confirmation → session → upsert User → redirect
+
+  (app)/layout.tsx                  # Auth guard: redirects unauthed to /login, renders Nav
+  (app)/dashboard/
+    page.tsx                        # Group list (server component)
+    CreateGroupButton.tsx           # Modal for creating groups (client)
+  (app)/groups/[id]/
+    page.tsx                        # Group detail: balances, expenses, activity, members (server)
+    GroupInteractive.tsx             # Client wrapper combining ExpensesList + ActivityFeed
+    ExpensesList.tsx                 # Expense list with optimistic add/edit/delete
+    AddExpenseForm.tsx              # Modal form with payer selection + participant filtering
+    ExpenseActions.tsx              # Edit/delete buttons + modals per expense
+    AddMemberForm.tsx               # Modal form for adding members by email
+    ActivityFeed.tsx                 # Activity log display with relative timestamps
+    useActivityLogs.ts              # Hook: optimistic activity log management
+
+  api/groups/
+    route.ts                        # GET (list groups) + POST (create group)
+    [id]/members/route.ts           # POST (add member by email)
+    [id]/expenses/route.ts          # POST (create expense with split)
+    [id]/expenses/[expenseId]/route.ts  # PUT (edit) + DELETE
+    [id]/balances/route.ts          # GET (simplified debts)
+
+  generated/prisma/                 # Auto-generated Prisma client — do NOT edit
 
 components/
-  Nav.tsx                    # Top nav with logout (client component)
-  ui/Button|Card|Input.tsx   # Reusable styled components
+  Nav.tsx                           # Top nav with logout (client)
+  ui/Button.tsx                     # Button with variants
+  ui/Card.tsx                       # Card container
+  ui/Input.tsx                      # Input field
 
 lib/
-  prisma/client.ts           # Prisma singleton (pg Pool + PrismaPg adapter)
-  supabase/client.ts         # Browser Supabase client
-  supabase/server.ts         # Server Supabase client (cookie-aware, for RSC/routes)
-  balances/simplify.ts       # Debt simplification — pure function, 14 tests
+  prisma/client.ts                  # Prisma singleton (pg Pool + PrismaPg adapter + SSL)
+  supabase/client.ts                # Browser Supabase client
+  supabase/server.ts                # Server Supabase client (cookie-aware, for RSC/routes)
+  balances/simplify.ts              # Debt simplification algorithm (pure function, zero deps)
 
-prisma/schema.prisma         # DB schema (5 models, see below)
-proxy.ts                     # Auth middleware (Next.js 16 uses proxy.ts, not middleware.ts)
+prisma/schema.prisma                # 6 models (see Data Models below)
+proxy.ts                            # Auth middleware (Next.js 16 convention, NOT middleware.ts)
 ```
 
 ## Data Models
 All monetary values are integers (cents). Never floats.
 ```
-User        — id (UUID), email (unique), displayName, avatarUrl?, createdAt
-Group       — id, name, createdAt, createdById → User
-GroupMember — id, groupId, userId, joinedAt  [unique: groupId+userId, cascade delete]
-Expense     — id, groupId, paidById → User, description, amountCents, date, createdAt
-ExpenseSplit— id, expenseId, userId, amountCents  [cascade delete on expense]
+User         — id (UUID), email (unique), displayName, avatarUrl?, createdAt
+Group        — id, name, createdAt, createdById → User
+GroupMember  — id, groupId, userId, joinedAt  [unique: groupId+userId, cascade delete]
+Expense      — id, groupId, paidById → User, description, amountCents, date, createdAt
+ExpenseSplit — id, expenseId, userId, amountCents  [cascade delete on expense]
+ActivityLog  — id, groupId, actorId → User, action, payload (JSON), createdAt  [cascade delete on group]
 ```
+
+ActivityLog actions: `"expense_added"`, `"expense_edited"`, `"expense_deleted"`. Payload: `{ description, amountCents, paidByDisplayName }`.
 
 ## API Routes
-All return `{ data, error }` JSON. Auth required (Supabase session checked via server client).
+All return `{ data, error }` JSON. All require Supabase session (return 401 without).
 ```
-GET  /api/groups                    — List user's groups
-POST /api/groups                    — Create group (+ auto-add creator as member)
-POST /api/groups/[id]/members       — Add member by email
-POST /api/groups/[id]/expenses      — Create expense with equal split (transaction)
-GET  /api/groups/[id]/balances      — Simplified debts with display names
-```
-
-## Local Investigation Workflow
-
-When a bug needs hands-on verification, use a local server rather than deploying to production.
-
-### Start a local server
-```bash
-vercel dev        # Preferred: mirrors Vercel production env, auto-loads env vars
-# or
-npm run dev       # Faster startup, sufficient for most cases
-```
-App runs at `http://localhost:3000/quid`.
-
-### Get an auth token for curl
-The smoke test helper in `tests/smoke.test.ts` (`getAuthCookie`) shows the exact approach, but for one-off curl testing, get a bearer token directly from Supabase:
-```bash
-curl -s -X POST "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password" \
-  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"<SMOKE_TEST_EMAIL>","password":"<SMOKE_TEST_PASSWORD>"}' \
-  | jq '.access_token'
-```
-Then use the token in subsequent requests:
-```bash
-TOKEN="<paste token here>"
-
-# List groups
-curl -s http://localhost:3000/quid/api/groups \
-  -H "Cookie: sb-<projectRef>-auth-token=<url-encoded-session-json>" | jq
-
-# Or use Authorization header if the route accepts it
-curl -s http://localhost:3000/quid/api/groups \
-  -H "Authorization: Bearer $TOKEN" | jq
+GET    /api/groups                         — List user's groups
+POST   /api/groups                         — Create group (+ auto-add creator as member)
+POST   /api/groups/[id]/members            — Add member by email
+POST   /api/groups/[id]/expenses           — Create expense with equal split (atomic transaction)
+PUT    /api/groups/[id]/expenses/[eid]     — Edit expense + recalculate splits (atomic)
+DELETE /api/groups/[id]/expenses/[eid]     — Delete expense (cascade deletes splits)
+GET    /api/groups/[id]/balances           — Simplified debts with display names
 ```
 
-**Note:** The app uses `@supabase/ssr` which reads sessions from a cookie, not an Authorization header. The easiest way to get a valid cookie is to sign in via the browser and copy the cookie from DevTools, or use the `getAuthCookie()` helper in the smoke tests.
+All group endpoints verify the authenticated user is a member of the group (return 403 otherwise).
 
-### Run smoke tests against local
-```bash
-SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts
+## Data Flow
 ```
-This runs all smoke tests except the basePath-sanity checks (which are production-only).
-
-### Read server logs
-With `vercel dev` or `npm run dev` running, `console.log` / `console.error` output from route handlers and server components prints directly to the terminal. Add temporary logs freely — they're visible immediately without any log-streaming setup.
-
-### Investigate production issues
-```bash
-vercel logs --follow                        # Live tail
-vercel logs --level error --since 1h        # Recent errors only
-vercel logs --environment production --expand  # Full request details
+Browser → proxy.ts (auth check) → Page/Route Handler
+                                      ↓
+                              Supabase server client (get session)
+                                      ↓
+                              Prisma (query/mutate data)
+                                      ↓
+                              PostgreSQL (Supabase-hosted)
 ```
+- **Read paths**: Server Components fetch via Prisma, render HTML.
+- **Write paths**: Client components POST to API routes → Zod validates → Prisma mutates → JSON response.
+- **Balances**: Computed on-demand from expense/split data. No stored balance table.
 
 ## Architecture Rules
 1. **Auth = Supabase, Data = Prisma.** Never query data through Supabase JS client.
-2. **Server Components by default.** Client components (`"use client"`) only for interactivity.
-3. **Business logic stays pure.** `lib/balances/simplify.ts` has zero framework deps — keep it that way.
+2. **Server Components by default.** `"use client"` only for interactivity.
+3. **Business logic stays pure.** `lib/balances/simplify.ts` has zero framework deps.
 4. **REST API is mobile-ready.** Routes are resource-oriented, not page-specific.
-5. **Zod validates at API boundaries.** Schemas defined inline in route handlers currently.
+5. **Zod validates at API boundaries.** Schemas defined inline in route handlers.
 
 ## Security Requirements
-This app handles real user data and financial records. These are non-negotiable:
+Non-negotiable for this production app:
+- **SSL cert verification enabled.** `rejectUnauthorized: true` on all DB connections. Never disable.
+- **All API routes verify auth.** Every handler checks Supabase session server-side.
+- **Users access only their own data.** All queries scope to authenticated user's groups.
+- **Validate all input with Zod.** Reject unexpected fields at API boundaries.
+- **No raw SQL with user input.** Prisma parameterized queries only.
 
-- **SSL certificate verification must be enabled.** `rejectUnauthorized: true` on all DB connections. Never disable cert verification as a convenience workaround — find the real fix.
-- **All API routes must verify auth.** Every route handler checks the Supabase session server-side. No route should trust client-supplied user IDs without validating session ownership.
-- **Users may only access their own data.** All Prisma queries must scope to the authenticated user's groups/expenses. Never return data the user isn't a member of.
-- **Validate all input at API boundaries.** Use Zod schemas before any DB write. Reject unexpected fields.
-- **No raw SQL with user input.** Use Prisma's parameterized queries only.
-- **Rate limiting is not yet implemented** — a known gap. Avoid adding endpoints that could be trivially abused without first considering mitigations.
+## Gotchas
 
-## Gotchas & Patterns
-
-### Next.js 16 specifics
+### Next.js 16
 - **`params` is a Promise**: `const { id } = await params` in pages and route handlers.
-- **Auth middleware is `proxy.ts`**, not `middleware.ts`. This is the Next.js 16 convention.
-- **`basePath: "/quid"`**: Internal routing uses relative paths (`router.push("/dashboard")`), but external URLs (Supabase email redirects) must use the full URL: `${NEXT_PUBLIC_SITE_URL}/auth/callback`.
+- **Auth middleware is `proxy.ts`**, not `middleware.ts`.
+- **`basePath: "/quid"`**: Internal routing uses relative paths (`router.push("/dashboard")`). External URLs (Supabase email redirects) must use `${NEXT_PUBLIC_SITE_URL}/auth/callback`.
+
+### basePath & fetch URLs (common bug source)
+**Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`.** It hardcodes the domain, causing CORS failures when Vercel serves at `www.` vs non-`www`. This bug has occurred twice. Instead:
+```ts
+const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
+fetch(`${basePath}/api/groups`, ...);  // Root-relative, no CORS issues
+```
 
 ### Prisma
 - Import: `import { prisma } from "@/lib/prisma/client"` (named export).
-- Uses `@prisma/adapter-pg` with a `pg.Pool` — no direct Prisma connection string at runtime.
+- Uses `@prisma/adapter-pg` with `pg.Pool` — no direct Prisma connection string at runtime.
 - Generated output: `app/generated/prisma/` (not node_modules). `npm run build` runs `prisma generate` automatically.
-- `prisma.config.ts` loads `.env.local` via dotenv so the CLI can find `DATABASE_URL`.
+- `prisma.config.ts` loads `.env.local` via dotenv so CLI can find `DATABASE_URL`.
 
-### SSL / Supabase DB connection
-Supabase uses a private root CA ("Supabase Root 2021 CA") not in the system trust store. The correct fix is **not** `rejectUnauthorized: false` — that disables all cert verification. Instead, `lib/prisma/client.ts` bundles the Supabase Root CA cert inline and uses `ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA }`.
+### SSL / Supabase DB Connection
+`lib/prisma/client.ts` bundles the Supabase Root CA cert inline and uses `ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA }`. Also strips `sslmode` from the connection string (pg-connection-string misparses it, overriding the ssl config).
 
-Two issues had to be solved simultaneously:
-1. **Bundled CA cert**: inlined in `client.ts` as a constant (it's public — the same cert for all Supabase projects using this CA).
-2. **Strip `sslmode` from the connection string**: `pg-connection-string` parses `sslmode=require` from the `DATABASE_URL` and currently treats it as `verify-full`, overriding the `ssl` config passed to `pg.Pool`. We strip it with `url.searchParams.delete("sslmode")` before passing to the pool.
+### Optimistic Updates
+Expenses and activity logs use optimistic UI updates. Pattern:
+1. Client applies change immediately with `isPending: true`
+2. Sends request to API
+3. On success: `router.refresh()` reconciles server state
+4. On failure: reverts via `router.refresh()`
+Pending items have fade animations. See `ExpensesList.tsx` and `useActivityLogs.ts`.
 
-### Expense splitting
-- Equal split: total divided evenly, remainder distributed 1 cent at a time to first N members.
-- Created atomically via `prisma.$transaction` (expense + all splits in one call).
+### Auth Flow
+- Signup → confirmation email with `emailRedirectTo: ${NEXT_PUBLIC_SITE_URL}/auth/callback`
+- Signup page shows "check your email" (does NOT redirect — user isn't authed yet)
+- `auth/callback/route.ts` exchanges code for session, upserts User in Prisma, redirects to `/dashboard`
+- Supabase dashboard must have Site URL = `https://gregbigelow.com/quid` and callback URL in redirect allowlist
 
-### Auth flow
-- Signup sends confirmation email with `emailRedirectTo: ${NEXT_PUBLIC_SITE_URL}/auth/callback`.
-- Signup page shows "check your email" — does NOT redirect (user isn't authed until they click the link).
-- `auth/callback/route.ts` exchanges the code for a session, then redirects to `/dashboard`.
-- Supabase dashboard must have Site URL = `https://gregbigelow.com/quid` and redirect allowlist including the callback URL.
+### Expense Splitting
+- Equal split: total ÷ participants, remainder distributed 1 cent at a time to first N members
+- Created atomically via `prisma.$transaction` (expense + splits + activity log)
+
+## Testing
+```
+lib/balances/simplify.test.ts           — 14 unit tests (debt simplification)
+lib/supabase/supabase.test.ts           — Env var + Supabase key validation
+app/(app)/groups/[id]/ExpensesList.test.tsx     — Expense list rendering
+app/(app)/groups/[id]/ActivityFeed.test.tsx     — Activity feed rendering
+app/(app)/groups/[id]/useActivityLogs.test.ts   — Activity log hook
+tests/smoke.test.ts                     — Production smoke tests (auth + API)
+```
+
+Run smoke tests after changing: `proxy.ts`, auth routes, API routes, or env vars.
 
 ## Code Conventions
 - TypeScript strict mode. No `any`.
@@ -230,14 +216,11 @@ Two issues had to be solved simultaneously:
 - Functional components with hooks. No classes.
 
 ## Reference Files
-- **PLANNING.md** — Architecture decisions with rationale, open design questions, future roadmap. Consult before structural changes.
-- **TODOS.md** — What's done, what's in progress, what's in the backlog.
+- **PLANNING.md** — Architecture decisions, design rationale, open questions. Consult before structural changes.
+- **TODOS.md** — Completed work and prioritized backlog.
 
 ## Keeping Docs Current
-After completing any non-trivial task, update these files if the work warrants it:
-
-- **CLAUDE.md** — Update when: new patterns or gotchas are discovered, stack versions change, project structure changes, new env vars are added, new commands are needed, or existing instructions become inaccurate.
-- **PLANNING.md** — Update when: an architectural decision is made or changed, a design question is resolved, or new open questions arise.
-- **TODOS.md** — Update when: a task is completed (mark done), a new task is identified, or the scope/status of a backlog item changes.
-
-Only update when the change is clearly relevant and accurate — don't pad these files with minor notes.
+After non-trivial tasks, update if warranted:
+- **CLAUDE.md** — New patterns, structure changes, new env vars, inaccurate instructions.
+- **PLANNING.md** — Architectural decisions made/changed, design questions resolved/raised.
+- **TODOS.md** — Tasks completed, new tasks identified, status changes.

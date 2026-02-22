@@ -1,99 +1,72 @@
 # Quid — Architecture & Planning
 
-This document captures **why** things are the way they are. For **what** exists and how to use it, see CLAUDE.md.
+Why things are the way they are. For what exists and how to use it, see CLAUDE.md.
 
 ## Architecture Decisions
 
-### Why Prisma + Supabase (not just Supabase client)?
-Supabase JS client couples you to Supabase's query API. Prisma gives us a standard ORM that works with any Postgres. If we ever migrate off Supabase hosting, only the connection string changes. Supabase is used strictly for auth (session management, email confirmation, OAuth).
+### Prisma + Supabase (not just Supabase client)
+Supabase JS client couples you to Supabase's query API. Prisma gives a standard ORM that works with any Postgres — if we migrate off Supabase hosting, only the connection string changes. Supabase is used strictly for auth.
 
-### Why driver adapter pattern (Prisma 7 + pg Pool)?
-Prisma 7 dropped built-in connection management in favor of `@prisma/adapter-pg`. We create our own `pg.Pool` and pass it to Prisma. This gives us control over pooling and works well with serverless (Vercel). The pool is created once via a module-level singleton.
+### Driver adapter pattern (Prisma 7 + pg Pool)
+Prisma 7 dropped built-in connection management in favor of `@prisma/adapter-pg`. We create a `pg.Pool` and pass it to Prisma, giving us control over pooling. The pool is a module-level singleton in `lib/prisma/client.ts`.
 
-### Why `proxy.ts` instead of `middleware.ts`?
-Next.js 16 renamed the middleware file to `proxy.ts`. We tried renaming back to `middleware.ts` but it broke — `proxy.ts` is the correct convention. The proxy handles auth checks: protecting app routes and redirecting authenticated users away from login/signup.
+### `proxy.ts` instead of `middleware.ts`
+Next.js 16 renamed middleware to `proxy.ts`. We confirmed `middleware.ts` doesn't work — `proxy.ts` is required. It handles auth checks: protecting app routes and redirecting authenticated users away from login/signup.
 
-### Why `basePath: "/quid"`?
-The app is hosted at `gregbigelow.com/quid`, not at the domain root. Vercel's `basePath` config handles this automatically for internal Next.js routing.
+### `basePath: "/quid"`
+The app lives at `gregbigelow.com/quid`, not the domain root. Vercel's `basePath` handles internal routing automatically.
 
-**Two different URL rules — don't mix them up:**
-
-| Use case | Correct approach | Why |
+**Two URL rules — don't mix them up:**
+| Context | Correct approach | Why |
 |---|---|---|
-| External services (Supabase email redirects, OAuth) | Full absolute URL via `NEXT_PUBLIC_SITE_URL` | External services need a fully-qualified URL to redirect back to |
-| Client-side `fetch()` to API routes | Root-relative path: `/quid/api/...` | Same-origin — no CORS preflight, works regardless of `www` vs. non-www |
+| External services (email redirects, OAuth) | Full URL via `NEXT_PUBLIC_SITE_URL` | External services need a fully-qualified redirect target |
+| Client-side `fetch()` | Root-relative: `/quid/api/...` | Same-origin, no CORS issues regardless of `www` vs non-`www` |
 
-**Never use `NEXT_PUBLIC_SITE_URL` directly in a client-side `fetch()` call.** Doing so hardcodes `gregbigelow.com` as the target. If Vercel serves the app at `www.gregbigelow.com` as well, the fetch becomes cross-origin, triggering a CORS preflight that fails when Vercel redirects between the two domains. This exact bug has occurred twice.
-
-To get the basePath as a root-relative path in a client component:
+**Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`.** This has caused CORS bugs twice. Extract the basePath instead:
 ```ts
 const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
-// → "/quid"
-fetch(`${basePath}/api/groups`, ...);
 ```
 
-### Why cents (integers) for money?
-Floating point arithmetic produces rounding errors (`0.1 + 0.2 !== 0.3`). Storing cents as integers avoids this entirely. All display formatting converts at the UI layer.
+### Cents (integers) for money
+`0.1 + 0.2 !== 0.3`. Storing cents as integers avoids floating point errors. Display formatting converts at the UI layer.
 
-### Why equal-split remainder distribution?
-When $10.00 is split 3 ways, you get $3.33 × 3 = $9.99 — one cent short. We distribute the remainder by giving 1 extra cent to the first N members (where N = amountCents % memberCount). This ensures splits always sum to exactly the expense total.
+### Equal-split remainder distribution
+$10.00 ÷ 3 = $3.33 × 3 = $9.99 (1 cent short). We give 1 extra cent to the first N members where N = amountCents % memberCount, ensuring splits always sum to the expense total exactly.
 
-### Why generated Prisma client in `app/generated/prisma/`?
-Default Prisma output goes to `node_modules/.prisma/client`, which gets blown away on `npm install`. Generating to `app/generated/prisma/` makes the output persistent and importable with `@/app/generated/prisma`. The build script runs `prisma generate` before `next build` to ensure it's always fresh.
+### Generated Prisma client in `app/generated/prisma/`
+Default output goes to `node_modules/.prisma/client` which gets wiped on `npm install`. Generating to `app/generated/prisma/` makes it persistent and importable via `@/app/generated/prisma`.
 
-### Why resource-oriented API routes?
-A mobile client (React Native or similar) is a future goal. If API routes are page-specific (e.g., `/api/dashboard-data`), the mobile app can't reuse them cleanly. Resource-oriented routes (`/api/groups`, `/api/groups/[id]/expenses`) work for any client.
+### Resource-oriented API routes
+A future mobile client should reuse the same API. Resource-oriented routes (`/api/groups`, `/api/groups/[id]/expenses`) work for any client, unlike page-specific endpoints.
 
-## Data Flow
+### Optimistic updates with server reconciliation
+Client components apply mutations immediately (with `isPending` flag), then reconcile via `router.refresh()`. This gives instant UI feedback while keeping the server as source of truth. Failures revert automatically.
 
-```
-Browser → proxy.ts (auth check) → Page/Route Handler
-                                      ↓
-                              Supabase server client (get session)
-                                      ↓
-                              Prisma (query/mutate data)
-                                      ↓
-                              PostgreSQL (Supabase-hosted)
-```
+### Activity logging
+All expense mutations (add, edit, delete) create an `ActivityLog` entry in the same transaction. The activity feed renders these with relative timestamps. Optimistic updates handle activity logs the same way as expenses.
 
-- **Read paths**: Server Components fetch data directly via Prisma, render HTML.
-- **Write paths**: Client components POST to API routes, which validate with Zod, mutate via Prisma, return JSON.
-- **Balances**: Computed on-demand from expense/split data already fetched for the group page — no separate DB query or stored balance table.
+## Decided Design Questions
 
-## Design Decisions (Pending / In Discussion)
+These were previously open — documenting the decisions for context.
 
-### Settle up: special expense vs. separate model?
-**Decision: Start with special expense.** A settlement is recorded as a regular expense where the debtor "pays" the creditor. The expense description is "Settlement" and it has a single split assigned to the creditor for the full amount. This zeroes out the debt using the existing expense/split infrastructure — no schema migration, no new model. If we later need richer settlement tracking (partial settlements, payment method, confirmation from creditor), we can introduce a `Settlement` model then.
+### Settle up approach
+**Decision: Special expense.** A settlement is a regular expense where the debtor "pays" the creditor. Description = "Settlement", single split to the creditor. Uses existing expense infrastructure, no schema migration. If richer tracking is needed later (partial settlements, payment confirmation), introduce a `Settlement` model then.
 
-### Edit/delete permissions: payer-only vs. any member?
-**Decision: Payer + group creator.** Only the user who paid the expense (or the group creator) can edit or delete it. This prevents disputes while giving the group admin an override. The group detail page should show edit/delete buttons only to authorized users.
+### Edit/delete permissions
+**Decision: Any group member.** Any member of the group can edit or delete any expense. This was chosen for simplicity over the initial "payer + group creator" plan. Revisit if users report problems.
 
-### Member removal: what about unsettled debts?
-**Decision: Block removal if debts exist.** Before removing a member, compute their net balance. If non-zero, return an error: "This member has unsettled debts. Settle up before removing." Exception: the member can always leave voluntarily and accept that debts are forgiven. Self-removal should warn but allow.
+### Member removal with unsettled debts
+**Decision: Block if debts exist.** Compute net balance before removal — if non-zero, return an error. Exception: self-removal ("leave group") should warn but allow if debts are settled.
 
 ### Non-equal splits UI
-Per-person amount entry (not percentage-based). Percentages add rounding complexity and users think in dollar amounts anyway. The form shows each member with an amount input, and validates that amounts sum to the expense total. Start with "Equal" as the default, "Custom" as an opt-in toggle.
+**Decision: Per-person amounts, not percentages.** Users think in dollar amounts. The form will show each member with an amount input, validating that splits sum to the total. "Equal" as default, "Custom" as opt-in toggle. Not yet implemented.
 
-### Group deletion: hard vs. soft delete?
-**Decision: Hard delete for now.** The schema already has cascade deletes configured. No audit trail requirement exists yet. If we add activity logging later, revisit with soft delete (add `deletedAt` column).
-
-### Settings scope
-Per-user global settings only (display name, avatar). No per-group settings yet — not enough features to warrant group-level config.
-
-### Mobile client
-Same Next.js API routes rather than a separate API project. The routes are already resource-oriented and return consistent `{ data, error }` JSON. When the time comes, add CORS headers to allow the mobile app's origin. Note: the web app deliberately avoids CORS entirely by using same-origin (root-relative) fetch URLs — CORS headers are only needed for cross-origin clients like a native app.
+### Group deletion
+**Decision: Hard delete.** Cascade deletes handle cleanup. No audit trail requirement yet. Revisit with soft delete if activity logging needs historical groups.
 
 ## Open Design Questions
 
-- **Dashboard balance computation cost**: Computing per-group net balance for every group on the dashboard requires joining expenses+splits for each group. Fine for <50 groups per user, but may need materialized balances later. Monitor query times.
-- **Expense categories**: Free-text tags vs. predefined enum? Free-text is more flexible; enum gives better filtering/reporting. Leaning toward a small predefined set with "Other" escape hatch.
-- **Notification system**: Email vs. in-app vs. push? Start with in-app only (toast-style). Email notifications are a separate effort requiring a transactional email setup.
-
-## Roadmap
-
-See TODOS.md for the detailed, prioritized backlog with implementation notes. Summary:
-
-- **P0 (Core gaps)**: Edit/delete expenses, delete groups, remove members, settle up
-- **P1 (UX polish)**: Loading states, password reset, settings page, dashboard summaries, sort/filter
-- **P2 (Features)**: Non-equal splits, Google OAuth, categories/notes, activity log
-- **P3 (Infra)**: Extract validators, shared types, integration tests, dark mode, mobile audit
+- **Dashboard balance computation cost**: Computing per-group net balance for every group requires joining expenses+splits per group. Fine for <50 groups/user, may need materialized balances later.
+- **Expense categories**: Free-text tags vs predefined enum? Leaning toward small predefined set with "Other" escape hatch.
+- **Notification system**: Start with in-app only (toast-style). Email notifications are a separate effort.
+- **Mobile client**: Same API routes with CORS headers added for cross-origin native apps. The web app deliberately avoids CORS by using same-origin fetch.
