@@ -2,15 +2,10 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
-
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,29 +44,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isMember = group.members.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
-  // Compute balances from expenses
-  const userMap = new Map(group.members.map((m) => [m.userId, m.user]));
-
-  const rawDebts = group.expenses.flatMap((expense) =>
-    expense.splits
-      .filter((split) => split.userId !== expense.paidById)
-      .map((split) => ({
-        from: split.userId,
-        to: expense.paidById,
-        amount: split.amountCents,
-      }))
-  );
-
-  const simplifiedDebts = simplifyDebts(rawDebts);
-
-  const resolvedDebts = simplifiedDebts.map((debt) => ({
-    fromId: debt.from,
-    fromName: userMap.get(debt.from)?.displayName ?? "Unknown",
-    toId: debt.to,
-    toName: userMap.get(debt.to)?.displayName ?? "Unknown",
-    amountCents: debt.amount,
-  }));
-
   const currentMember = group.members.find((m) => m.userId === user.id);
   const currentUserDisplayName = currentMember?.user.displayName ?? user.email ?? "You";
 
@@ -108,51 +80,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{group.name}</h1>
       </div>
 
-      {/* Balances */}
-      <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Balances</h2>
-        {resolvedDebts.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Everyone&apos;s settled up!
-          </div>
-        ) : (
-          <Card className="divide-y divide-gray-100 dark:divide-gray-700">
-            {resolvedDebts.map((debt, i) => {
-              const isCurrentUserOwing = debt.fromId === user.id;
-              const isCurrentUserReceiving = debt.toId === user.id;
-              const fromLabel = isCurrentUserOwing ? "You" : debt.fromName;
-              const verb = isCurrentUserOwing ? "owe" : "owes";
-              const toLabel = isCurrentUserReceiving ? "you" : debt.toName;
-
-              return (
-                <div key={i} className="flex items-center justify-between px-4 py-3">
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-semibold">{fromLabel}</span>
-                    {" "}{verb}{" "}
-                    <span className="font-semibold">{toLabel}</span>
-                  </p>
-                  <span
-                    className={`text-sm font-bold tabular-nums ${
-                      isCurrentUserOwing
-                        ? "text-red-600"
-                        : isCurrentUserReceiving
-                        ? "text-emerald-600"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    {formatCents(debt.amountCents)}
-                  </span>
-                </div>
-              );
-            })}
-          </Card>
-        )}
-      </section>
-
-      {/* Expenses + Activity (client component with optimistic updates) */}
+      {/* Expenses, Activity, and Balances (client component with optimistic updates) */}
       <GroupInteractive
         groupId={group.id}
         groupCreatedById={group.createdById}

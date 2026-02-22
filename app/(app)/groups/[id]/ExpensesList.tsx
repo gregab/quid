@@ -33,6 +33,7 @@ interface ExpensesListProps {
   initialExpenses: ExpenseRow[];
   members: Member[];
   onOptimisticActivity: (log: ActivityLog) => void;
+  onExpensesChange?: (expenses: ExpenseRow[]) => void;
 }
 
 function formatCents(cents: number): string {
@@ -54,6 +55,7 @@ export function ExpensesList({
   initialExpenses,
   members,
   onOptimisticActivity,
+  onExpensesChange,
 }: ExpensesListProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -68,6 +70,11 @@ export function ExpensesList({
       return initialExpenses;
     });
   }, [initialExpenses]);
+
+  // Notify parent when expenses change so it can recompute balances.
+  useEffect(() => {
+    onExpensesChange?.(expenses);
+  }, [expenses, onExpensesChange]);
 
   const handleOptimisticAdd = useCallback((expense: ExpenseRow) => {
     setExpenses((prev) => [expense, ...prev]);
