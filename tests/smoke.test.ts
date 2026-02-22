@@ -150,6 +150,7 @@ describe.skipIf(skipAll || isLocal)("basePath sanity: routes only exist under /q
     { method: "GET",  path: "/api/groups" },
     { method: "POST", path: "/api/groups" },
     { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
+    { method: "DELETE", path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
     { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses" },
     { method: "PUT",    path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
     { method: "DELETE", path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
@@ -197,6 +198,10 @@ describe.skipIf(skipAll)("API endpoints: unauthenticated requests return 401", (
       path: "/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002",
     },
     { method: "GET", path: "/groups/00000000-0000-0000-0000-000000000001/balances" },
+    {
+      method: "DELETE",
+      path: "/groups/00000000-0000-0000-0000-000000000001/members",
+    },
   ];
 
   for (const { method, path, body } of cases) {
@@ -328,6 +333,21 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       expect(res.status).toBe(200);
       const body = await res.json() as { data: null; error: unknown };
       expect(body.error).toBeNull();
+    });
+
+    it("DELETE /api/groups/:id/members → 200, leaves group (also cleans up smoke test group)", async () => {
+      if (!createdGroupId) return;
+      const res = await callApi(
+        "DELETE",
+        `/groups/${createdGroupId}/members`,
+        undefined,
+        { Cookie: authCookie }
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json() as { data: { deletedGroup: boolean }; error: unknown };
+      expect(body.error).toBeNull();
+      // Last member leaving deletes the group
+      expect(body.data.deletedGroup).toBe(true);
     });
 
     it("GET /api/groups/:id/balances → 403 for a group user is not a member of", async () => {
