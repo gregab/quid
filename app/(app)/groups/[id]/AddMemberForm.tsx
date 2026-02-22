@@ -153,30 +153,34 @@ export function AddMemberForm({
 
     setLoading(true);
 
-    const basePath = new URL(
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary",
-    ).pathname;
-    const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const basePath = new URL(
+        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary",
+      ).pathname;
+      const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    const json = (await res.json()) as {
-      data?: { user: { displayName: string } };
-      error?: string;
-    };
+      const json = (await res.json()) as {
+        data?: { user: { displayName: string } };
+        error?: string;
+      };
 
-    setLoading(false);
+      if (!res.ok || json.error) {
+        setError(json.error ?? "Something went wrong.");
+        return;
+      }
 
-    if (!res.ok || json.error) {
-      setError(json.error ?? "Something went wrong.");
-      return;
+      setOpen(false);
+      resetState();
+      router.refresh();
+    } catch {
+      setError("Network error — please check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setOpen(false);
-    resetState();
-    router.refresh();
   }
 
   function resetState() {
