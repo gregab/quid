@@ -6,13 +6,30 @@ import { LeaveGroupButton } from "./LeaveGroupButton";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
-// Unique emoji per member slot (by join order → guaranteed no duplicates within a group)
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
   "🦊", "🐼", "🧙", "🦄", "🐬", "🦁", "🐙", "🐢", "🦝", "🐻",
   "🐺", "🐲", "🦈", "🐸", "🦇", "🐿️", "🐨", "🐯", "🦦",
   "🦥", "🦔", "🐵", "🦋", "🐱",
 ];
+
+// Hash-based emoji assignment: each member gets a unique emoji derived from their
+// userId + groupId, so you get a different character in each group. Linear probing
+// for collisions, processed in hash order for stability.
+function assignMemberEmojis(userIds: string[], groupId: string): Map<string, string> {
+  const hash = (uid: string) =>
+    (uid + groupId).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  const sorted = [...userIds].sort((a, b) => hash(a) - hash(b));
+  const used = new Set<number>();
+  const result = new Map<string, string>();
+  for (const uid of sorted) {
+    let idx = hash(uid) % MEMBER_EMOJIS.length;
+    while (used.has(idx)) idx = (idx + 1) % MEMBER_EMOJIS.length;
+    used.add(idx);
+    result.set(uid, MEMBER_EMOJIS[idx]!);
+  }
+  return result;
+}
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,6 +55,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     (a, b) => a.joinedAt.localeCompare(b.joinedAt)
   );
 
+  const memberEmojiMap = assignMemberEmojis(groupMembers.map((m) => m.userId), id);
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
@@ -100,7 +118,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Member chips */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {groupMembers.map((m, i) => (
+          {groupMembers.map((m) => (
             <div
               key={m.id}
               title={m.User?.email ?? undefined}
@@ -110,7 +128,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                   : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
               }`}
             >
-              <span className="text-sm leading-none">{MEMBER_EMOJIS[i % MEMBER_EMOJIS.length]}</span>
+              <span className="text-sm leading-none">{memberEmojiMap.get(m.userId)}</span>
               <span>{m.User!.displayName}</span>
               {m.userId === user.id && <span className="opacity-50">· you</span>}
             </div>
