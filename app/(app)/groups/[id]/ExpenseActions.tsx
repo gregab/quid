@@ -319,7 +319,7 @@ export function ExpenseActions({
                   id="editPaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
