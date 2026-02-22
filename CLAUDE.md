@@ -20,6 +20,10 @@ npx prisma migrate dev                  # Run migrations
 npx prisma generate                     # Regenerate client → app/generated/prisma/
 git push origin main                    # Deploy to production
 vercel logs --follow                    # Stream live production logs
+
+# E2E tests (requires: npm run dev running in another terminal)
+npm run cy:open                         # Cypress interactive GUI
+npm run cy:run                          # Cypress headless (CI)
 ```
 
 ## Where to Change Things
@@ -40,6 +44,7 @@ vercel logs --follow                    # Stream live production logs
 | **Nav bar** | `components/Nav.tsx` |
 | **Auth middleware** (route protection) | `proxy.ts` (**not** `middleware.ts` — Next.js 16 convention) |
 | **Styling / dark mode** | Tailwind classes with `dark:` variants; globals in `app/globals.css` |
+| **E2E tests** | `cypress/e2e/` — specs; `cypress/support/commands.ts` — `cy.login()`; `cypress.config.ts` |
 
 ## Critical Gotchas
 
@@ -62,6 +67,7 @@ vercel logs --follow                    # Stream live production logs
 
 **Write tests for every bug fix and every new feature.** A bug fix without a test can regress silently. A new feature without a test has no documented contract.
 
+### Unit / integration tests (Vitest)
 ```
 lib/balances/simplify.test.ts                   — unit tests (debt simplification)
 lib/supabase/supabase.test.ts                   — env var + Supabase key validation
@@ -72,14 +78,28 @@ app/(app)/groups/[id]/useActivityLogs.test.ts    — activity log hook
 tests/smoke.test.ts                              — production smoke tests (auth + API)
 ```
 
+### E2E tests (Cypress)
+```
+cypress/e2e/auth.cy.ts           — auth redirects, UI login/logout, invalid-creds error
+cypress/e2e/dashboard.cy.ts      — group list, create-group modal, basePath on links
+cypress/e2e/group-detail.cy.ts   — add/edit/delete expenses, activity feed, balances
+cypress/e2e/navigation.cy.ts     — nav bar, browser history, basePath 404
+```
+
+Cypress requires `npm run dev` running in a separate terminal. Set credentials in `cypress.env.json` (gitignored):
+```json
+{ "SMOKE_TEST_EMAIL": "...", "SMOKE_TEST_PASSWORD": "..." }
+```
+
 **Where to add tests:**
 - New UI behavior or rendering logic → add to the relevant `*.test.tsx` co-located with the component
 - New pure function → co-locate a `*.test.ts` next to it
 - New API route behavior → smoke test if it can't be covered by unit/integration tests
+- New user-facing flow → add or extend a Cypress spec in `cypress/e2e/`
 
 Run smoke tests after changing: `proxy.ts`, auth routes, API routes, or env vars.
 
-See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and gotchas.
+See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress details.
 
 ## Code Conventions
 - TypeScript strict. No `any`. `async/await`, not `.then()`.
@@ -93,7 +113,7 @@ All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, `http://localhost:3000/quid` in dev
-- `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for authenticated smoke tests
+- `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for authenticated smoke tests + Cypress
 
 ## Reference Docs
 - **ARCHITECTURE.md** — How everything works: data models, API details, auth flow, patterns, design decisions. Read this to understand the codebase deeply.

@@ -411,6 +411,38 @@ Wrap in `await act(async () => { ... })` when the handler is async (e.g. calls f
 - Styles/classnames beyond the minimum needed to verify behavior (e.g. `opacity-60` for pending state is fine)
 - Things that are already covered by the framework (Next.js routing, Prisma query syntax)
 
+### E2E Tests (Cypress)
+
+**Stack:** Cypress 15 + TypeScript. Specs live in `cypress/e2e/`. Run against a local dev server.
+
+**Setup:**
+- `cypress.config.ts` — `baseUrl: http://localhost:3000/quid`, video off, 10 s command timeout
+- `cypress/support/commands.ts` — `cy.login()` custom command
+- `cypress/support/e2e.ts` — imports commands
+- `cypress/tsconfig.json` — types: ["cypress"]
+- `cypress.env.json` (gitignored) — `SMOKE_TEST_EMAIL` + `SMOKE_TEST_PASSWORD`
+
+**`cy.login()` custom command:** Uses `cy.session()` to cache login between tests. On first call it visits `/login`, types the credentials from `cypress.env.json`, clicks "Sign in →", and waits for `/dashboard`. On subsequent calls in the same run, the session cookies are restored from cache — no re-login. If the validate function (visit /dashboard) fails, cy.session re-runs the setup.
+
+**Test data strategy:** Tests create fresh data via `cy.request()` to the API in `beforeEach` blocks. Groups and expenses are named `[cypress] ...` with a `Date.now()` suffix for uniqueness. No cleanup — test data accumulates in the test account but doesn't affect correctness.
+
+**Spec files:**
+| File | What it covers |
+|------|----------------|
+| `cypress/e2e/auth.cy.ts` | Unauthenticated redirects, UI login/logout, invalid-credentials error |
+| `cypress/e2e/dashboard.cy.ts` | Group list, create-group modal, basePath correctness on links |
+| `cypress/e2e/group-detail.cy.ts` | Add/edit/delete expenses, activity feed, balances section |
+| `cypress/e2e/navigation.cy.ts` | Nav bar, browser history back/forward, basePath 404 |
+
+**Selectors:** Prefer existing `id` attributes (`#email`, `#expenseDescription`) and `aria-label` attributes (`[aria-label="Edit expense"]`) over brittle class selectors. All modals have `.modal-content` for scoping assertions.
+
+**Running E2E tests:**
+```bash
+npm run dev                   # Start dev server first
+npm run cy:open               # Interactive GUI
+npm run cy:run                # Headless CI mode
+```
+
 ## Open Questions
 
 - **Dashboard balance cost**: Per-group net balance requires joining expenses+splits for each group. Fine for <50 groups/user, may need materialized balances later.

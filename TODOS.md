@@ -15,6 +15,7 @@
 - Optimistic updates on expense add, edit, delete + activity feed
 - Smoke tests (unauthenticated + authenticated)
 - Component tests: ExpensesList, ActivityFeed, useActivityLogs
+- Cypress E2E tests — auth, dashboard, group detail, navigation specs
 
 ## In Progress
 <!-- Move items here when actively working on them -->
@@ -42,5 +43,5 @@
 - **Extract Zod schemas** to `lib/validators/` for reuse (client + server)
 - **Shared TypeScript types** in `types/` (API response shapes, domain types)
 - **API route integration tests** — Test handlers directly with mocked Prisma/Supabase
-- **Cypress E2E tests** — Full user flow coverage in real browser
+- ~~**Cypress E2E tests** — Full user flow coverage in real browser~~ ✓ Done
 - **Mobile responsiveness audit** — Touch targets, modals, small screen layout
