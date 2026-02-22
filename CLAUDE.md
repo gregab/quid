@@ -4,11 +4,22 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 **Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/quid`.
 
+## Design Philosophy
+
+**Keep it simple and conventional.** Always prefer the standard, idiomatic way of doing things in Next.js, React, Supabase, and Tailwind. If a solution feels hacky, overly clever, or like you're fighting the framework — stop. You're probably going down the wrong path.
+
+Before reaching for a workaround, ask yourself:
+- Is this how the framework docs say to do it?
+- Would a senior Next.js/React developer look at this and think it's normal?
+- Am I adding complexity to solve a problem that shouldn't exist?
+
+If the answer to any of these is "no" or "I'm not sure," **pause and ask the user** rather than pushing through. Say what you're trying to do, what's feeling off, and ask if they can point you to the relevant framework docs. A 30-second question beats a 30-minute rabbit hole that produces fragile code.
+
 ## Workflow
 
 For any change: understand the code first, make changes, write tests, run tests, commit, push. **Tests pass before shipping. Every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys). This applies to all changes — UI, copy, styling, refactors, bug fixes. Don't wait to be asked.
 
-**Starting a task:** Read **ARCHITECTURE.md** first to orient yourself — it covers data models, API routes, auth flow, and key design decisions. Don't blindly slurp in source files; use ARCHITECTURE.md to understand the codebase structure, then read only the specific files relevant to the task.
+**Starting a task:** Read **ARCHITECTURE.md** first to orient yourself — it covers data models, API routes, auth flow, and key design decisions. Don't blindly slurp in source files; use ARCHITECTURE.md and the "Where to Change Things" table below to understand what's relevant, then read only the specific files you need. **Be strategic with token usage** — prefer targeted reads over broad exploration. Read one or two key files, make your changes, and only pull in more context if something isn't clear.
 
 ## Commands
 ```bash
