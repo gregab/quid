@@ -4,7 +4,7 @@ import CreateGroupButton from "./CreateGroupButton";
 
 // Deterministic emoji per group so it doesn't flicker
 function groupEmoji(id: string): string {
-  const emojis = ["🐦", "🪶", "🦅", "🕊️", "🦉", "🌙", "☀️", "⭐", "🌿", "🪴", "🌾", "🦆", "🌞", "🐧", "✨"];
+  const emojis = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
   const index = id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % emojis.length;
   return emojis[index];
 }
