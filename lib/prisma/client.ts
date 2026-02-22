@@ -42,6 +42,11 @@ function createPrismaClient() {
   const pool = new pg.Pool({
     connectionString: url.toString(),
     ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA },
+    // max: 1 is critical for serverless (Vercel). Each function instance gets its own
+    // Node.js process; without this cap each instance opens up to 10 connections by
+    // default, which rapidly exhausts Supabase's connection limit across concurrent
+    // invocations and causes DriverAdapterError: MaxClientsInSessionMode.
+    max: 1,
   });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
@@ -51,6 +56,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Always cache on globalThis — not just in dev. In production the module is
+// loaded once per process, but if the module is ever re-evaluated (e.g. dev
+// hot-reload, edge-case re-imports) we want to reuse the existing client and
+// its pool rather than opening a new set of connections.
+if (!globalForPrisma.prisma) globalForPrisma.prisma = createPrismaClient();
+export const prisma = globalForPrisma.prisma;

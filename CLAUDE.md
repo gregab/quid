@@ -8,6 +8,8 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 For any change: understand the code first, make changes, write tests, run tests, commit, push. **Tests pass before shipping. Every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys). This applies to all changes — UI, copy, styling, refactors, bug fixes. Don't wait to be asked.
 
+**Starting a task:** Read **ARCHITECTURE.md** first to orient yourself — it covers data models, API routes, auth flow, and key design decisions. Don't blindly slurp in source files; use ARCHITECTURE.md to understand the codebase structure, then read only the specific files relevant to the task.
+
 ## Commands
 ```bash
 npm run dev                             # Dev server (localhost:3000/quid)
@@ -47,6 +49,7 @@ vercel logs --follow                    # Stream live production logs
 4. **Money is always integers (cents).** Never floats. Display formatting converts at UI layer.
 5. **Prisma import**: `import { prisma } from "@/lib/prisma/client"` (named export)
 6. **Auth = Supabase, Data = Prisma.** Never query data through Supabase JS client.
+7. **`pg.Pool` must be created with `max: 1`** in `lib/prisma/client.ts`. On Vercel, each serverless function instance is a separate process. Without the cap, each instance uses up to 10 connections (pg default), exhausting Supabase's limit across concurrent invocations — causing `DriverAdapterError: MaxClientsInSessionMode`. Do not remove this. It's tested in `lib/prisma/client.test.ts`.
 
 ## Security Rules
 - SSL cert verification always enabled (`rejectUnauthorized: true`)
@@ -62,6 +65,7 @@ vercel logs --follow                    # Stream live production logs
 ```
 lib/balances/simplify.test.ts                   — unit tests (debt simplification)
 lib/supabase/supabase.test.ts                   — env var + Supabase key validation
+lib/prisma/client.test.ts                       — pool config (max: 1) + singleton invariants
 app/(app)/groups/[id]/ExpensesList.test.tsx      — expense list rendering + interactions
 app/(app)/groups/[id]/ActivityFeed.test.tsx      — activity feed rendering
 app/(app)/groups/[id]/useActivityLogs.test.ts    — activity log hook
@@ -98,5 +102,5 @@ All in `.env.local` (see `.env.local.example`):
 ## Keeping Docs Current
 After non-trivial tasks, update if warranted:
 - **CLAUDE.md** — Workflow changes, new gotchas, structure changes.
-- **ARCHITECTURE.md** — Design decisions, new patterns, implementation details.
+- **ARCHITECTURE.md** — Design decisions, new patterns, implementation details. If you acquired novel, generally-useful context about how the codebase works (data flows, tricky interactions, non-obvious patterns), add it here so future sessions don't have to rediscover it. Also remove or correct any information that turned out to be wrong or outdated.
 - **TODOS.md** — Tasks completed, new tasks identified.
