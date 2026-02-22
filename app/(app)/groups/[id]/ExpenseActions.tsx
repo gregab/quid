@@ -49,6 +49,18 @@ export function ExpenseActions({
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/quid").pathname;
 
+  const parsedAmountCents = Math.round(parseFloat(amount) * 100);
+  const originalParticipantIds = new Set(
+    expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId)
+  );
+  const hasChanges =
+    description !== expense.description ||
+    (!isNaN(parsedAmountCents) && parsedAmountCents !== expense.amountCents) ||
+    date !== expense.date ||
+    paidByUserId !== expense.paidById ||
+    participantIds.size !== originalParticipantIds.size ||
+    [...participantIds].some((id) => !originalParticipantIds.has(id));
+
   function toggleParticipant(userId: string) {
     setParticipantIds((prev) => {
       const next = new Set(prev);
@@ -339,7 +351,7 @@ export function ExpenseActions({
                 <Button type="button" variant="ghost" onClick={handleEditClose}>
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={!hasChanges}>
                   Save changes
                 </Button>
               </div>
