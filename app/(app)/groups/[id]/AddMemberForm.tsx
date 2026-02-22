@@ -22,26 +22,35 @@ export function AddMemberForm({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  // Delayed flag so "Searching…" doesn't flash on fast responses
+  const [showSearching, setShowSearching] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const searchingTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   const search = useCallback(
     async (q: string) => {
       if (q.length < 2) {
         setResults([]);
-        setShowDropdown(false);
+        setShowResults(false);
+        setSearching(false);
+        setShowSearching(false);
+        if (searchingTimerRef.current) clearTimeout(searchingTimerRef.current);
         return;
       }
 
       setSearching(true);
+      // Only show "Searching…" if the query takes more than 200ms
+      if (searchingTimerRef.current) clearTimeout(searchingTimerRef.current);
+      searchingTimerRef.current = setTimeout(() => setShowSearching(true), 200);
+
       const supabase = createClient();
       const escaped = q.replace(/%/g, "\\%").replace(/_/g, "\\_");
 
@@ -62,10 +71,12 @@ export function AddMemberForm({
       }
 
       const { data } = await queryBuilder;
+      if (searchingTimerRef.current) clearTimeout(searchingTimerRef.current);
       setResults(data ?? []);
-      setShowDropdown(true);
+      setShowResults(true);
       setHighlightedIndex(-1);
       setSearching(false);
+      setShowSearching(false);
     },
     [existingMemberIds],
   );
@@ -86,7 +97,7 @@ export function AddMemberForm({
     setSelectedUser(user);
     setQuery("");
     setResults([]);
-    setShowDropdown(false);
+    setShowResults(false);
     setError(null);
   }
 
@@ -99,7 +110,7 @@ export function AddMemberForm({
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!showDropdown || results.length === 0) return;
+    if (!showResults || results.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -115,22 +126,15 @@ export function AddMemberForm({
       e.preventDefault();
       selectUser(results[highlightedIndex]!);
     } else if (e.key === "Escape") {
-      setShowDropdown(false);
+      setShowResults(false);
     }
   }
 
-  // Close dropdown on click outside
+  // Clean up timers on unmount
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      if (searchingTimerRef.current) clearTimeout(searchingTimerRef.current);
+    };
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -186,10 +190,13 @@ export function AddMemberForm({
   function resetState() {
     setQuery("");
     setResults([]);
-    setShowDropdown(false);
+    setShowResults(false);
     setSelectedUser(null);
     setError(null);
     setHighlightedIndex(-1);
+    setSearching(false);
+    setShowSearching(false);
+    if (searchingTimerRef.current) clearTimeout(searchingTimerRef.current);
   }
 
   function handleClose() {
@@ -213,17 +220,20 @@ export function AddMemberForm({
             if (e.target === e.currentTarget) handleClose();
           }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Add a member
-              </h2>
-              <p className="text-sm text-gray-400 mt-0.5">
-                Search by name or email address.
-              </p>
+          <div className="modal-content bg-white rounded-2xl w-full max-w-sm shadow-2xl dark:bg-gray-800 flex flex-col">
+            <div className="p-6 pb-0">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Add a member
+                </h2>
+                <p className="text-sm text-gray-400 mt-0.5">
+                  Search by name or email address.
+                </p>
+              </div>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col">
+              <div className="px-6">
                 <label
                   htmlFor="memberSearch"
                   className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300"
@@ -249,59 +259,62 @@ export function AddMemberForm({
                     </span>
                   </div>
                 ) : (
-                  <div className="relative" ref={dropdownRef}>
-                    <input
-                      id="memberSearch"
-                      type="text"
-                      autoComplete="off"
-                      placeholder="Search by name or email…"
-                      value={query}
-                      onChange={(e) => handleInputChange(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => {
-                        if (results.length > 0) setShowDropdown(true);
-                      }}
-                      ref={inputRef}
-                      className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
-                    />
-
-                    {showDropdown && (results.length > 0 || searching) && (
-                      <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700 overflow-hidden">
-                        {results.length > 0 ? (
-                          results.map((user, i) => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              className={`w-full px-3 py-2 text-left cursor-pointer transition-colors ${
-                                i === highlightedIndex
-                                  ? "bg-amber-50 dark:bg-amber-900/30"
-                                  : "hover:bg-gray-50 dark:hover:bg-gray-600"
-                              }`}
-                              onMouseEnter={() => setHighlightedIndex(i)}
-                              onClick={() => selectUser(user)}
-                            >
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {user.displayName}
-                              </div>
-                              <div className="text-xs text-gray-400">
-                                {user.email}
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-400">
-                            Searching…
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <input
+                    id="memberSearch"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Search by name or email…"
+                    value={query}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => {
+                      if (results.length > 0) setShowResults(true);
+                    }}
+                    ref={inputRef}
+                    className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+                  />
                 )}
               </div>
 
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {/* Inline results — flows naturally so buttons stay visible */}
+              {showResults && !selectedUser && (
+                <div className="mt-2 max-h-48 overflow-y-auto">
+                  {results.length > 0 ? (
+                    results.map((user, i) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className={`w-full px-6 py-2.5 text-left cursor-pointer transition-colors ${
+                          i === highlightedIndex
+                            ? "bg-amber-50 dark:bg-amber-900/30"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        }`}
+                        onMouseEnter={() => setHighlightedIndex(i)}
+                        onClick={() => selectUser(user)}
+                      >
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {user.displayName}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {user.email}
+                        </div>
+                      </button>
+                    ))
+                  ) : showSearching ? (
+                    <div className="px-6 py-2.5 text-sm text-gray-400">
+                      Searching…
+                    </div>
+                  ) : !searching ? (
+                    <div className="px-6 py-2.5 text-sm text-gray-400">
+                      No users found
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
-              <div className="flex gap-2 justify-end pt-1">
+              {error && <p className="px-6 mt-3 text-sm text-red-600">{error}</p>}
+
+              <div className="flex gap-2 justify-end p-6 pt-4">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel
                 </Button>
