@@ -96,9 +96,6 @@ function SignupForm() {
           <div className="relative z-10">
             <div className="mb-3 text-4xl">🪶</div>
             <h1 className="mb-2 text-2xl font-black tracking-tight">Join the flock.</h1>
-            <p className="font-mono text-xs text-stone-300/80">
-              A new bird joins the wire.
-            </p>
           </div>
         </div>
 
