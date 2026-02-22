@@ -1,10 +1,8 @@
 /**
  * Tests for the Prisma client singleton and connection pool configuration.
  *
- * The key invariant: pg.Pool must be created with max: 1.
- * Without it, each Vercel serverless function instance opens up to 10 connections
- * by default. With concurrent invocations this quickly exhausts Supabase's connection
- * limit, causing: DriverAdapterError: MaxClientsInSessionMode / Max client connections reached.
+ * Key invariant: pg.Pool is created with max: 1 so each serverless function
+ * instance holds at most one connection to the transaction pooler.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

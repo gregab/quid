@@ -31,8 +31,8 @@ o/bKiIz+Fq8=
 -----END CERTIFICATE-----`;
 
 function createPrismaClient() {
-  const raw = process.env.POSTGRES_URL_NON_POOLING || process.env.DATABASE_URL;
-  if (!raw) throw new Error("Missing database connection string: set POSTGRES_URL_NON_POOLING or DATABASE_URL");
+  const raw = process.env.DATABASE_URL;
+  if (!raw) throw new Error("Missing DATABASE_URL environment variable");
 
   // Strip sslmode from the connection string — pg-connection-string parses it and currently
   // treats 'require' as 'verify-full', which overrides our ssl config object below.
@@ -42,10 +42,9 @@ function createPrismaClient() {
   const pool = new pg.Pool({
     connectionString: url.toString(),
     ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA },
-    // max: 1 is critical for serverless (Vercel). Each function instance gets its own
-    // Node.js process; without this cap each instance opens up to 10 connections by
-    // default, which rapidly exhausts Supabase's connection limit across concurrent
-    // invocations and causes DriverAdapterError: MaxClientsInSessionMode.
+    // max: 1 keeps each serverless function instance to a single pooler connection.
+    // With the transaction pooler this is less critical than with direct connections,
+    // but still sensible — no reason for one short-lived invocation to hold multiple.
     max: 1,
   });
   const adapter = new PrismaPg(pool);

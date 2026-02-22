@@ -60,9 +60,8 @@ components/
   ui/Input.tsx                           # Input with label, error message, full-width styling
 
 lib/
-  prisma/client.ts                       # Prisma singleton: creates pg.Pool with SSL (bundled Supabase
-                                         #   Root CA cert), strips sslmode from connection string,
-                                         #   passes pool to PrismaPg adapter
+  prisma/client.ts                       # Prisma singleton: pg.Pool → PrismaPg adapter, connects via
+                                         #   transaction pooler (DATABASE_URL), bundles Supabase Root CA
   supabase/client.ts                     # Browser Supabase client (createBrowserClient)
   supabase/server.ts                     # Server Supabase client (cookie-aware, for RSC + route handlers)
   balances/simplify.ts                   # Debt simplification: pure function, zero framework deps,
@@ -234,13 +233,22 @@ fetch(`${basePath}/api/groups/...`, { method: "POST", ... });
 
 ## Database Connection
 
+**Two connection URLs, two purposes:**
+
+| Env var | Points to | Used by | Why |
+|---|---|---|---|
+| `DATABASE_URL` | Supabase **transaction pooler** (port 6543) | Runtime queries (Vercel serverless functions) | Supavisor multiplexes many short-lived serverless connections into a small pool of actual Postgres connections. Designed for stateless, ephemeral workloads. |
+| `DIRECT_URL` | Supabase **direct connection** (port 5432) | Migrations only (`npx prisma migrate dev`) | Migrations use advisory locks and long-running DDL that require a persistent, dedicated Postgres connection. |
+
+In Prisma 7, connection URLs live in `prisma.config.ts`, not `schema.prisma`. The `datasource.url` in `prisma.config.ts` uses `DIRECT_URL` for migrations (falls back to `POSTGRES_URL_NON_POOLING` for legacy Vercel compat). The runtime `lib/prisma/client.ts` reads `DATABASE_URL` (the pooler) for the `pg.Pool`.
+
 `lib/prisma/client.ts` handles two Supabase-specific issues:
 
 1. **SSL certificate**: Supabase uses a private root CA not in system trust stores. The file bundles the Supabase Root CA cert as an inline constant and passes it via `ssl: { rejectUnauthorized: true, ca: SUPABASE_ROOT_CA }`. Never set `rejectUnauthorized: false`.
 
 2. **Connection string sslmode**: `pg-connection-string` misparses `sslmode=require` from the DATABASE_URL, overriding the `ssl` config. We strip it with `url.searchParams.delete("sslmode")` before creating the pool.
 
-The Prisma client is a module-level singleton. It creates a `pg.Pool` and passes it to `@prisma/adapter-pg` (Prisma 7's driver adapter pattern).
+The Prisma client is a module-level singleton. It creates a `pg.Pool` (with `max: 1`) and passes it to `@prisma/adapter-pg` (Prisma 7's driver adapter pattern).
 
 ## Expense Splitting
 
@@ -410,6 +418,26 @@ Wrap in `await act(async () => { ... })` when the handler is async (e.g. calls f
 - Implementation details (internal state, private functions)
 - Styles/classnames beyond the minimum needed to verify behavior (e.g. `opacity-60` for pending state is fine)
 - Things that are already covered by the framework (Next.js routing, Prisma query syntax)
+
+### Smoke Tests (`tests/smoke.test.ts`)
+
+Smoke tests are a **post-deploy health check**, not a pre-deploy safety net. Run them after pushing to verify production is working — not while developing. During development, use `SKIP_SMOKE_TESTS=1 npm test` to run only unit/integration tests (fast, no network).
+
+**By default `npm test` hits live production** (`https://www.gregbigelow.com/quid`). Override with:
+```bash
+SKIP_SMOKE_TESTS=1 npm test                                    # skip entirely
+SMOKE_TEST_BASE_URL=http://localhost:3000/quid npm test tests/smoke.test.ts  # run against local dev
+```
+
+**What they cover:**
+- Site reachability and auth redirects (unauthenticated → /login)
+- basePath sanity: routes only exist under `/quid`, not at the domain root
+- All API endpoints return 401 for unauthenticated requests
+- Full authenticated CRUD flow (requires `SMOKE_TEST_EMAIL` + `SMOKE_TEST_PASSWORD` in `.env.local`)
+
+**Authenticated tests mutate prod data:** they create a group, add/edit/delete an expense, then clean up. The group is named `[smoke test — safe to delete]` and gets left behind if a test fails mid-run — safe to delete manually.
+
+**When to run smoke tests:** after changes to `proxy.ts`, auth routes, API routes, basePath config, or env vars.
 
 ### E2E Tests (Cypress)
 

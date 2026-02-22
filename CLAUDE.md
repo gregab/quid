@@ -54,7 +54,8 @@ npm run cy:run                          # Cypress headless (CI)
 4. **Money is always integers (cents).** Never floats. Display formatting converts at UI layer.
 5. **Prisma import**: `import { prisma } from "@/lib/prisma/client"` (named export)
 6. **Auth = Supabase, Data = Prisma.** Never query data through Supabase JS client.
-7. **`pg.Pool` must be created with `max: 1`** in `lib/prisma/client.ts`. On Vercel, each serverless function instance is a separate process. Without the cap, each instance uses up to 10 connections (pg default), exhausting Supabase's limit across concurrent invocations — causing `DriverAdapterError: MaxClientsInSessionMode`. Do not remove this. It's tested in `lib/prisma/client.test.ts`.
+7. **`pg.Pool` must be created with `max: 1`** in `lib/prisma/client.ts`. Each serverless function instance should hold at most one connection to the transaction pooler. Tested in `lib/prisma/client.test.ts`.
+8. **`DATABASE_URL` = transaction pooler, `DIRECT_URL` = direct connection.** Runtime queries go through the pooler (port 6543). Only migrations use the direct connection (port 5432). Never swap these.
 
 ## Security Rules
 - SSL cert verification always enabled (`rejectUnauthorized: true`)
@@ -109,7 +110,8 @@ See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress d
 
 ## Environment Variables
 All in `.env.local` (see `.env.local.example`):
-- `DATABASE_URL` — Direct (non-pooled) Supabase Postgres connection string
+- `DATABASE_URL` — Supabase transaction pooler URL (port 6543, used at runtime by serverless functions)
+- `DIRECT_URL` — Direct (non-pooled) Supabase Postgres connection string (port 5432, used only for migrations)
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
 - `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/quid` in prod, `http://localhost:3000/quid` in dev
