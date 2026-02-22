@@ -265,7 +265,7 @@ export function AddMemberForm({
                       className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                     />
 
-                    {showDropdown && (
+                    {showDropdown && (results.length > 0 || searching) && (
                       <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-700 overflow-hidden">
                         {results.length > 0 ? (
                           results.map((user, i) => (
@@ -288,13 +288,9 @@ export function AddMemberForm({
                               </div>
                             </button>
                           ))
-                        ) : searching ? (
-                          <div className="px-3 py-2 text-sm text-gray-400">
-                            Searching…
-                          </div>
                         ) : (
                           <div className="px-3 py-2 text-sm text-gray-400">
-                            No users found
+                            Searching…
                           </div>
                         )}
                       </div>
