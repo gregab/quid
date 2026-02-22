@@ -56,16 +56,16 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Form a new group</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Form a new group</h2>
               <p className="text-sm text-gray-400 mt-0.5">
                 Who's in your next financial friendship?
               </p>
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Group name
                 </label>
                 <Input

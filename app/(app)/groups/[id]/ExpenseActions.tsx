@@ -202,11 +202,11 @@ export function ExpenseActions({
           className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) handleEditClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Edit expense</h2>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl dark:bg-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 dark:text-white">Edit expense</h2>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Description
                 </label>
                 <Input
@@ -220,7 +220,7 @@ export function ExpenseActions({
                 />
               </div>
               <div>
-                <label htmlFor="editAmount" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editAmount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Amount ($)
                 </label>
                 <Input
@@ -235,7 +235,7 @@ export function ExpenseActions({
                 />
               </div>
               <div>
-                <label htmlFor="editDate" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Date
                 </label>
                 <Input
@@ -247,14 +247,14 @@ export function ExpenseActions({
                 />
               </div>
               <div>
-                <label htmlFor="editPaidBy" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="editPaidBy" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Paid by
                 </label>
                 <select
                   id="editPaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -264,7 +264,7 @@ export function ExpenseActions({
                 </select>
               </div>
               <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2">Split between</p>
+                <p className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Split between</p>
                 <div className="space-y-1.5">
                   {members.map((m) => (
                     <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
@@ -274,7 +274,7 @@ export function ExpenseActions({
                         onChange={() => toggleParticipant(m.userId)}
                         className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
-                      <span className="text-sm text-gray-700">{m.displayName}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{m.displayName}</span>
                     </label>
                   ))}
                 </div>
@@ -299,9 +299,9 @@ export function ExpenseActions({
           className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(false); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Delete expense?</h2>
-            <p className="text-sm text-gray-500 mb-5">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl dark:bg-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">Delete expense?</h2>
+            <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
               &ldquo;{expense.description}&rdquo; will be permanently deleted.
             </p>
             <div className="flex gap-2 justify-end">

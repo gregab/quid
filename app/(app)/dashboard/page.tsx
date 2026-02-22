@@ -82,8 +82,8 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Your groups</h2>
-            <p className="mt-0.5 text-sm text-gray-500">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your groups</h2>
+            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               {groups.length === 0
                 ? "None yet — you're either incredibly generous or very new here."
                 : groups.length === 1
@@ -95,10 +95,10 @@ export default async function DashboardPage() {
         </div>
 
         {groups.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-20 text-center">
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-20 text-center dark:border-gray-600 dark:bg-gray-800/50">
             <div className="mb-4 text-6xl">🫰</div>
-            <p className="mb-2 text-xl font-bold text-gray-700">No groups yet</p>
-            <p className="mx-auto max-w-sm text-gray-500">
+            <p className="mb-2 text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
+            <p className="mx-auto max-w-sm text-gray-500 dark:text-gray-400">
               Are you just picking up every tab like some kind of benevolent monarch?
               Chaotic good. Or maybe just create a group.
             </p>
@@ -109,13 +109,13 @@ export default async function DashboardPage() {
               <Link
                 key={group.id}
                 href={`/groups/${group.id}`}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md"
+                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-indigo-500"
               >
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 text-2xl shadow-inner">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-100 text-2xl shadow-inner dark:from-indigo-900 dark:to-violet-800">
                   {groupEmoji(group.id)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-gray-900">{group.name}</p>
+                  <p className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</p>
                   <p className="mt-0.5 text-xs text-gray-400">
                     since{" "}
                     {new Date(group.createdAt).toLocaleDateString("en-US", {
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
 
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
-        <p className="pb-2 text-center text-xs italic text-gray-400">
+        <p className="pb-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
           Maybe the real financial independence is the friends we meticulously tracked along the way. 💸
         </p>
       )}

@@ -61,11 +61,11 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
           className="modal-backdrop fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Add a member</h2>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl dark:bg-gray-800">
+            <h2 className="text-lg font-bold text-gray-900 mb-4 dark:text-white">Add a member</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="memberEmail" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
                   Email address
                 </label>
                 <Input

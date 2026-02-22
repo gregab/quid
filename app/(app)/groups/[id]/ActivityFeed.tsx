@@ -46,11 +46,11 @@ function actionLabel(action: string): string {
 export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
   return (
     <section>
-      <h2 className="text-lg font-bold text-gray-900 mb-3">Activity</h2>
+      <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Activity</h2>
       {logs.length === 0 ? (
         <p className="text-sm text-gray-400">No activity yet.</p>
       ) : (
-        <Card className="divide-y divide-gray-100">
+        <Card className="divide-y divide-gray-100 dark:divide-gray-700">
           {logs.map((log) => {
             const payload = log.payload as Payload;
             const verb = actionLabel(log.action);
@@ -58,7 +58,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
 
             return (
               <div key={log.id} className="flex items-start justify-between gap-4 px-4 py-3">
-                <p className="text-sm text-gray-700 leading-snug">
+                <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
                   <span className="font-semibold">{log.actor.displayName}</span>
                   {" "}{verb}{" "}
                   {payload.description && (

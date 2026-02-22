@@ -106,12 +106,12 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </svg>
           Back to groups
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{group.name}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{group.name}</h1>
       </div>
 
       {/* Balances */}
       <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Balances</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Balances</h2>
         {resolvedDebts.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +120,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             Everyone&apos;s settled up!
           </div>
         ) : (
-          <Card className="divide-y divide-gray-100">
+          <Card className="divide-y divide-gray-100 dark:divide-gray-700">
             {resolvedDebts.map((debt, i) => {
               const isCurrentUserOwing = debt.fromId === user.id;
               const isCurrentUserReceiving = debt.toId === user.id;
@@ -130,7 +130,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
               return (
                 <div key={i} className="flex items-center justify-between px-4 py-3">
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     <span className="font-semibold">{fromLabel}</span>
                     {" "}{verb}{" "}
                     <span className="font-semibold">{toLabel}</span>
@@ -169,18 +169,18 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       {/* Members */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900">Members</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Members</h2>
           <AddMemberForm groupId={group.id} />
         </div>
         <ul className="space-y-2">
           {group.members.map((m) => (
             <li key={m.id}>
               <Card className="px-4 py-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0 dark:bg-indigo-900 dark:text-indigo-400">
                   {m.user.displayName[0]?.toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
                     {m.user.displayName}
                     {m.userId === user.id && (
                       <span className="ml-1.5 text-xs text-gray-400 font-normal">(you)</span>

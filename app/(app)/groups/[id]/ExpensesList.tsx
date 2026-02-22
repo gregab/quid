@@ -117,7 +117,7 @@ export function ExpensesList({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-gray-900">Expenses</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Expenses</h2>
         <AddExpenseForm
           groupId={groupId}
           currentUserId={currentUserId}
@@ -143,13 +143,13 @@ export function ExpensesList({
                 }`}
               >
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm text-gray-900 truncate">{expense.description}</p>
+                  <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Paid by {expense.paidByDisplayName} · {formatDate(expense.date)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold text-indigo-700 whitespace-nowrap">
+                  <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
                     {formatCents(expense.amountCents)}
                   </span>
                   <ExpenseActions
