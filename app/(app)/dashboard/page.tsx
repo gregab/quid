@@ -74,8 +74,7 @@ export default async function DashboardPage() {
             <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">🪺</div>
             <p className="mb-2 text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
             <p className="mx-auto max-w-sm text-sm sm:text-base text-gray-500 dark:text-gray-400">
-              An empty nest. No flockmates, no shared expenses.
-              Start a group and get your birds in a row.
+              An empty nest. Start a group and get your birds in a row.
             </p>
           </div>
         ) : (
@@ -116,7 +115,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
-          Birds of a feather split tabs together. 🪶
+          Maybe the real financial independence is the friends we meticulously tracked along the way. 🪶
         </p>
       )}
     </div>

@@ -80,7 +80,7 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
                   id="groupName"
                   type="text"
                   required
-                  placeholder="e.g. Pelican Fund, The Nest Egg, Flock Expenses"
+                  placeholder="e.g. Pelican Fund, Crow Situation, Arctic Expedition"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus

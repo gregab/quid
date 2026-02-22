@@ -52,9 +52,9 @@ describe("GroupInteractive — Balances section", () => {
     vi.restoreAllMocks();
   });
 
-  it("shows 'All perched even!' when there are no expenses", () => {
+  it("shows 'Everyone's settled up!' when there are no expenses", () => {
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[]} />);
-    expect(screen.getByText(/all perched even/i)).toBeTruthy();
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 
   it("shows the correct debt amount when one member paid for all", () => {
@@ -75,23 +75,23 @@ describe("GroupInteractive — Balances section", () => {
     expect(screen.getByText("$5.00")).toBeTruthy();
   });
 
-  it("shows 'All perched even!' when debts cancel out", () => {
+  it("shows 'settled up' when debts cancel out", () => {
     // Alice paid $10 for both, Bob paid $10 for both → net zero
     const exp1 = makeExpense({ id: "1", amountCents: 1000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
     const exp2 = makeExpense({ id: "2", amountCents: 1000, paidById: "user-b", participantIds: ["user-a", "user-b"] });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[exp1, exp2]} />);
-    expect(screen.getByText(/all perched even/i)).toBeTruthy();
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 
   it("updates balances when initialExpenses changes via rerender", () => {
     const { rerender } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[]} />);
-    expect(screen.getByText(/all perched even/i)).toBeTruthy();
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
 
     const expense = makeExpense({ amountCents: 2000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
     rerender(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
 
     // Bob now owes Alice $10
-    expect(screen.queryByText(/all perched even/i)).toBeNull();
+    expect(screen.queryByText(/everyone.*settled up/i)).toBeNull();
     expect(screen.getByText("$10.00")).toBeTruthy();
   });
 });

@@ -20,7 +20,7 @@ function makeLog(overrides: Partial<ActivityLog> = {}): ActivityLog {
 describe("ActivityFeed", () => {
   it("shows empty state when no logs", () => {
     render(<ActivityFeed logs={[]} />);
-    expect(screen.getByText("No wingbeats yet.")).toBeDefined();
+    expect(screen.getByText("No activity yet.")).toBeDefined();
   });
 
   it("renders log with actor name and action", () => {

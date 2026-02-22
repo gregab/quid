@@ -42,7 +42,7 @@ export default function LoginPage() {
             <div className="mb-3 text-4xl">🕊️</div>
             <h1 className="mb-2 text-2xl font-black tracking-tight">Welcome back.</h1>
             <p className="font-mono text-xs text-stone-300/80">
-              The flock&apos;s debts aren&apos;t going to roost themselves.
+              The debts aren&apos;t going to track themselves.
             </p>
           </div>
         </div>
