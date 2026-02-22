@@ -214,18 +214,17 @@ export function ExpenseActions({
 
   return (
     <>
-      <div className="flex items-center gap-0.5 shrink-0">
+      <div className="flex items-center gap-0 shrink-0 -mr-1">
         {expense.canEdit && (
           <button
             onClick={() => setEditOpen(true)}
             disabled={isPending || editLoading}
-            className="text-gray-300 hover:text-indigo-500 p-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="text-gray-300 hover:text-indigo-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Edit expense"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
+              className="w-4 h-4 sm:w-3.5 sm:h-3.5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -242,13 +241,12 @@ export function ExpenseActions({
           <button
             onClick={() => setDeleteConfirm(true)}
             disabled={isPending}
-            className="text-gray-300 hover:text-red-500 p-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="text-gray-300 hover:text-red-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Delete expense"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
+              className="w-4 h-4 sm:w-3.5 sm:h-3.5"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

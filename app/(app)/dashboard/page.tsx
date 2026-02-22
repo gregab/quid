@@ -63,20 +63,20 @@ export default async function DashboardPage() {
   const statusMessage = STATUS_MESSAGES[Math.floor(Math.random() * STATUS_MESSAGES.length)]!;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-8 text-white shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-6 sm:p-8 text-white shadow-xl">
         {/* Decorative blobs */}
         <div className="pointer-events-none absolute -right-10 -top-10 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-14 -right-6 h-72 w-72 rounded-full bg-fuchsia-400/20 blur-3xl" />
         <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-64 -translate-x-1/2 rounded-full bg-violet-300/10 blur-2xl" />
 
         <div className="relative z-10">
-          <div className="mb-4 text-5xl">🤝</div>
-          <h1 className="mb-3 text-3xl font-black tracking-tight">
+          <div className="mb-3 sm:mb-4 text-4xl sm:text-5xl">🤝</div>
+          <h1 className="mb-2 sm:mb-3 text-2xl sm:text-3xl font-black tracking-tight">
             Hey {displayName}.
           </h1>
-          <p className="text-sm text-indigo-200/80 font-mono">{statusMessage}</p>
+          <p className="text-xs sm:text-sm text-indigo-200/80 font-mono">{statusMessage}</p>
         </div>
       </div>
 
@@ -97,10 +97,10 @@ export default async function DashboardPage() {
         </div>
 
         {groups.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-6 py-20 text-center dark:border-gray-600 dark:bg-gray-800/50">
-            <div className="mb-4 text-6xl">🫰</div>
-            <p className="mb-2 text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
-            <p className="mx-auto max-w-sm text-gray-500 dark:text-gray-400">
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-5 py-12 sm:px-6 sm:py-20 text-center dark:border-gray-600 dark:bg-gray-800/50">
+            <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">🫰</div>
+            <p className="mb-2 text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
+            <p className="mx-auto max-w-sm text-sm sm:text-base text-gray-500 dark:text-gray-400">
               Are you just picking up every tab like some kind of benevolent monarch?
               Chaotic good. Or maybe just create a group.
             </p>
