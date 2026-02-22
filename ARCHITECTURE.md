@@ -490,6 +490,8 @@ Wrap in `await act(async () => { ... })` when the handler is async (e.g. calls f
 
 Smoke tests are a **post-deploy health check**, not a pre-deploy safety net. Run them after pushing to verify production is working — not while developing. During development, use `SKIP_SMOKE_TESTS=1 npm test` to run only unit/integration tests (fast, no network).
 
+**Prefer Cypress for new E2E coverage.** Smoke tests hit live production and are slow. For any user-facing flow or API behaviour that can be tested against a local dev server, write a Cypress spec instead. Add to smoke tests only for things that can only be verified post-deploy: basePath sanity, production env var validation, etc.
+
 **By default `npm test` hits live production** (`https://www.gregbigelow.com/aviary`). Override with:
 ```bash
 SKIP_SMOKE_TESTS=1 npm test                                    # skip entirely

@@ -93,4 +93,65 @@ describe("InviteJoinForm", () => {
 
     expect(screen.getByText("Invalid invite token")).toBeDefined();
   });
+
+  it("redirects to the correct group path after joining", async () => {
+    const push = vi.fn();
+    vi.mocked(await import("next/navigation")).useRouter = () => ({ push, refresh: vi.fn() } as never);
+
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { groupId: "group-1", alreadyMember: false }, error: null }),
+    } as Response);
+
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
+    });
+
+    expect(push).toHaveBeenCalledWith("/groups/group-1");
+  });
+
+  it("redirects to the group even when alreadyMember is true", async () => {
+    const push = vi.fn();
+    vi.mocked(await import("next/navigation")).useRouter = () => ({ push, refresh: vi.fn() } as never);
+
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { groupId: "group-2", alreadyMember: true }, error: null }),
+    } as Response);
+
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
+    });
+
+    expect(push).toHaveBeenCalledWith("/groups/group-2");
+  });
+
+  it("shows network error message when fetch throws", async () => {
+    vi.spyOn(global, "fetch").mockRejectedValue(new Error("fetch failed"));
+
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
+    });
+
+    expect(
+      screen.getByText("Network error — please check your connection and try again.")
+    ).toBeDefined();
+  });
+
+  it("shows fallback error message when response has no error field", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      json: async () => ({ data: null }),
+    } as Response);
+
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
+    });
+
+    expect(screen.getByText("Something went wrong.")).toBeDefined();
+  });
 });

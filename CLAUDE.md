@@ -99,6 +99,7 @@ cypress/e2e/auth.cy.ts           — auth redirects, UI login/logout, invalid-cr
 cypress/e2e/dashboard.cy.ts      — group list, create-group modal, basePath on links
 cypress/e2e/group-detail.cy.ts   — add/edit/delete expenses, activity feed, balances
 cypress/e2e/navigation.cy.ts     — nav bar, browser history, basePath 404
+cypress/e2e/invite.cy.ts         — invite redirect, invalid token, already-member redirect
 ```
 
 Cypress requires `npm run dev` running in a separate terminal. Set credentials in `cypress.env.json` (gitignored):
@@ -109,8 +110,8 @@ Cypress requires `npm run dev` running in a separate terminal. Set credentials i
 **Where to add tests:**
 - New UI behavior or rendering logic → add to the relevant `*.test.tsx` co-located with the component
 - New pure function → co-locate a `*.test.ts` next to it
-- New API route behavior → smoke test if it can't be covered by unit/integration tests
 - New user-facing flow → add or extend a Cypress spec in `cypress/e2e/`
+- New API route behavior → **prefer a Cypress spec**; only add smoke tests for things that can only be verified post-deploy against production (e.g. basePath sanity, env var validation). Smoke tests are a post-deploy health check, not a pre-deploy safety net. Don't add more of them.
 
 Run smoke tests after changing: `proxy.ts`, auth routes, API routes, or env vars.
 
