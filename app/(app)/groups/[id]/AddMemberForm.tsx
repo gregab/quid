@@ -220,20 +220,17 @@ export function AddMemberForm({
             if (e.target === e.currentTarget) handleClose();
           }}
         >
-          <div className="modal-content bg-white rounded-2xl w-full max-w-sm shadow-2xl dark:bg-gray-800 flex flex-col">
-            <div className="p-6 pb-0">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Add a member
-                </h2>
-                <p className="text-sm text-gray-400 mt-0.5">
-                  Search by name or email address.
-                </p>
-              </div>
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
+            <div className="mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Add a member
+              </h2>
+              <p className="text-sm text-gray-400 mt-0.5">
+                Search by name or email address.
+              </p>
             </div>
-
-            <form onSubmit={handleSubmit} className="flex flex-col">
-              <div className="px-6">
+            <form onSubmit={handleSubmit}>
+              <div>
                 <label
                   htmlFor="memberSearch"
                   className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300"
@@ -274,47 +271,49 @@ export function AddMemberForm({
                     className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
                   />
                 )}
+
+                {/* Reserved space for dropdown results — fixed height so modal doesn't resize */}
+                <div className="h-40 mt-2">
+                  {showResults && !selectedUser && (
+                    <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-700 overflow-hidden max-h-40 overflow-y-auto">
+                      {results.length > 0 ? (
+                        results.map((user, i) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className={`w-full px-3 py-2 text-left cursor-pointer transition-colors ${
+                              i === highlightedIndex
+                                ? "bg-amber-50 dark:bg-amber-900/30"
+                                : "hover:bg-gray-50 dark:hover:bg-gray-600"
+                            }`}
+                            onMouseEnter={() => setHighlightedIndex(i)}
+                            onClick={() => selectUser(user)}
+                          >
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {user.displayName}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {user.email}
+                            </div>
+                          </button>
+                        ))
+                      ) : showSearching ? (
+                        <div className="px-3 py-2 text-sm text-gray-400">
+                          Searching…
+                        </div>
+                      ) : !searching ? (
+                        <div className="px-3 py-2 text-sm text-gray-400">
+                          No users found
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Inline results — flows naturally so buttons stay visible */}
-              {showResults && !selectedUser && (
-                <div className="mt-2 max-h-48 overflow-y-auto">
-                  {results.length > 0 ? (
-                    results.map((user, i) => (
-                      <button
-                        key={user.id}
-                        type="button"
-                        className={`w-full px-6 py-2.5 text-left cursor-pointer transition-colors ${
-                          i === highlightedIndex
-                            ? "bg-amber-50 dark:bg-amber-900/30"
-                            : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        }`}
-                        onMouseEnter={() => setHighlightedIndex(i)}
-                        onClick={() => selectUser(user)}
-                      >
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.displayName}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {user.email}
-                        </div>
-                      </button>
-                    ))
-                  ) : showSearching ? (
-                    <div className="px-6 py-2.5 text-sm text-gray-400">
-                      Searching…
-                    </div>
-                  ) : !searching ? (
-                    <div className="px-6 py-2.5 text-sm text-gray-400">
-                      No users found
-                    </div>
-                  ) : null}
-                </div>
-              )}
+              {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
 
-              {error && <p className="px-6 mt-3 text-sm text-red-600">{error}</p>}
-
-              <div className="flex gap-2 justify-end p-6 pt-4">
+              <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel
                 </Button>
