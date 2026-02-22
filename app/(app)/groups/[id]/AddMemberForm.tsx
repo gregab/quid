@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
-export function AddMemberForm({ groupId }: { groupId: string }) {
+export function AddMemberForm({ groupId, buttonClassName }: { groupId: string; buttonClassName?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -52,8 +52,8 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
 
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)} className="text-sm">
-        Add member
+      <Button variant="secondary" onClick={() => setOpen(true)} className={buttonClassName ?? "text-sm"}>
+        + add member
       </Button>
 
       {open && (

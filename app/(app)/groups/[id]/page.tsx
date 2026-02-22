@@ -2,10 +2,16 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma/client";
-import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
+
+// Unique emoji per member slot (by join order → guaranteed no duplicates within a group)
+const MEMBER_EMOJIS = [
+  "🦊", "🐼", "🌺", "🧙", "🦋", "🌵", "🦄", "🐬", "🍄", "🦁",
+  "🐙", "🦜", "🐢", "🌙", "⚡", "🎨", "🐧", "🦩", "🌻", "🦝",
+  "🍀", "🐻", "🌸", "🦚", "🎯",
+];
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -66,7 +72,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* Header + Members */}
       <div>
         <Link
           href="/dashboard"
@@ -78,6 +84,29 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           Back to groups
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{group.name}</h1>
+
+        {/* Member chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {group.members.map((m, i) => (
+            <div
+              key={m.id}
+              title={m.user.email ?? undefined}
+              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                m.userId === user.id
+                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+              }`}
+            >
+              <span className="text-sm leading-none">{MEMBER_EMOJIS[i % MEMBER_EMOJIS.length]}</span>
+              <span>{m.user.displayName}</span>
+              {m.userId === user.id && <span className="opacity-50">· you</span>}
+            </div>
+          ))}
+          <AddMemberForm
+            groupId={group.id}
+            buttonClassName="!rounded-full !py-1 !px-2.5 !text-xs border-dashed"
+          />
+        </div>
       </div>
 
       {/* Expenses, Activity, and Balances (client component with optimistic updates) */}
@@ -90,34 +119,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         initialLogs={activityLogs}
         members={members}
       />
-
-      {/* Members */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Members</h2>
-          <AddMemberForm groupId={group.id} />
-        </div>
-        <ul className="space-y-2">
-          {group.members.map((m) => (
-            <li key={m.id}>
-              <Card className="px-4 py-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-600 shrink-0 dark:bg-indigo-900 dark:text-indigo-400">
-                  {m.user.displayName[0]?.toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {m.user.displayName}
-                    {m.userId === user.id && (
-                      <span className="ml-1.5 text-xs text-gray-400 font-normal">(you)</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-400">{m.user.email}</p>
-                </div>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </section>
     </div>
   );
 }
