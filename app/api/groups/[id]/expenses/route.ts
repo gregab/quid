@@ -29,6 +29,7 @@ export async function POST(
   // Verify the requesting user is a member of the group
   const members = await prisma.groupMember.findMany({
     where: { groupId },
+    include: { user: { select: { displayName: true } } },
     orderBy: { joinedAt: "asc" },
   });
 
@@ -55,6 +56,8 @@ export async function POST(
   if (!memberIds.has(paidById)) {
     return NextResponse.json({ data: null, error: "Payer is not a member of this group" }, { status: 400 });
   }
+
+  const paidByMember = members.find((m) => m.userId === paidById)!;
 
   const participants = rawParticipantIds
     ? members.filter((m) => rawParticipantIds.includes(m.userId))
@@ -94,6 +97,19 @@ export async function POST(
         userId: s.userId,
         amountCents: s.amountCents,
       })),
+    });
+
+    await tx.activityLog.create({
+      data: {
+        groupId,
+        actorId: user.id,
+        action: "expense_added",
+        payload: {
+          description,
+          amountCents,
+          paidByDisplayName: paidByMember.user.displayName,
+        },
+      },
     });
 
     return created;

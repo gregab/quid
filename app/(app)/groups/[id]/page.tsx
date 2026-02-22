@@ -6,6 +6,7 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
 import { ExpensesList } from "./ExpensesList";
+import { ActivityFeed } from "./ActivityFeed";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
 function formatCents(cents: number): string {
@@ -22,19 +23,27 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   if (!user) redirect("/login");
 
-  const group = await prisma.group.findUnique({
-    where: { id },
-    include: {
-      members: {
-        include: { user: true },
-        orderBy: { joinedAt: "asc" },
+  const [group, activityLogs] = await Promise.all([
+    prisma.group.findUnique({
+      where: { id },
+      include: {
+        members: {
+          include: { user: true },
+          orderBy: { joinedAt: "asc" },
+        },
+        expenses: {
+          include: { paidBy: true, splits: true },
+          orderBy: { date: "desc" },
+        },
       },
-      expenses: {
-        include: { paidBy: true, splits: true },
-        orderBy: { date: "desc" },
-      },
-    },
-  });
+    }),
+    prisma.activityLog.findMany({
+      where: { groupId: id },
+      include: { actor: { select: { displayName: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+  ]);
 
   if (!group) redirect("/dashboard");
 
@@ -80,8 +89,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     paidById: expense.paidById,
     paidByDisplayName: expense.paidBy.displayName,
     participantIds: expense.splits.map((s) => s.userId),
-    canEdit: expense.paidById === user.id,
-    canDelete: expense.paidById === user.id || group.createdById === user.id,
+    canEdit: isMember,
+    canDelete: isMember,
   }));
 
   return (
@@ -153,6 +162,9 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         initialExpenses={initialExpenses}
         members={members}
       />
+
+      {/* Activity */}
+      <ActivityFeed logs={activityLogs} />
 
       {/* Members */}
       <section>

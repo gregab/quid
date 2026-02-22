@@ -15,8 +15,9 @@
 - Env var validation in Supabase clients
 - Production email confirmation links (fixed localhost bug)
 - Smoke tests (unauthenticated + authenticated) for auth, API, basePath
-- Edit expenses: PUT /api/groups/[id]/expenses/[expenseId] with atomic split recalculation (payer only)
-- Delete expenses: DELETE /api/groups/[id]/expenses/[expenseId] (payer or group creator); ExpenseActions component with edit modal + delete confirmation
+- Edit expenses: PUT /api/groups/[id]/expenses/[expenseId] with atomic split recalculation (any member)
+- Delete expenses: DELETE /api/groups/[id]/expenses/[expenseId] (any member); ExpenseActions component with edit modal + delete confirmation
+- Activity log: ActivityLog model + feed on group page; logs expense_added/edited/deleted with actor, description, amount
 
 ## In Progress
 <!-- Move items here when actively working on them -->
@@ -109,10 +110,10 @@ These are features that real users will hit immediately and have no workaround f
 - **Scope**: Add optional `category` field to Expense model (enum or free-text). Add optional `notes` field (longer text). Update the add/edit expense forms. Display category as a badge on expense cards.
 - **Schema change**: Requires a Prisma migration to add columns.
 
-#### 14. Activity/history log
-- **Why**: Users want to know who added what and when. "Who added that $200 expense?" Currently there's no audit trail.
-- **Scope**: Could be a simple chronological feed on the group page: "Greg added 'Groceries' ($45.00) on Jan 15" / "Sarah was added to the group on Jan 10". No separate model needed initially — derive from existing `createdAt` timestamps on expenses and members.
-- **Files to touch**: New section on group detail page, or a separate `/groups/[id]/activity` page.
+#### ~~14. Activity/history log~~ ✓ Done
+- ActivityLog model with groupId, actorId, action, payload (JSON), createdAt
+- Logs on expense_added, expense_edited, expense_deleted
+- ActivityFeed component on group page (between Expenses and Members)
 
 ### P3: Infrastructure & Code Quality
 

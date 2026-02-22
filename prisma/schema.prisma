@@ -18,6 +18,7 @@ model User {
   memberships   GroupMember[]
   paidExpenses  Expense[]
   splits        ExpenseSplit[]
+  activityLogs  ActivityLog[]
 }
 
 model Group {
@@ -26,9 +27,10 @@ model Group {
   createdAt   DateTime @default(now())
   createdById String
 
-  creator  User          @relation(fields: [createdById], references: [id])
-  members  GroupMember[]
-  expenses Expense[]
+  creator      User          @relation(fields: [createdById], references: [id])
+  members      GroupMember[]
+  expenses     Expense[]
+  activityLogs ActivityLog[]
 
   @@index([createdById])
 }
@@ -75,4 +77,19 @@ model ExpenseSplit {
 
   @@index([expenseId])
   @@index([userId])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  groupId   String
+  actorId   String
+  action    String   // "expense_added" | "expense_edited" | "expense_deleted"
+  payload   Json     // { description, amountCents, paidByDisplayName }
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  actor User  @relation(fields: [actorId], references: [id])
+
+  @@index([groupId])
+  @@index([actorId])
 }

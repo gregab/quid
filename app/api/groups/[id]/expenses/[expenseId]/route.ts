@@ -32,7 +32,10 @@ export async function PUT(
     include: {
       group: {
         include: {
-          members: { orderBy: { joinedAt: "asc" } },
+          members: {
+            include: { user: { select: { displayName: true } } },
+            orderBy: { joinedAt: "asc" },
+          },
         },
       },
     },
@@ -45,14 +48,6 @@ export async function PUT(
   const isMember = expense.group.members.some((m) => m.userId === user.id);
   if (!isMember) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
-  }
-
-  // Only the payer can edit
-  if (expense.paidById !== user.id) {
-    return NextResponse.json(
-      { data: null, error: "Only the payer can edit this expense" },
-      { status: 403 }
-    );
   }
 
   const body: unknown = await request.json();
@@ -74,6 +69,8 @@ export async function PUT(
   if (!memberIds.has(newPaidById)) {
     return NextResponse.json({ data: null, error: "Payer is not a member of this group" }, { status: 400 });
   }
+
+  const newPaidByMember = allMembers.find((m) => m.userId === newPaidById)!;
 
   let participants = allMembers;
   if (rawParticipantIds) {
@@ -109,6 +106,19 @@ export async function PUT(
       })),
     });
 
+    await tx.activityLog.create({
+      data: {
+        groupId,
+        actorId: user.id,
+        action: "expense_edited",
+        payload: {
+          description,
+          amountCents,
+          paidByDisplayName: newPaidByMember.user.displayName,
+        },
+      },
+    });
+
     return result;
   });
 
@@ -130,10 +140,10 @@ export async function DELETE(
 
   const { id: groupId, expenseId } = await params;
 
-  // Fetch expense with group to check creator
+  // Fetch expense with paidBy for activity log payload
   const expense = await prisma.expense.findUnique({
     where: { id: expenseId },
-    include: { group: true },
+    include: { paidBy: { select: { displayName: true } } },
   });
 
   if (!expense || expense.groupId !== groupId) {
@@ -149,16 +159,22 @@ export async function DELETE(
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
   }
 
-  // Only the payer or group creator can delete
-  const canDelete = expense.paidById === user.id || expense.group.createdById === user.id;
-  if (!canDelete) {
-    return NextResponse.json(
-      { data: null, error: "Only the payer or group creator can delete this expense" },
-      { status: 403 }
-    );
-  }
+  await prisma.$transaction(async (tx) => {
+    await tx.activityLog.create({
+      data: {
+        groupId,
+        actorId: user.id,
+        action: "expense_deleted",
+        payload: {
+          description: expense.description,
+          amountCents: expense.amountCents,
+          paidByDisplayName: expense.paidBy.displayName,
+        },
+      },
+    });
 
-  await prisma.expense.delete({ where: { id: expenseId } });
+    await tx.expense.delete({ where: { id: expenseId } });
+  });
 
   return NextResponse.json({ data: null, error: null });
 }
