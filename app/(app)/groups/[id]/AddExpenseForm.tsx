@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
+import type { ActivityLog } from "./ActivityFeed";
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -12,6 +13,7 @@ interface AddExpenseFormProps {
   members: Member[];
   onOptimisticAdd: (expense: ExpenseRow) => void;
   onSettled: () => void;
+  onOptimisticActivity: (log: ActivityLog) => void;
 }
 
 export function AddExpenseForm({
@@ -21,6 +23,7 @@ export function AddExpenseForm({
   members,
   onOptimisticAdd,
   onSettled,
+  onOptimisticActivity,
 }: AddExpenseFormProps) {
   const allMemberIds = members.map((m) => m.userId);
 
@@ -85,6 +88,16 @@ export function AddExpenseForm({
       participantIds: submittedParticipantIds,
       canEdit: submittedPaidByUserId === currentUserId,
       canDelete: submittedPaidByUserId === currentUserId,
+      isPending: true,
+    });
+
+    // Add optimistic activity log
+    onOptimisticActivity({
+      id: `activity-${pendingId}`,
+      action: "expense_added",
+      payload: { description: submittedDescription, amountCents, paidByDisplayName },
+      createdAt: new Date(),
+      actor: { displayName: currentUserDisplayName },
       isPending: true,
     });
 

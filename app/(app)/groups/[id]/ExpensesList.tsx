@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
 import { ExpenseActions } from "./ExpenseActions";
+import type { ActivityLog } from "./ActivityFeed";
 
 export interface Member {
   userId: string;
@@ -31,6 +32,7 @@ interface ExpensesListProps {
   currentUserDisplayName: string;
   initialExpenses: ExpenseRow[];
   members: Member[];
+  onOptimisticActivity: (log: ActivityLog) => void;
 }
 
 function formatCents(cents: number): string {
@@ -51,6 +53,7 @@ export function ExpensesList({
   currentUserDisplayName,
   initialExpenses,
   members,
+  onOptimisticActivity,
 }: ExpensesListProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -100,7 +103,9 @@ export function ExpensesList({
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
     });
-  }, []);
+    // Refresh to reconcile any pending activity logs
+    router.refresh();
+  }, [router]);
 
   const handleDeleteSettled = useCallback(() => {
     router.refresh();
@@ -125,6 +130,7 @@ export function ExpensesList({
           members={members}
           onOptimisticAdd={handleOptimisticAdd}
           onSettled={handleAddSettled}
+          onOptimisticActivity={onOptimisticActivity}
         />
       </div>
 
@@ -157,11 +163,13 @@ export function ExpensesList({
                     expense={expense}
                     members={members}
                     isPending={expense.isPending}
+                    currentUserDisplayName={currentUserDisplayName}
                     onOptimisticDelete={handleOptimisticDelete}
                     onDeleteFailed={handleDeleteFailed}
                     onDeleteSettled={handleDeleteSettled}
                     onOptimisticUpdate={handleOptimisticUpdate}
                     onUpdateSettled={handleUpdateSettled}
+                    onOptimisticActivity={onOptimisticActivity}
                   />
                 </div>
               </Card>

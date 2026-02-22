@@ -5,8 +5,7 @@ import { prisma } from "@/lib/prisma/client";
 import { simplifyDebts } from "@/lib/balances/simplify";
 import { Card } from "@/components/ui/Card";
 import { AddMemberForm } from "./AddMemberForm";
-import { ExpensesList } from "./ExpensesList";
-import { ActivityFeed } from "./ActivityFeed";
+import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
 function formatCents(cents: number): string {
@@ -153,18 +152,16 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         )}
       </section>
 
-      {/* Expenses (client component with optimistic updates) */}
-      <ExpensesList
+      {/* Expenses + Activity (client component with optimistic updates) */}
+      <GroupInteractive
         groupId={group.id}
         groupCreatedById={group.createdById}
         currentUserId={user.id}
         currentUserDisplayName={currentUserDisplayName}
         initialExpenses={initialExpenses}
+        initialLogs={activityLogs}
         members={members}
       />
-
-      {/* Activity */}
-      <ActivityFeed logs={activityLogs} />
 
       {/* Members */}
       <section>

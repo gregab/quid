@@ -4,17 +4,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
+import type { ActivityLog } from "./ActivityFeed";
 
 interface ExpenseActionsProps {
   groupId: string;
   expense: ExpenseRow;
   members: Member[];
   isPending?: boolean;
+  currentUserDisplayName: string;
   onOptimisticDelete: (expenseId: string) => void;
   onDeleteFailed: (expense: ExpenseRow) => void;
   onDeleteSettled: () => void;
   onOptimisticUpdate: (expense: ExpenseRow) => void;
   onUpdateSettled: () => void;
+  onOptimisticActivity: (log: ActivityLog) => void;
 }
 
 export function ExpenseActions({
@@ -22,11 +25,13 @@ export function ExpenseActions({
   expense,
   members,
   isPending = false,
+  currentUserDisplayName,
   onOptimisticDelete,
   onDeleteFailed,
   onDeleteSettled,
   onOptimisticUpdate,
   onUpdateSettled,
+  onOptimisticActivity,
 }: ExpenseActionsProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -83,9 +88,19 @@ export function ExpenseActions({
       participantIds: [...participantIds],
     };
 
-    // Optimistically update
+    const paidByDisplayName = paidByMember?.displayName ?? expense.paidByDisplayName;
+
+    // Optimistically update expense and activity log
     setEditOpen(false);
     onOptimisticUpdate(updatedExpense);
+    onOptimisticActivity({
+      id: `activity-pending-${Date.now()}`,
+      action: "expense_edited",
+      payload: { description, amountCents, paidByDisplayName },
+      createdAt: new Date(),
+      actor: { displayName: currentUserDisplayName },
+      isPending: true,
+    });
 
     setEditLoading(true);
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
@@ -104,10 +119,11 @@ export function ExpenseActions({
     setEditLoading(false);
 
     if (!res.ok || json.error) {
-      // Revert optimistic update
+      // Revert optimistic update and reconcile pending activity log via refresh
       onOptimisticUpdate(expense);
       setEditOpen(true);
       setError(json.error ?? "Something went wrong.");
+      onUpdateSettled();
       return;
     }
 
@@ -116,8 +132,20 @@ export function ExpenseActions({
 
   async function handleDelete() {
     setDeleteConfirm(false);
-    // Optimistically remove
+    // Optimistically remove expense and add activity log
     onOptimisticDelete(expense.id);
+    onOptimisticActivity({
+      id: `activity-pending-${Date.now()}`,
+      action: "expense_deleted",
+      payload: {
+        description: expense.description,
+        amountCents: expense.amountCents,
+        paidByDisplayName: expense.paidByDisplayName,
+      },
+      createdAt: new Date(),
+      actor: { displayName: currentUserDisplayName },
+      isPending: true,
+    });
 
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "DELETE",

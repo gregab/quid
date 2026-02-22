@@ -1,11 +1,12 @@
 import { Card } from "@/components/ui/Card";
 
-type ActivityLog = {
+export type ActivityLog = {
   id: string;
   action: string;
   payload: unknown;
   createdAt: Date;
   actor: { displayName: string };
+  isPending?: boolean;
 };
 
 type Payload = {
@@ -57,7 +58,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
             const hasAmount = typeof payload.amountCents === "number";
 
             return (
-              <div key={log.id} className="flex items-start justify-between gap-4 px-4 py-3">
+              <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
                 <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
                   <span className="font-semibold">{log.actor.displayName}</span>
                   {" "}{verb}{" "}
