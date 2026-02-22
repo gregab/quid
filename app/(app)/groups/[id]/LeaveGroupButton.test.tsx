@@ -24,12 +24,12 @@ afterEach(() => {
 
 describe("LeaveGroupButton", () => {
   it("renders the leave group trigger", () => {
-    render(<LeaveGroupButton groupId="g1" />);
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     expect(screen.getByText("Leave group")).toBeDefined();
   });
 
   it("opens confirmation dialog on click", () => {
-    render(<LeaveGroupButton groupId="g1" />);
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
     expect(screen.getByText("Leave group?")).toBeDefined();
     expect(screen.getByText("Leave")).toBeDefined();
@@ -37,14 +37,14 @@ describe("LeaveGroupButton", () => {
   });
 
   it("closes dialog when Cancel is clicked", () => {
-    render(<LeaveGroupButton groupId="g1" />);
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
     fireEvent.click(screen.getByText("Cancel"));
     expect(screen.queryByText("Leave group?")).toBeNull();
   });
 
   it("calls DELETE and redirects to dashboard on success", async () => {
-    render(<LeaveGroupButton groupId="g1" />);
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     await act(async () => {
@@ -64,7 +64,7 @@ describe("LeaveGroupButton", () => {
       json: async () => ({ data: null, error: "Cannot leave group: you owe $15. Please settle up first." }),
     } as Response);
 
-    render(<LeaveGroupButton groupId="g1" />);
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     await act(async () => {
@@ -73,5 +73,23 @@ describe("LeaveGroupButton", () => {
 
     expect(screen.getByText("Cannot leave group: you owe $15. Please settle up first.")).toBeDefined();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("shows warning and disables Leave button when user owes more than $2", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={1500} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    expect(screen.getByText("You owe $15.00 in this group. Please settle up before leaving.")).toBeDefined();
+    const leaveBtn = screen.getByText("Leave");
+    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("allows leaving when user owes $2 or less", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={200} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    expect(screen.queryByText(/You owe/)).toBeNull();
+    const leaveBtn = screen.getByText("Leave");
+    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(false);
   });
 });

@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
-export function LeaveGroupButton({ groupId }: { groupId: string }) {
+export function LeaveGroupButton({ groupId, userOwedCents }: { groupId: string; userOwedCents: number }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
+  const blocked = userOwedCents > 200;
 
   async function handleLeave() {
     setLoading(true);
@@ -48,15 +49,21 @@ export function LeaveGroupButton({ groupId }: { groupId: string }) {
         >
           <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
             <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">Leave group?</h2>
-            <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
-              You&apos;ll no longer see this group or its expenses. If you&apos;re the last member, the group will be deleted.
-            </p>
+            {blocked ? (
+              <p className="text-sm text-red-600 mb-5 dark:text-red-400">
+                You owe ${(userOwedCents / 100).toFixed(2)} in this group. Please settle up before leaving.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
+                You&apos;ll no longer see this group or its expenses. If you&apos;re the last member, the group will be deleted.
+              </p>
+            )}
             {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="ghost" onClick={() => setConfirmOpen(false)} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="button" variant="danger" onClick={handleLeave} disabled={loading}>
+              <Button type="button" variant="danger" onClick={handleLeave} disabled={loading || blocked}>
                 {loading ? "Leaving..." : "Leave"}
               </Button>
             </div>

@@ -102,6 +102,18 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     canDelete: isMember,
   }));
 
+  // Compute how much the current user owes on net (positive = owes money)
+  const allExpenses = expenses ?? [];
+  let paid = 0;
+  let owed = 0;
+  for (const expense of allExpenses) {
+    if (expense.paidById === user.id) paid += expense.amountCents;
+    for (const split of expense.ExpenseSplit ?? []) {
+      if (split.userId === user.id) owed += split.amountCents;
+    }
+  }
+  const userOwedCents = owed - paid; // positive = user owes money
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header + Members */}
@@ -151,7 +163,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       />
 
       <div className="pt-4">
-        <LeaveGroupButton groupId={group.id} />
+        <LeaveGroupButton groupId={group.id} userOwedCents={userOwedCents} />
       </div>
     </div>
   );
