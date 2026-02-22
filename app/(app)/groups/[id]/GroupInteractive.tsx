@@ -6,6 +6,7 @@ import { ActivityFeed, type ActivityLog } from "./ActivityFeed";
 import { ExpensesList } from "./ExpensesList";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { simplifyDebts } from "@/lib/balances/simplify";
+import { splitAmount } from "@/lib/balances/splitAmount";
 import { Card } from "@/components/ui/Card";
 
 interface GroupInteractiveProps {
@@ -56,11 +57,10 @@ export function GroupInteractive({
           : members.map((m) => m.userId);
       const n = participantIds.length;
       if (n === 0) continue;
-      const base = Math.floor(expense.amountCents / n);
-      const remainder = expense.amountCents % n;
+      const splits = splitAmount(expense.amountCents, n);
       participantIds.forEach((uid, i) => {
         if (uid === expense.paidById) return;
-        rawDebts.push({ from: uid, to: expense.paidById, amount: base + (i < remainder ? 1 : 0) });
+        rawDebts.push({ from: uid, to: expense.paidById, amount: splits[i]! });
       });
     }
 
