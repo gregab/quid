@@ -1,5 +1,8 @@
+import { DelayedFallback } from "@/components/ui/DelayedFallback";
+
 export default function DashboardLoading() {
   return (
+    <DelayedFallback>
     <div className="space-y-6 sm:space-y-8">
       {/* Hero skeleton */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl bg-gray-200 dark:bg-gray-700 animate-pulse">
@@ -35,5 +38,6 @@ export default function DashboardLoading() {
         </div>
       </div>
     </div>
+    </DelayedFallback>
   );
 }

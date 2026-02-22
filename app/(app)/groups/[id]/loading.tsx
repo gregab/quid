@@ -1,5 +1,8 @@
+import { DelayedFallback } from "@/components/ui/DelayedFallback";
+
 export default function GroupLoading() {
   return (
+    <DelayedFallback>
     <div className="space-y-6 sm:space-y-8">
       {/* Back link + group name */}
       <div>
@@ -66,5 +69,6 @@ export default function GroupLoading() {
         </div>
       </section>
     </div>
+    </DelayedFallback>
   );
 }
