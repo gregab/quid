@@ -60,10 +60,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
-  // Fetch expenses with paidBy user and splits
+  // Fetch expenses with paidBy user and splits (including split participants' display names)
   const { data: expenses } = await supabase
     .from("Expense")
-    .select("*, User!paidById(*), ExpenseSplit(*)")
+    .select("*, User!paidById(*), ExpenseSplit(*, User(displayName))")
     .eq("groupId", id)
     .order("date", { ascending: false });
 
@@ -79,11 +79,25 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   // (Prisma returned { actor: { displayName } }, Supabase returns { User: { displayName } })
   const transformedLogs = (activityLogs ?? []).map((log) => ({
     ...log,
-    actor: log.User!,
+    actor: log.User ?? { displayName: "Deleted User" },
   }));
 
   const currentMember = groupMembers.find((m) => m.userId === user.id);
   const currentUserDisplayName = currentMember?.User?.displayName ?? user.email ?? "You";
+
+  // Build a display-name map for ALL users referenced in this group's expenses,
+  // including members who have since left or deleted their accounts.
+  const allUserNames: Record<string, string> = {};
+  for (const m of groupMembers) {
+    if (m.User) allUserNames[m.userId] = m.User.displayName;
+  }
+  for (const expense of expenses ?? []) {
+    if (expense.User) allUserNames[expense.paidById] = expense.User.displayName;
+    for (const split of expense.ExpenseSplit ?? []) {
+      const name = (split as { User?: { displayName: string } | null }).User?.displayName;
+      if (name) allUserNames[split.userId] = name;
+    }
+  }
 
   const members: Member[] = groupMembers.map((m) => ({
     userId: m.userId,
@@ -96,7 +110,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     amountCents: expense.amountCents,
     date: expense.date.split("T")[0]!,
     paidById: expense.paidById,
-    paidByDisplayName: expense.User!.displayName,
+    paidByDisplayName: expense.User?.displayName ?? "Deleted User",
     participantIds: (expense.ExpenseSplit ?? []).map((s) => s.userId),
     canEdit: isMember,
     canDelete: isMember,
@@ -160,6 +174,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         initialExpenses={initialExpenses}
         initialLogs={transformedLogs}
         members={members}
+        allUserNames={allUserNames}
       />
 
       <div className="pt-4">

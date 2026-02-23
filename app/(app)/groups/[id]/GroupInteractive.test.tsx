@@ -23,6 +23,7 @@ const BASE_PROPS = {
   currentUserDisplayName: "Alice",
   initialLogs: [],
   members: MEMBERS,
+  allUserNames: { "user-a": "Alice", "user-b": "Bob" },
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {

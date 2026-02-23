@@ -17,6 +17,7 @@ interface GroupInteractiveProps {
   initialExpenses: ExpenseRow[];
   initialLogs: ActivityLog[];
   members: Member[];
+  allUserNames: Record<string, string>;
 }
 
 function formatCents(cents: number): string {
@@ -31,6 +32,7 @@ export function GroupInteractive({
   initialExpenses,
   initialLogs,
   members,
+  allUserNames,
 }: GroupInteractiveProps) {
   const { logs, addOptimisticLog } = useActivityLogs(initialLogs);
   const [balancesExpenses, setBalancesExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -65,15 +67,18 @@ export function GroupInteractive({
     }
 
     const simplified = simplifyDebts(rawDebts);
-    const memberMap = new Map(members.map((m) => [m.userId, m.displayName]));
+    // Build name map from all known users (includes departed members), then
+    // override with current members so optimistic updates always resolve.
+    const nameMap = new Map<string, string>(Object.entries(allUserNames));
+    for (const m of members) nameMap.set(m.userId, m.displayName);
     return simplified.map((debt) => ({
       fromId: debt.from,
-      fromName: memberMap.get(debt.from) ?? "Unknown",
+      fromName: nameMap.get(debt.from) ?? "Unknown",
       toId: debt.to,
-      toName: memberMap.get(debt.to) ?? "Unknown",
+      toName: nameMap.get(debt.to) ?? "Unknown",
       amountCents: debt.amount,
     }));
-  }, [balancesExpenses, members]);
+  }, [balancesExpenses, members, allUserNames]);
 
   return (
     <>

@@ -36,14 +36,25 @@ export async function GET(
       .eq("groupId", groupId),
     supabase
       .from("Expense")
-      .select("*, ExpenseSplit(*)")
+      .select("*, User!paidById(displayName), ExpenseSplit(*, User(displayName))")
       .eq("groupId", groupId),
   ]);
 
   const members = membersResult.data ?? [];
   const expenses = expensesResult.data ?? [];
 
-  const userMap = new Map(members.map((m) => [m.userId, m.User!]));
+  // Build name map from current members, then fill in payers and split participants
+  // so departed/deleted users still resolve to their display name.
+  const userMap = new Map<string, string>(
+    members.map((m) => [m.userId, m.User!.displayName])
+  );
+  for (const expense of expenses) {
+    if (expense.User) userMap.set(expense.paidById, expense.User.displayName);
+    for (const split of expense.ExpenseSplit ?? []) {
+      const name = (split as { User?: { displayName: string } | null }).User?.displayName;
+      if (name) userMap.set(split.userId, name);
+    }
+  }
 
   // Build raw debts: each split creates a debt from the split user to the payer
   const rawDebts = expenses.flatMap((expense) =>
@@ -60,9 +71,9 @@ export async function GET(
 
   const data = simplified.map((debt) => ({
     fromId: debt.from,
-    fromName: userMap.get(debt.from)?.displayName ?? debt.from,
+    fromName: userMap.get(debt.from) ?? "Unknown",
     toId: debt.to,
-    toName: userMap.get(debt.to)?.displayName ?? debt.to,
+    toName: userMap.get(debt.to) ?? "Unknown",
     amountCents: debt.amount,
   }));
 
