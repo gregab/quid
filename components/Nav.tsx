@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { FeedbackModal } from "@/components/FeedbackModal";
 
 export default function Nav({ email }: { email: string }) {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Nav({ email }: { email: string }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </Link>
+          <FeedbackModal />
           <button
             onClick={handleLogout}
             className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer dark:text-gray-400 dark:hover:text-white"

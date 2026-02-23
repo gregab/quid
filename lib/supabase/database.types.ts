@@ -184,6 +184,38 @@ export type Database = {
           },
         ]
       }
+      Feedback: {
+        Row: {
+          createdAt: string
+          id: string
+          message: string
+          metadata: Json
+          userId: string
+        }
+        Insert: {
+          createdAt?: string
+          id?: string
+          message: string
+          metadata?: Json
+          userId: string
+        }
+        Update: {
+          createdAt?: string
+          id?: string
+          message?: string
+          metadata?: Json
+          userId?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "Feedback_userId_fkey"
+            columns: ["userId"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       Group: {
         Row: {
           createdAt: string
