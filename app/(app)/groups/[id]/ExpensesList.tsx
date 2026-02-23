@@ -110,6 +110,27 @@ function getPersonalContext(
   return null;
 }
 
+/**
+ * Returns a human-readable payment direction line from the current user's perspective:
+ * - "you paid [Name]" when the current user is the sender
+ * - "[Name] paid you" when the current user is the receiver
+ * - "[From] → [To]" otherwise
+ */
+function getPaymentDirection(
+  expense: ExpenseRow,
+  currentUserId: string,
+  members: Member[],
+  allUserNames: Record<string, string>
+): string {
+  const receiverId = expense.participantIds[0];
+  const toName = receiverId ? getMemberPillProps(receiverId, members, allUserNames).name : "Unknown";
+  const fromName = getMemberPillProps(expense.paidById, members, allUserNames).name;
+
+  if (expense.paidById === currentUserId) return `you paid ${toName}`;
+  if (receiverId === currentUserId) return `${fromName} paid you`;
+  return `${fromName} → ${toName}`;
+}
+
 export function ExpensesList({
   groupId,
   groupCreatedById,
@@ -268,17 +289,18 @@ export function ExpensesList({
                   {expense.isPayment ? (
                     <>
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">Payment</p>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          <span className="text-xs text-gray-400">
-                            {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
-                          </span>
-                        </div>
+                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Payment</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(expense.date)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
-                          {formatCents(expense.amountCents)}
-                        </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {getPaymentDirection(expense, currentUserId, members, allUserNames)}
+                          </span>
+                          <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
+                            {formatCents(expense.amountCents)}
+                          </span>
+                        </div>
                         <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
                           <ExpenseActions
                             groupId={groupId}
@@ -300,25 +322,16 @@ export function ExpensesList({
                     <>
                       <div className="min-w-0">
                         <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                          <span className="text-xs text-gray-400">
-                            Paid by {getMemberPillProps(expense.paidById, members, allUserNames).name} · {formatDate(expense.date)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
-                            .map((id) => getMemberPillProps(id, members, allUserNames).name)
-                            .join(", ")}
-                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(expense.date)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
-                            {formatCents(expense.amountCents)}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {expense.paidById === currentUserId ? "you" : getMemberPillProps(expense.paidById, members, allUserNames).name} paid {formatCents(expense.amountCents)}
                           </span>
                           {personalContext && (
                             <span
-                              className={`text-xs font-medium whitespace-nowrap ${
+                              className={`text-sm font-semibold whitespace-nowrap ${
                                 personalContext.positive
                                   ? "text-emerald-600 dark:text-emerald-400"
                                   : "text-rose-500 dark:text-rose-400"

@@ -258,12 +258,33 @@ describe("ExpensesList — payment card rendering", () => {
     expect(screen.getByText("Payment")).toBeDefined();
   });
 
-  it("renders 'Alice → Bob' format for payment rows", () => {
+  it("renders payment direction from the current user's perspective", () => {
+    // makePayment() has paidById: "user-1" (Alice = currentUser) → participantIds: ["user-2"] (Bob)
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
-    // Names and arrow render as a single text span
+    // Current user is sender, so shows "you paid Bob" rather than "Alice → Bob"
     const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("Alice");
+    expect(list?.textContent).toContain("you paid");
     expect(list?.textContent).toContain("Bob");
+  });
+
+  it("renders '[Name] → [Name]' for payments between other users", () => {
+    // Neither payer nor recipient is the current user
+    const payment = makePayment({ paidById: "user-2", participantIds: ["user-3"], createdById: "user-2" });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-3": "Charlie" }}
+        members={[
+          { userId: "user-1", displayName: "Alice" },
+          { userId: "user-2", displayName: "Bob" },
+          { userId: "user-3", displayName: "Charlie" },
+        ]}
+        initialExpenses={[payment]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Bob");
+    expect(list?.textContent).toContain("Charlie");
     expect(list?.textContent).toContain("→");
   });
 
@@ -314,39 +335,69 @@ describe("ExpensesList — payment card rendering", () => {
 });
 
 // ----------------------------
-// Participant display
+// Expense row display
 // ----------------------------
 
-describe("ExpensesList — participant display on regular expenses", () => {
-  it("shows participant names for a regular expense", () => {
+describe("ExpensesList — expense row display", () => {
+  it("shows payer info and personal stake for a regular expense", () => {
+    // paidById: user-2 (Bob), participantIds: [user-1 (Alice), user-2 (Bob)], currentUser: user-1
+    const expense = makeExpense({ paidById: "user-2", participantIds: ["user-1", "user-2"], amountCents: 2000 });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    const list = document.querySelector("ul");
+    // Secondary line: "[payer] paid $X"
+    expect(list?.textContent).toContain("Bob paid");
+    expect(list?.textContent).toContain("$20.00");
+    // Personal stake: current user owes their share
+    expect(list?.textContent).toContain("you owe");
+  });
+
+  it("does not show a comma-separated participant list on expense rows", () => {
     const expense = makeExpense({ participantIds: ["user-1", "user-2"] });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    // Names render as a comma-separated string
-    const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("Alice");
-    expect(list?.textContent).toContain("Bob");
+    // Participant names are not listed on the row
+    expect(screen.queryByText("Alice, Bob")).toBeNull();
   });
 
-  it("shows a single participant name when only one person split the expense", () => {
-    const expense = makeExpense({ participantIds: ["user-1"] });
+  it("shows 'you paid' when current user is the payer", () => {
+    // paidById: user-1 (Alice = currentUser)
+    const expense = makeExpense({ paidById: "user-1", participantIds: ["user-1", "user-2"], amountCents: 2000 });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
     const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("Alice");
-    // Bob should not appear as a participant
-    expect(screen.getByText("Alice")).toBeDefined();
-    expect(screen.queryByText("Bob")).toBeNull();
+    expect(list?.textContent).toContain("you paid");
+    // Personal stake: Alice lent Bob's share
+    expect(list?.textContent).toContain("you lent");
   });
 
-  it("falls back to all members when participantIds is empty", () => {
-    const expense = makeExpense({ participantIds: [] });
+  it("shows 'you lent' when current user paid and others owe them", () => {
+    const expense = makeExpense({ paidById: "user-1", participantIds: ["user-1", "user-2"], amountCents: 2000 });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
     const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("Alice");
-    expect(list?.textContent).toContain("Bob");
+    expect(list?.textContent).toContain("you lent");
   });
 
-  it("resolves names from allUserNames for departed members not in members list", () => {
-    const expense = makeExpense({ participantIds: ["user-1", "user-99"] });
+  it("shows no personal stake when current user is not involved", () => {
+    // paidById: user-2 (Bob), no currentUser in participants
+    const expense = makeExpense({ paidById: "user-2", participantIds: ["user-2"], amountCents: 2000 });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).not.toContain("you lent");
+    expect(list?.textContent).not.toContain("you owe");
+  });
+
+  it("falls back to all members for personal stake calculation when participantIds is empty", () => {
+    // Empty participantIds: should treat all members (user-1, user-2) as participants
+    // current user (user-1) is payer, so they lent Bob's share
+    const expense = makeExpense({ paidById: "user-1", participantIds: [], amountCents: 2000 });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    const list = document.querySelector("ul");
+    // Alice lent Bob's half → "you lent $10.00"
+    expect(list?.textContent).toContain("you lent");
+    expect(list?.textContent).toContain("$10.00");
+  });
+
+  it("shows departed payer name using allUserNames fallback", () => {
+    // paidById: user-99 (Charlie, departed — not in members list)
+    const expense = makeExpense({ paidById: "user-99", participantIds: ["user-1"], amountCents: 3000 });
     render(
       <ExpensesList
         {...BASE_PROPS}
@@ -355,10 +406,8 @@ describe("ExpensesList — participant display on regular expenses", () => {
       />
     );
     const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("Alice");
-    expect(list?.textContent).toContain("Charlie");
-    // Bob is not a participant in this expense
-    expect(list?.textContent).not.toContain("Bob");
+    expect(list?.textContent).toContain("Charlie paid");
+    expect(list?.textContent).toContain("you owe");
   });
 
   it("shows edit and delete buttons for the expense creator", () => {
@@ -392,7 +441,7 @@ describe("ExpensesList — participant display on regular expenses", () => {
       createdById: "user-1",
     };
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[payment]} />);
-    // Payment renders "Alice → Bob", not "Alice, Bob"
+    // Payment shows direction text ("you paid Bob"), not a comma-separated list
     expect(screen.queryByText("Alice, Bob")).toBeNull();
   });
 });
