@@ -1,6 +1,6 @@
-/** Maximum allowed expense/payment amount: $1,000,000 */
-export const MAX_AMOUNT_DOLLARS = 1_000_000;
-export const MAX_AMOUNT_CENTS = 100_000_000; // $1,000,000 in cents
+/** Maximum allowed expense/payment amount: $100,000 */
+export const MAX_AMOUNT_DOLLARS = 100_000;
+export const MAX_AMOUNT_CENTS = 10_000_000; // $100,000 in cents
 
 /**
  * Strips comma formatting so a display value like "1,234.56" can be parsed.
