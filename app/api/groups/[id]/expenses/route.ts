@@ -86,6 +86,7 @@ export async function POST(
   }
 
   const participantIds = participants.map((m) => m.userId);
+  const participantDisplayNames = participants.map((m) => m.User!.displayName);
 
   // Validate custom splits
   let splitAmounts: number[] | null = null;
@@ -127,6 +128,7 @@ export async function POST(
     _paid_by_display_name: paidByMember.User!.displayName,
     _split_type: effectiveSplitType,
     _split_amounts: splitAmounts ?? undefined,
+    _participant_display_names: participantDisplayNames,
   });
 
   if (error) {

@@ -223,7 +223,7 @@ export async function DELETE(
   // Fetch expense with paidBy for activity log payload
   const { data: expense } = await supabase
     .from("Expense")
-    .select("*, User!paidById(displayName)")
+    .select("*, User!paidById(displayName), ExpenseSplit(userId, User(displayName))")
     .eq("id", expenseId)
     .single();
 
@@ -248,12 +248,18 @@ export async function DELETE(
     return NextResponse.json({ data: null, error: "Only the creator can delete this expense" }, { status: 403 });
   }
 
+  const participantDisplayNames = (expense.ExpenseSplit ?? []).map(
+    (s) => (s.User as { displayName: string } | null)?.displayName ?? "Unknown"
+  );
+
   const { error } = await supabase.rpc("delete_expense", {
     _expense_id: expenseId,
     _group_id: groupId,
     _description: expense.description,
     _amount_cents: expense.amountCents,
     _paid_by_display_name: expense.User!.displayName,
+    _date: expense.date.split("T")[0],
+    _participant_display_names: expense.isPayment ? null : participantDisplayNames,
   });
 
   if (error) {

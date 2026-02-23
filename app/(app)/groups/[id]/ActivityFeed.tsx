@@ -30,6 +30,8 @@ type Payload = {
   changes?: Changes;
   fromDisplayName?: string;
   toDisplayName?: string;
+  date?: string;
+  participantDisplayNames?: string[];
 };
 
 function formatCents(cents: number): string {
@@ -235,6 +237,16 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 </p>
               </div>
             )}
+            {payload.date && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Date
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatExpenseDate(payload.date)}
+                </p>
+              </div>
+            )}
             {payload.paidByDisplayName && (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
@@ -242,6 +254,16 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 </p>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   {formatDisplayName(payload.paidByDisplayName)}
+                </p>
+              </div>
+            )}
+            {payload.participantDisplayNames && payload.participantDisplayNames.length > 0 && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Split between
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatNameList(payload.participantDisplayNames.map(formatDisplayName))}
                 </p>
               </div>
             )}
@@ -259,6 +281,18 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 </p>
                 <p className="text-base font-semibold text-gray-900 dark:text-white">
                   {payload.description}
+                </p>
+              </div>
+            )}
+
+            {/* Date as context — only shown when the date didn't change (otherwise it's in Changes) */}
+            {payload.date && !payload.changes?.date && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Date
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatExpenseDate(payload.date)}
                 </p>
               </div>
             )}
@@ -355,6 +389,16 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 </p>
                 <p className="text-base font-semibold text-gray-900 dark:text-white">
                   {formatCents(payload.amountCents)}
+                </p>
+              </div>
+            )}
+            {payload.date && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Date
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatExpenseDate(payload.date)}
                 </p>
               </div>
             )}

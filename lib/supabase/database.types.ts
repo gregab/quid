@@ -338,6 +338,21 @@ export type Database = {
             }
             Returns: string
           }
+        | {
+            Args: {
+              _amount_cents: number
+              _date: string
+              _description: string
+              _group_id: string
+              _paid_by_display_name: string
+              _paid_by_id: string
+              _participant_display_names?: string[]
+              _participant_ids: string[]
+              _split_amounts?: number[]
+              _split_type?: string
+            }
+            Returns: string
+          }
       create_group: { Args: { _name: string }; Returns: string }
       create_payment: {
         Args: {
@@ -352,16 +367,29 @@ export type Database = {
         Returns: string
       }
       delete_account: { Args: never; Returns: undefined }
-      delete_expense: {
-        Args: {
-          _amount_cents: number
-          _description: string
-          _expense_id: string
-          _group_id: string
-          _paid_by_display_name: string
-        }
-        Returns: undefined
-      }
+      delete_expense:
+        | {
+            Args: {
+              _amount_cents: number
+              _description: string
+              _expense_id: string
+              _group_id: string
+              _paid_by_display_name: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _amount_cents: number
+              _date?: string
+              _description: string
+              _expense_id: string
+              _group_id: string
+              _paid_by_display_name: string
+              _participant_display_names?: string[]
+            }
+            Returns: undefined
+          }
       get_group_by_invite_token: { Args: { _token: string }; Returns: Json }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       join_group_by_token: { Args: { _token: string }; Returns: Json }

@@ -289,7 +289,7 @@ export function ExpenseDetailModal({
     onOptimisticActivity({
       id: `activity-pending-${Date.now()}`,
       action: "expense_edited",
-      payload: { description, amountCents, paidByDisplayName, changes },
+      payload: { description, amountCents, date, paidByDisplayName, changes },
       createdAt: new Date(),
       actor: { displayName: currentUserDisplayName },
       isPending: true,
@@ -343,6 +343,7 @@ export function ExpenseDetailModal({
         action: "payment_deleted",
         payload: {
           amountCents: expense.amountCents,
+          date: expense.date,
           fromDisplayName: expense.paidByDisplayName,
           toDisplayName: recipientName,
         },
@@ -351,13 +352,21 @@ export function ExpenseDetailModal({
         isPending: true,
       });
     } else {
+      const participantDisplayNames =
+        expense.participantIds.length > 0
+          ? expense.participantIds.map(
+              (id) => members.find((m) => m.userId === id)?.displayName ?? id
+            )
+          : members.map((m) => m.displayName);
       onOptimisticActivity({
         id: `activity-pending-${Date.now()}`,
         action: "expense_deleted",
         payload: {
           description: expense.description,
           amountCents: expense.amountCents,
+          date: expense.date,
           paidByDisplayName: expense.paidByDisplayName,
+          participantDisplayNames,
         },
         createdAt: new Date(),
         actor: { displayName: currentUserDisplayName },
