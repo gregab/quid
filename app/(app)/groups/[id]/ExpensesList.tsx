@@ -9,6 +9,7 @@ import { ExpenseActions } from "./ExpenseActions";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import type { MemberColor } from "./MemberPill";
+import { splitAmount } from "@/lib/balances/splitAmount";
 
 export interface Member {
   userId: string;
@@ -66,6 +67,47 @@ function getMemberPillProps(
     return { name: formatDisplayName(member.displayName), emoji: member.emoji, color: member.color };
   }
   return { name: formatDisplayName(allUserNames[userId] ?? "Unknown") };
+}
+
+/**
+ * Returns the current user's personal financial stake in this expense:
+ * - "you lent $X" (green) when they paid and others owe them
+ * - "you owe $X" (red) when someone else paid and they're a participant
+ * - null when user isn't involved, or it's a payment (already settled semantics)
+ */
+function getPersonalContext(
+  expense: ExpenseRow,
+  currentUserId: string,
+  members: Member[]
+): { label: string; amountCents: number; positive: boolean } | null {
+  if (expense.isPayment) return null;
+
+  const participantIds =
+    expense.participantIds.length > 0
+      ? expense.participantIds
+      : members.map((m) => m.userId);
+
+  const n = participantIds.length;
+  if (n === 0) return null;
+
+  const myIndex = participantIds.indexOf(currentUserId);
+  const amIParticipant = myIndex !== -1;
+  const amIPayer = expense.paidById === currentUserId;
+
+  if (amIPayer) {
+    const myShare = amIParticipant ? splitAmount(expense.amountCents, n)[myIndex]! : 0;
+    const lentAmount = expense.amountCents - myShare;
+    if (lentAmount <= 0) return null;
+    return { label: "you lent", amountCents: lentAmount, positive: true };
+  }
+
+  if (amIParticipant) {
+    const myShare = splitAmount(expense.amountCents, n)[myIndex]!;
+    if (myShare <= 0) return null;
+    return { label: "you owe", amountCents: myShare, positive: false };
+  }
+
+  return null;
 }
 
 export function ExpensesList({
@@ -211,83 +253,99 @@ export function ExpensesList({
         <p className="text-gray-400 text-sm">No expenses yet. Add one to get started.</p>
       ) : (
         <ul className="space-y-2">
-          {expenses.map((expense) => (
-            <li
-              key={expense.id}
-              className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
-            >
-              <Card
-                className={`px-4 py-3 flex items-center justify-between gap-4 ${
-                  expense.isPending ? "opacity-60" : ""
-                }`}
+          {expenses.map((expense) => {
+            const personalContext = getPersonalContext(expense, currentUserId, members);
+            return (
+              <li
+                key={expense.id}
+                className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
               >
-                {expense.isPayment ? (
-                  <>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-emerald-600 truncate dark:text-emerald-400">Payment</p>
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        <span className="text-xs text-gray-400">
-                          {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
-                        </span>
+                <Card
+                  className={`px-4 py-3 flex items-center justify-between gap-4 ${
+                    expense.isPending ? "opacity-60" : ""
+                  }`}
+                >
+                  {expense.isPayment ? (
+                    <>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-emerald-600 truncate dark:text-emerald-400">Payment</p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <span className="text-xs text-gray-400">
+                            {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
-                        {formatCents(expense.amountCents)}
-                      </span>
-                      <ExpenseActions
-                        groupId={groupId}
-                        expense={expense}
-                        members={members}
-                        isPending={expense.isPending}
-                        currentUserDisplayName={currentUserDisplayName}
-                        onOptimisticDelete={handleOptimisticDelete}
-                        onDeleteFailed={handleDeleteFailed}
-                        onDeleteSettled={handleDeleteSettled}
-                        onOptimisticUpdate={handleOptimisticUpdate}
-                        onUpdateSettled={handleUpdateSettled}
-                        onOptimisticActivity={onOptimisticActivity}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        <span className="text-xs text-gray-400">
-                          Paid by {getMemberPillProps(expense.paidById, members, allUserNames).name} · {formatDate(expense.date)}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
+                          {formatCents(expense.amountCents)}
                         </span>
+                        <ExpenseActions
+                          groupId={groupId}
+                          expense={expense}
+                          members={members}
+                          isPending={expense.isPending}
+                          currentUserDisplayName={currentUserDisplayName}
+                          onOptimisticDelete={handleOptimisticDelete}
+                          onDeleteFailed={handleDeleteFailed}
+                          onDeleteSettled={handleDeleteSettled}
+                          onOptimisticUpdate={handleOptimisticUpdate}
+                          onUpdateSettled={handleUpdateSettled}
+                          onOptimisticActivity={onOptimisticActivity}
+                        />
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
-                          .map((id) => getMemberPillProps(id, members, allUserNames).name)
-                          .join(", ")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
-                        {formatCents(expense.amountCents)}
-                      </span>
-                      <ExpenseActions
-                        groupId={groupId}
-                        expense={expense}
-                        members={members}
-                        isPending={expense.isPending}
-                        currentUserDisplayName={currentUserDisplayName}
-                        onOptimisticDelete={handleOptimisticDelete}
-                        onDeleteFailed={handleDeleteFailed}
-                        onDeleteSettled={handleDeleteSettled}
-                        onOptimisticUpdate={handleOptimisticUpdate}
-                        onUpdateSettled={handleUpdateSettled}
-                        onOptimisticActivity={onOptimisticActivity}
-                      />
-                    </div>
-                  </>
-                )}
-              </Card>
-            </li>
-          ))}
+                    </>
+                  ) : (
+                    <>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                          <span className="text-xs text-gray-400">
+                            Paid by {getMemberPillProps(expense.paidById, members, allUserNames).name} · {formatDate(expense.date)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
+                            .map((id) => getMemberPillProps(id, members, allUserNames).name)
+                            .join(", ")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
+                            {formatCents(expense.amountCents)}
+                          </span>
+                          {personalContext && (
+                            <span
+                              className={`text-xs font-medium whitespace-nowrap ${
+                                personalContext.positive
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-rose-500 dark:text-rose-400"
+                              }`}
+                            >
+                              {personalContext.label} {formatCents(personalContext.amountCents)}
+                            </span>
+                          )}
+                        </div>
+                        <ExpenseActions
+                          groupId={groupId}
+                          expense={expense}
+                          members={members}
+                          isPending={expense.isPending}
+                          currentUserDisplayName={currentUserDisplayName}
+                          onOptimisticDelete={handleOptimisticDelete}
+                          onDeleteFailed={handleDeleteFailed}
+                          onDeleteSettled={handleDeleteSettled}
+                          onOptimisticUpdate={handleOptimisticUpdate}
+                          onUpdateSettled={handleUpdateSettled}
+                          onOptimisticActivity={onOptimisticActivity}
+                        />
+                      </div>
+                    </>
+                  )}
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       )}
 
