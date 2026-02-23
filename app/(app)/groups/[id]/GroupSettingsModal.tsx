@@ -5,6 +5,19 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/compressImage";
 
+const segmenter = new Intl.Segmenter();
+
+/** Extract the first grapheme cluster from a string. */
+function firstGrapheme(str: string): string {
+  const [first] = segmenter.segment(str);
+  return first?.segment ?? "";
+}
+
+/** Returns true if the string contains an Extended_Pictographic character (emoji). */
+function isEmoji(str: string): boolean {
+  return /\p{Extended_Pictographic}/u.test(str);
+}
+
 interface Props {
   groupId: string;
   currentEmoji: string | null;
@@ -125,9 +138,13 @@ export function GroupSettingsModal({
               <input
                 type="text"
                 value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (!raw) { setEmoji(""); return; }
+                  const first = firstGrapheme(raw);
+                  if (isEmoji(first)) setEmoji(first);
+                }}
                 placeholder={`Default: ${defaultEmoji}`}
-                maxLength={8}
                 className="min-w-0 flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-lg text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
               {emoji && (
@@ -140,7 +157,7 @@ export function GroupSettingsModal({
                 </button>
               )}
             </div>
-            <p className="mt-1 text-xs text-gray-400">Type or paste any emoji</p>
+            <p className="mt-1 text-xs text-gray-400">Paste or type one emoji</p>
           </div>
 
           {/* Banner image */}

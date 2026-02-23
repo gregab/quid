@@ -69,10 +69,24 @@ describe("GroupSettingsModal", () => {
     expect(input.value).toBe("🦜");
   });
 
-  it("updates emoji preview as user types", () => {
+  it("accepts a valid emoji", () => {
     render(<GroupSettingsModal {...defaultProps} />);
     const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
     fireEvent.change(input, { target: { value: "🦜" } });
+    expect(input.value).toBe("🦜");
+  });
+
+  it("rejects plain text characters", () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "abc" } });
+    expect(input.value).toBe("");
+  });
+
+  it("trims to the first grapheme cluster when multiple emojis are pasted", () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "🦜🐦🦅" } });
     expect(input.value).toBe("🦜");
   });
 
