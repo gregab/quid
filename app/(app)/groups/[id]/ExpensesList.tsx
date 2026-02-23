@@ -8,10 +8,13 @@ import { RecordPaymentForm } from "./RecordPaymentForm";
 import { ExpenseActions } from "./ExpenseActions";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
+import { MemberPill, type MemberColor } from "./MemberPill";
 
 export interface Member {
   userId: string;
   displayName: string;
+  emoji?: string;
+  color?: MemberColor;
 }
 
 export interface ExpenseRow {
@@ -50,6 +53,18 @@ function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year!, month! - 1, day!);
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getMemberPillProps(
+  userId: string,
+  members: Member[],
+  allUserNames: Record<string, string>
+): { name: string; emoji?: string; color?: MemberColor } {
+  const member = members.find((m) => m.userId === userId);
+  if (member) {
+    return { name: formatDisplayName(member.displayName), emoji: member.emoji, color: member.color };
+  }
+  return { name: formatDisplayName(allUserNames[userId] ?? "Unknown") };
 }
 
 export function ExpensesList({
@@ -201,18 +216,16 @@ export function ExpensesList({
               >
                 {expense.isPayment ? (
                   <>
-                    <div className="min-w-0 flex items-center gap-2">
-                      <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                        Payment
-                      </span>
-                      <p className="text-sm text-gray-700 truncate dark:text-gray-300">
-                        <span className="font-semibold">{formatDisplayName(expense.paidByDisplayName)}</span>
-                        {" → "}
-                        <span className="font-semibold">
-                          {formatDisplayName(members.find((m) => m.userId === expense.participantIds[0])?.displayName ?? allUserNames[expense.participantIds[0]!] ?? "Unknown")}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                          Payment
                         </span>
-                        <span className="text-gray-400 ml-1.5">· {formatDate(expense.date)}</span>
-                      </p>
+                        <MemberPill {...getMemberPillProps(expense.paidById, members, allUserNames)} />
+                        <span className="text-gray-400 text-xs">→</span>
+                        <MemberPill {...getMemberPillProps(expense.participantIds[0]!, members, allUserNames)} />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">{formatDate(expense.date)}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
@@ -237,14 +250,17 @@ export function ExpensesList({
                   <>
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Paid by {formatDisplayName(expense.paidByDisplayName)} · {formatDate(expense.date)}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <span className="text-xs text-gray-400">Paid by</span>
+                        <MemberPill {...getMemberPillProps(expense.paidById, members, allUserNames)} />
+                        <span className="text-xs text-gray-400">· {formatDate(expense.date)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
                         {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
-                          .map((id) => formatDisplayName(allUserNames[id] ?? members.find((m) => m.userId === id)?.displayName ?? "Unknown"))
-                          .join(", ")}
-                      </p>
+                          .map((id) => (
+                            <MemberPill key={id} {...getMemberPillProps(id, members, allUserNames)} />
+                          ))}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">

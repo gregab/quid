@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow } from "./ExpensesList";
 
@@ -70,9 +70,9 @@ describe("GroupInteractive — Balances section", () => {
     // currentUserId = user-a (Alice), so fromLabel = "You", toLabel = "Bob"
     const expense = makeExpense({ amountCents: 1000, paidById: "user-b", participantIds: ["user-a", "user-b"] });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    // "You owe Bob $5.00"
-    expect(screen.getByText("You")).toBeTruthy();
-    expect(screen.getByText("Bob")).toBeTruthy();
+    // "You owe Bob $5.00" — names appear as pills (multiple spans with same text)
+    expect(screen.getAllByText("You").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("$5.00")).toBeTruthy();
   });
 
@@ -125,8 +125,8 @@ describe("GroupInteractive — Balances with departed members", () => {
       participantIds: ["user-a", "user-c"],
     });
     render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
-    expect(screen.getByText("Carol")).toBeTruthy();
-    expect(screen.queryByText("Unknown")).toBeNull();
+    expect(screen.getAllByText("Carol").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
     expect(screen.getByText("$5.00")).toBeTruthy();
   });
 
@@ -139,8 +139,8 @@ describe("GroupInteractive — Balances with departed members", () => {
       participantIds: ["user-a", "user-c"],
     });
     render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
-    expect(screen.getByText("Carol")).toBeTruthy();
-    expect(screen.queryByText("Unknown")).toBeNull();
+    expect(screen.getAllByText("Carol").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
     expect(screen.getByText("$5.00")).toBeTruthy();
   });
 
@@ -153,10 +153,10 @@ describe("GroupInteractive — Balances with departed members", () => {
       participantIds: ["user-a", "user-b", "user-c"],
     });
     render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
-    expect(screen.queryByText("Unknown")).toBeNull();
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
     // Both current member (Bob) and departed member (Carol) appear by name
-    expect(screen.getByText("Bob")).toBeTruthy();
-    expect(screen.getByText("Carol")).toBeTruthy();
+    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Carol").length).toBeGreaterThanOrEqual(1);
   });
 
   it("falls back to 'Unknown' only for a user with no name in allUserNames or members", () => {
@@ -168,6 +168,6 @@ describe("GroupInteractive — Balances with departed members", () => {
       participantIds: ["user-a", "ghost-user"],
     });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    expect(screen.getByText("Unknown")).toBeTruthy();
+    expect(screen.getAllByText("Unknown").length).toBeGreaterThanOrEqual(1);
   });
 });

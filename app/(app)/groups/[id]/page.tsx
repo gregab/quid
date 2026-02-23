@@ -7,6 +7,7 @@ import { LeaveGroupButton } from "./LeaveGroupButton";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { formatDisplayName } from "@/lib/formatDisplayName";
+import { MemberPill, type MemberColor } from "./MemberPill";
 
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
@@ -15,20 +16,40 @@ const MEMBER_EMOJIS = [
   "🦥", "🦔", "🐵", "🦋", "🐱",
 ];
 
-// Hash-based emoji assignment: each member gets a unique emoji derived from their
-// userId + groupId, so you get a different character in each group. Linear probing
-// for collisions, processed in hash order for stability.
-function assignMemberEmojis(userIds: string[], groupId: string): Map<string, string> {
+// Each member gets a unique color. Full class strings required for Tailwind JIT.
+const MEMBER_COLORS: MemberColor[] = [
+  { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-700 dark:text-rose-300" },
+  { bg: "bg-sky-100 dark:bg-sky-900/40", text: "text-sky-700 dark:text-sky-300" },
+  { bg: "bg-violet-100 dark:bg-violet-900/40", text: "text-violet-700 dark:text-violet-300" },
+  { bg: "bg-lime-100 dark:bg-lime-900/40", text: "text-lime-700 dark:text-lime-300" },
+  { bg: "bg-orange-100 dark:bg-orange-900/40", text: "text-orange-700 dark:text-orange-300" },
+  { bg: "bg-teal-100 dark:bg-teal-900/40", text: "text-teal-700 dark:text-teal-300" },
+  { bg: "bg-fuchsia-100 dark:bg-fuchsia-900/40", text: "text-fuchsia-700 dark:text-fuchsia-300" },
+  { bg: "bg-amber-100 dark:bg-amber-900/40", text: "text-amber-700 dark:text-amber-300" },
+  { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
+  { bg: "bg-pink-100 dark:bg-pink-900/40", text: "text-pink-700 dark:text-pink-300" },
+  { bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
+  { bg: "bg-cyan-100 dark:bg-cyan-900/40", text: "text-cyan-700 dark:text-cyan-300" },
+];
+
+// Hash-based assignment: each member gets a unique value derived from userId + groupId,
+// so you get different assignments in different groups. Linear probing for collisions,
+// processed in hash order for stability.
+function assignMemberValues<T>(
+  userIds: string[],
+  groupId: string,
+  palette: T[]
+): Map<string, T> {
   const hash = (uid: string) =>
     (uid + groupId).split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const sorted = [...userIds].sort((a, b) => hash(a) - hash(b));
   const used = new Set<number>();
-  const result = new Map<string, string>();
+  const result = new Map<string, T>();
   for (const uid of sorted) {
-    let idx = hash(uid) % MEMBER_EMOJIS.length;
-    while (used.has(idx)) idx = (idx + 1) % MEMBER_EMOJIS.length;
+    let idx = hash(uid) % palette.length;
+    while (used.has(idx)) idx = (idx + 1) % palette.length;
     used.add(idx);
-    result.set(uid, MEMBER_EMOJIS[idx]!);
+    result.set(uid, palette[idx]!);
   }
   return result;
 }
@@ -57,7 +78,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     (a, b) => a.joinedAt.localeCompare(b.joinedAt)
   );
 
-  const memberEmojiMap = assignMemberEmojis(groupMembers.map((m) => m.userId), id);
+  const memberEmojiMap = assignMemberValues(groupMembers.map((m) => m.userId), id, MEMBER_EMOJIS);
+  const memberColorMap = assignMemberValues(groupMembers.map((m) => m.userId), id, MEMBER_COLORS);
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
@@ -103,6 +125,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const members: Member[] = groupMembers.map((m) => ({
     userId: m.userId,
     displayName: m.User!.displayName,
+    emoji: memberEmojiMap.get(m.userId)!,
+    color: memberColorMap.get(m.userId)!,
   }));
 
   const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => ({
@@ -149,19 +173,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         {/* Member chips */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {groupMembers.map((m) => (
-            <div
+            <MemberPill
               key={m.id}
+              name={formatDisplayName(m.User!.displayName)}
+              emoji={memberEmojiMap.get(m.userId)}
+              color={memberColorMap.get(m.userId)}
+              suffix={m.userId === user.id ? "· you" : undefined}
               title={m.User?.email ?? undefined}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                m.userId === user.id
-                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
-                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-              }`}
-            >
-              <span className="text-sm leading-none">{memberEmojiMap.get(m.userId)}</span>
-              <span>{formatDisplayName(m.User!.displayName)}</span>
-              {m.userId === user.id && <span className="opacity-50">· you</span>}
-            </div>
+            />
           ))}
           <AddMemberForm groupId={group.id} existingMemberIds={groupMembers.map((m) => m.userId)} />
           <CopyInviteLinkButton inviteToken={group.inviteToken} />
