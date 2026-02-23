@@ -407,6 +407,88 @@ describe("ExpensesList — payment card rendering", () => {
 });
 
 // ----------------------------
+// Settled-up payment cards
+// ----------------------------
+
+describe("ExpensesList — settled-up payment card rendering", () => {
+  function makeSettledPayment(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
+    return {
+      id: "settled-1",
+      description: "Payment",
+      amountCents: 5000,
+      date: "2024-03-01",
+      paidById: "user-1",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-2"],
+      splits: [{ userId: "user-2", amountCents: 5000 }],
+      splitType: "equal",
+      canEdit: false,
+      canDelete: true,
+      isPayment: true,
+      settledUp: true,
+      createdById: "user-1",
+      ...overrides,
+    };
+  }
+
+  it("shows 'settled up with' verbiage instead of 'paid' for settled-up payments", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("settled up with");
+    expect(list?.textContent).not.toContain("you paid");
+    expect(list?.textContent).not.toContain("paid you");
+  });
+
+  it("uses display names (not 'you') in the settled-up title", () => {
+    // paidById: user-1 (Alice = currentUser), recipient: user-2 (Bob)
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice settled up with Bob");
+  });
+
+  it("uses display names for settled-up payment between two other users", () => {
+    const payment = makeSettledPayment({ paidById: "user-2", participantIds: ["user-3"], createdById: "user-2" });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-3": "Charlie" }}
+        members={[
+          { userId: "user-1", displayName: "Alice" },
+          { userId: "user-2", displayName: "Bob" },
+          { userId: "user-3", displayName: "Charlie" },
+        ]}
+        initialExpenses={[payment]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Bob settled up with Charlie");
+  });
+
+  it("appends ✨ to the settled-up title", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("✨");
+  });
+
+  it("renders amount in emerald for settled-up payments", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />
+    );
+    const amountEl = container.querySelector(".text-emerald-700.font-bold");
+    expect(amountEl, "amount should have emerald color class").not.toBeNull();
+    expect(amountEl!.textContent).toContain("$50.00");
+  });
+
+  it("does NOT show settled-up style for regular (non-settled) payments", () => {
+    const regularPayment = makeSettledPayment({ settledUp: false });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[regularPayment]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).not.toContain("settled up with");
+    expect(list?.textContent).toContain("you paid");
+  });
+});
+
+// ----------------------------
 // Expense row display
 // ----------------------------
 

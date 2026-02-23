@@ -127,6 +127,21 @@ function getPaymentDirection(
   return `${fromName} → ${toName}`;
 }
 
+/**
+ * Returns the "settled up with" title for a settled-up payment card.
+ * Always uses display names (no "you" pronoun): "Alice settled up with Bob"
+ */
+export function getSettledUpTitle(
+  expense: ExpenseRow,
+  members: Member[],
+  allUserNames: Record<string, string>
+): string {
+  const receiverId = expense.participantIds[0];
+  const toName = receiverId ? getMemberPillProps(receiverId, members, allUserNames).name : "Unknown";
+  const fromName = getMemberPillProps(expense.paidById, members, allUserNames).name;
+  return `${fromName} settled up with ${toName}`;
+}
+
 export function ExpensesList({
   groupId,
   groupCreatedById,
@@ -337,7 +352,7 @@ export function ExpensesList({
                       <div className="flex-1 min-w-0">
                         <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-gray-900 dark:text-gray-100"}`}>
                           {isSettledUp ? (
-                            <>{paymentDirection} ✨</>
+                            <>{getSettledUpTitle(expense, members, allUserNames)} ✨</>
                           ) : expense.isPayment ? (
                             <>{paymentDirection}</>
                           ) : expense.description}
