@@ -10,7 +10,7 @@ export function LeaveGroupButton({ groupId, userOwedCents }: { groupId: string; 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const blocked = userOwedCents > 200;
+  const blocked = userOwedCents > 0;
 
   async function handleLeave() {
     setLoading(true);

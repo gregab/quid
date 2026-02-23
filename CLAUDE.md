@@ -62,6 +62,10 @@ npm run cy:run                          # Cypress headless (CI)
 | **Styling / dark mode** | Tailwind classes with `dark:` variants; globals in `app/globals.css` |
 | **E2E tests** | `cypress/e2e/` — specs; `cypress/support/commands.ts` — `cy.login()`; `cypress.config.ts` |
 
+## DRY: Don't Duplicate Business Logic
+- **Balance/debt calculations** live in `lib/balances/` and must be the single source of truth. Never re-derive balances with a manual loop — use `buildRawDebts()` → `simplifyDebts()` (or the convenience wrapper `getUserDebtCents()`).
+- When the same rule exists in both JS and an RPC function (e.g., "user can't leave with outstanding debt"), keep them in sync. The JS utility is the client-side source of truth; the RPC is the server-side safety net.
+
 ## Critical Gotchas
 
 1. **`params` is a Promise** in Next.js 16: `const { id } = await params`

@@ -8,6 +8,7 @@ import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
+import { getUserDebtCents } from "@/lib/balances/getUserDebt";
 
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
@@ -154,17 +155,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     };
   });
 
-  // Compute how much the current user owes on net (positive = owes money)
-  const allExpenses = expenses ?? [];
-  let paid = 0;
-  let owed = 0;
-  for (const expense of allExpenses) {
-    if (expense.paidById === user.id) paid += expense.amountCents;
-    for (const split of expense.ExpenseSplit ?? []) {
-      if (split.userId === user.id) owed += split.amountCents;
-    }
-  }
-  const userOwedCents = owed - paid; // positive = user owes money
+  // Compute how much the current user owes on net (uses simplified debts)
+  const userOwedCents = getUserDebtCents(
+    initialExpenses.map((e) => ({
+      paidById: e.paidById,
+      splits: e.splits,
+    })),
+    user.id
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8">

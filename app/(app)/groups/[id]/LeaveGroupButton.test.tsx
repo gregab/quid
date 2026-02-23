@@ -75,17 +75,17 @@ describe("LeaveGroupButton", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("shows warning and disables Leave button when user owes more than $2", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={1500} />);
+  it("shows warning and disables Leave button when user owes any amount", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={50} />);
     fireEvent.click(screen.getByText("Leave group"));
 
-    expect(screen.getByText("You owe $15.00 in this group. Please settle up before leaving.")).toBeDefined();
+    expect(screen.getByText("You owe $0.50 in this group. Please settle up before leaving.")).toBeDefined();
     const leaveBtn = screen.getByText("Leave");
     expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
   });
 
-  it("allows leaving when user owes $2 or less", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={200} />);
+  it("allows leaving when user owes nothing", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     expect(screen.queryByText(/You owe/)).toBeNull();
