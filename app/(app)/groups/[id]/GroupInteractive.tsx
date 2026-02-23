@@ -139,7 +139,10 @@ export function GroupInteractive({
                     </span>
                   </span>
                   {i < resolvedDebts.length - 1 && (
-                    <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
+                    <>
+                      <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
+                      <wbr />
+                    </>
                   )}
                 </span>
               );

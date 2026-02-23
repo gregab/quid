@@ -512,10 +512,13 @@ describe("GroupInteractive — balance UI improvements", () => {
     const { container } = render(
       <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[aliceOwesBob, carolOwesBob]} />
     );
-    // · separators appear between debts
+    // · separators appear between debts, each followed by a <wbr> wrap opportunity
     const separators = container.querySelectorAll("span");
     const dotSeparators = Array.from(separators).filter((el) => el.textContent?.trim() === "·");
     expect(dotSeparators.length).toBeGreaterThanOrEqual(1);
+    // Each separator is followed by a <wbr> so the browser can break before the next phrase
+    const wbrs = container.querySelectorAll("wbr");
+    expect(wbrs.length).toBe(dotSeparators.length);
   });
 
   it("does not render · separator when there is only one debt", () => {
