@@ -139,7 +139,7 @@ export function SettingsClient({
                 type="button"
                 variant="danger"
                 onClick={handleDelete}
-                disabled={loading || confirmText !== "DELETE"}
+                disabled={loading || confirmText !== "DELETE" || hasOutstandingBalances}
               >
                 {loading ? "Deleting..." : "Delete my account"}
               </Button>

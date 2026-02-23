@@ -68,6 +68,16 @@ describe("SettingsClient", () => {
     expect(screen.getByText(/you owe \$20\.00/)).toBeDefined();
   });
 
+  it("keeps confirm button disabled even after typing DELETE when balances exist", () => {
+    const balances = [{ groupId: "g1", groupName: "Trip", balanceCents: 1500 }];
+    render(<SettingsClient {...BASE_PROPS} groupBalances={balances} />);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
+    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+    const confirmBtn = screen.getByRole("button", { name: /delete my account/i }) as HTMLButtonElement;
+    expect(confirmBtn.disabled).toBe(true);
+  });
+
   it("does not show balance warnings when no outstanding balances", () => {
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
