@@ -268,7 +268,7 @@ export function ExpensesList({
                   {expense.isPayment ? (
                     <>
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm text-emerald-600 truncate dark:text-emerald-400">Payment</p>
+                        <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">Payment</p>
                         <div className="flex items-center gap-1.5 flex-wrap mt-1">
                           <span className="text-xs text-gray-400">
                             {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
@@ -276,7 +276,7 @@ export function ExpensesList({
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
+                        <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
                           {formatCents(expense.amountCents)}
                         </span>
                         <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
