@@ -59,12 +59,15 @@ describe("ExpenseDetailModal — view mode", () => {
     expect(screen.getByRole("heading", { name: "Dinner" })).toBeDefined();
   });
 
-  it("shows amount, date, paid-by, and split-with details", () => {
+  it("shows amount, date, paid-by, and per-person split breakdown", () => {
     render(<ExpenseDetailModal {...BASE_PROPS} expense={makeExpense()} />);
-    expect(screen.getByText("$25.00")).toBeDefined();
-    expect(screen.getByText("January 15, 2024")).toBeDefined();
-    // paidById = user-1 = currentUserId, so shows "(you)"
-    expect(screen.getByText(/alice.*\(you\)/i)).toBeDefined();
+    // Amount appears twice: once in the prominent header, once in the "Paid by" card
+    expect(screen.getAllByText("$25.00").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/January 15, 2024/)).toBeDefined();
+    // paidById = user-1 = currentUserId, so shows "(you)" in both Paid by card and split row
+    expect(screen.getAllByText(/alice.*\(you\)/i).length).toBeGreaterThanOrEqual(1);
+    // Per-person shares: $25.00 / 2 = $12.50 each
+    expect(screen.getAllByText("$12.50").length).toBe(2);
   });
 
   it("shows 'Added by [name]' for a non-creator expense", () => {

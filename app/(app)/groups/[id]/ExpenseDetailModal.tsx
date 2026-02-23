@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
+import { splitAmount } from "@/lib/balances/splitAmount";
 
 interface ExpenseDetailModalProps {
   groupId: string;
@@ -228,7 +229,10 @@ export function ExpenseDetailModal({
   // View-mode display data
   const participantDisplayIds =
     expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId);
-  const participantNames = participantDisplayIds.map((id) => allUserNames[id] ?? "Unknown");
+  const splits =
+    participantDisplayIds.length > 0
+      ? splitAmount(expense.amountCents, participantDisplayIds.length)
+      : [];
   const payerName = allUserNames[expense.paidById] ?? expense.paidByDisplayName;
   const recipientId = expense.participantIds[0];
   const recipientName = recipientId ? (allUserNames[recipientId] ?? "Unknown") : "Unknown";
@@ -247,7 +251,7 @@ export function ExpenseDetailModal({
         {/* ── VIEW MODE ── */}
         {mode === "view" && (
           <>
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
                   {expense.isPayment ? "Payment" : "Expense"}
@@ -269,47 +273,97 @@ export function ExpenseDetailModal({
               </button>
             </div>
 
-            <dl className="space-y-2.5 text-sm mb-5 border-t border-gray-100 dark:border-gray-700 pt-4">
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">Amount</dt>
-                <dd className="font-semibold text-gray-900 dark:text-gray-100">{formatCents(expense.amountCents)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">Date</dt>
-                <dd className="text-gray-900 dark:text-gray-100">{formatDisplayDate(expense.date)}</dd>
-              </div>
-              {expense.isPayment ? (
-                <>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500 dark:text-gray-400">From</dt>
-                    <dd className="text-gray-900 dark:text-gray-100">
+            {/* Amount + date — prominent key facts */}
+            <div className="flex items-baseline gap-1.5 mb-5">
+              <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                {formatCents(expense.amountCents)}
+              </span>
+              <span className="text-sm text-gray-400 dark:text-gray-500">
+                · {formatDisplayDate(expense.date)}
+              </span>
+            </div>
+
+            {expense.isPayment ? (
+              /* Payment: simple From / To */
+              <dl className="space-y-2.5 text-sm mb-5 border-t border-gray-100 dark:border-gray-700 pt-4">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">From</dt>
+                  <dd className="text-gray-900 dark:text-gray-100">
+                    {payerName}{expense.paidById === currentUserId ? " (you)" : ""}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">To</dt>
+                  <dd className="text-gray-900 dark:text-gray-100">
+                    {recipientName}{recipientId === currentUserId ? " (you)" : ""}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              /* Expense: visual breakdown */
+              <div className="mb-5 space-y-4">
+                {/* Paid by */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                    Paid by
+                  </p>
+                  <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl px-3 py-2.5">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {payerName}{expense.paidById === currentUserId ? " (you)" : ""}
-                    </dd>
+                    </span>
+                    <span className="text-sm font-bold text-amber-700 dark:text-amber-400 tabular-nums">
+                      {formatCents(expense.amountCents)}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500 dark:text-gray-400">To</dt>
-                    <dd className="text-gray-900 dark:text-gray-100">
-                      {recipientName}{recipientId === currentUserId ? " (you)" : ""}
-                    </dd>
+                </div>
+
+                {/* Per-person split with proportion bars */}
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                    Split
+                  </p>
+                  <div className="space-y-2.5">
+                    {splits.map((share, i) => {
+                      const id = participantDisplayIds[i]!;
+                      const name = allUserNames[id] ?? "Unknown";
+                      const isYou = id === currentUserId;
+                      const isPayer = id === expense.paidById;
+                      const widthPct =
+                        expense.amountCents > 0 ? (share / expense.amountCents) * 100 : 0;
+                      return (
+                        <div key={id}>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                                {name}{isYou ? " (you)" : ""}
+                              </span>
+                              {isPayer && (
+                                <span className="shrink-0 text-[10px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full">
+                                  paid
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 ml-3 shrink-0 tabular-nums">
+                              {formatCents(share)}
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                isPayer
+                                  ? "bg-amber-300 dark:bg-amber-600"
+                                  : "bg-gray-300 dark:bg-gray-500"
+                              }`}
+                              style={{ width: `${widthPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between">
-                    <dt className="text-gray-500 dark:text-gray-400">Paid by</dt>
-                    <dd className="text-gray-900 dark:text-gray-100">
-                      {payerName}{expense.paidById === currentUserId ? " (you)" : ""}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-gray-500 dark:text-gray-400 shrink-0">Split with</dt>
-                    <dd className="text-gray-900 dark:text-gray-100 text-right">
-                      {participantNames.join(", ")}
-                    </dd>
-                  </div>
-                </>
-              )}
-            </dl>
+                </div>
+              </div>
+            )}
 
             {showCreatedBy && createdByName && (
               <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
