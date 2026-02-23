@@ -17,6 +17,7 @@ interface GroupInteractiveProps {
   currentUserDisplayName: string;
   initialExpenses: ExpenseRow[];
   initialLogs: ActivityLog[];
+  hasMoreLogs: boolean;
   members: Member[];
   allUserNames: Record<string, string>;
 }
@@ -32,10 +33,12 @@ export function GroupInteractive({
   currentUserDisplayName,
   initialExpenses,
   initialLogs,
+  hasMoreLogs,
   members,
   allUserNames,
 }: GroupInteractiveProps) {
-  const { logs, addOptimisticLog } = useActivityLogs(initialLogs);
+  const { logs, addOptimisticLog, hasMore, isLoadingMore, loadMore } =
+    useActivityLogs(initialLogs, groupId, hasMoreLogs);
   const [balancesExpenses, setBalancesExpenses] = useState<ExpenseRow[]>(initialExpenses);
 
   // Sync balances when server data arrives (e.g. after add resolves and pending items clear).
@@ -123,7 +126,12 @@ export function GroupInteractive({
         onOptimisticActivity={addOptimisticLog}
         onExpensesChange={handleExpensesChange}
       />
-      <ActivityFeed logs={logs} />
+      <ActivityFeed
+        logs={logs}
+        hasMore={hasMore}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={loadMore}
+      />
     </>
   );
 }

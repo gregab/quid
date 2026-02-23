@@ -555,3 +555,52 @@ describe("ExpensesList — custom splits personal stake display", () => {
     expect(list?.textContent).toContain("$40.00");
   });
 });
+
+describe("ExpensesList — display truncation", () => {
+  function makeExpenses(count: number): ExpenseRow[] {
+    return Array.from({ length: count }, (_, i) =>
+      makeExpense({ id: `expense-${i}`, description: `Expense ${i}` })
+    );
+  }
+
+  it("shows all expenses when there are 30 or fewer", () => {
+    const expenses = makeExpenses(30);
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={expenses} />);
+    expect(screen.queryByText(/Show \d+ more/)).toBeNull();
+    const items = document.querySelectorAll("li");
+    expect(items).toHaveLength(30);
+  });
+
+  it("shows only 30 expenses when there are more than 30", () => {
+    const expenses = makeExpenses(35);
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={expenses} />);
+    const items = document.querySelectorAll("li");
+    expect(items).toHaveLength(30);
+  });
+
+  it("shows 'Show N more' button when more than 30 expenses exist", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+    expect(screen.getByText("Show 5 more")).toBeDefined();
+  });
+
+  it("reveals more expenses when 'Show N more' is clicked", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+    fireEvent.click(screen.getByText("Show 5 more"));
+    const items = document.querySelectorAll("li");
+    expect(items).toHaveLength(35);
+  });
+
+  it("hides the Show more button after all expenses are revealed", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+    fireEvent.click(screen.getByText("Show 5 more"));
+    expect(screen.queryByText(/Show \d+ more/)).toBeNull();
+  });
+
+  it("caps each 'Show more' click at 30 additional items", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(65)} />);
+    expect(screen.getByText("Show 30 more")).toBeDefined();
+    fireEvent.click(screen.getByText("Show 30 more"));
+    expect(document.querySelectorAll("li")).toHaveLength(60);
+    expect(screen.getByText("Show 5 more")).toBeDefined();
+  });
+});

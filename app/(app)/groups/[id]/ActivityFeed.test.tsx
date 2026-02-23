@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { ActivityFeed, type ActivityLog } from "./ActivityFeed";
 
@@ -431,6 +431,32 @@ describe("ActivityFeed — deleted account fallback", () => {
     );
     expect(screen.getByText("Deleted U.")).toBeDefined();
     expect(screen.getByText("left the group")).toBeDefined();
+  });
+});
+
+describe("ActivityFeed — load more", () => {
+  it("does not show Load more button when hasMore is false", () => {
+    render(<ActivityFeed logs={[makeLog()]} hasMore={false} />);
+    expect(screen.queryByText("Load more")).toBeNull();
+  });
+
+  it("shows Load more button when hasMore is true", () => {
+    render(<ActivityFeed logs={[makeLog()]} hasMore={true} onLoadMore={vi.fn()} />);
+    expect(screen.getByText("Load more")).toBeDefined();
+  });
+
+  it("calls onLoadMore when button is clicked", () => {
+    const onLoadMore = vi.fn();
+    render(<ActivityFeed logs={[makeLog()]} hasMore={true} onLoadMore={onLoadMore} />);
+    fireEvent.click(screen.getByText("Load more"));
+    expect(onLoadMore).toHaveBeenCalledOnce();
+  });
+
+  it("shows Loading… and disables button when isLoadingMore is true", () => {
+    render(<ActivityFeed logs={[makeLog()]} hasMore={true} isLoadingMore={true} />);
+    const btn = screen.getByText("Loading…");
+    expect(btn).toBeDefined();
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

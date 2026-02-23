@@ -142,6 +142,7 @@ export function ExpensesList({
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [openDetailExpenseId, setOpenDetailExpenseId] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(30);
 
   // When router.refresh() delivers fresh server data, replace any pending items.
   // useState(initialExpenses) only uses the prop as the initial value and ignores
@@ -271,7 +272,7 @@ export function ExpensesList({
         <p className="text-gray-400 text-sm">No expenses yet. Add one to get started.</p>
       ) : (
         <ul className="space-y-2">
-          {expenses.map((expense) => {
+          {expenses.slice(0, displayCount).map((expense) => {
             const personalContext = getPersonalContext(expense, currentUserId);
             const payerName = expense.paidById === currentUserId
               ? "you"
@@ -378,6 +379,18 @@ export function ExpensesList({
             );
           })}
         </ul>
+      )}
+
+      {expenses.length > displayCount && (
+        <div className="flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={() => setDisplayCount((c) => c + 30)}
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition-colors"
+          >
+            Show {Math.min(expenses.length - displayCount, 30)} more
+          </button>
+        </div>
       )}
 
       {/* Detail / edit modal — rendered once at list level */}

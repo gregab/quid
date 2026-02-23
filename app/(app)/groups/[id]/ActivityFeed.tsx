@@ -443,7 +443,17 @@ function isClickable(log: ActivityLog): boolean {
   return !log.isPending && log.action !== "member_left";
 }
 
-export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
+export function ActivityFeed({
+  logs,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: {
+  logs: ActivityLog[];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+}) {
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
 
   return (
@@ -550,6 +560,18 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                 </div>
               );
             })}
+            {(hasMore || isLoadingMore) && (
+              <div className="px-4 py-2.5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={onLoadMore}
+                  disabled={isLoadingMore}
+                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 disabled:opacity-50 font-medium transition-colors"
+                >
+                  {isLoadingMore ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            )}
           </Card>
         )}
       </section>
