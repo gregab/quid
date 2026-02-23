@@ -494,7 +494,7 @@ describe("GroupInteractive — balance UI improvements", () => {
     expect(container.querySelector("[class*='text-emerald-']")).not.toBeNull();
   });
 
-  it("renders balances as inline text with · separators between multiple debts", () => {
+  it("renders each debt phrase as a separate flex item (no · separator characters)", () => {
     const aliceOwesBob = makeExpense({
       id: "e1",
       amountCents: 1000,
@@ -512,27 +512,16 @@ describe("GroupInteractive — balance UI improvements", () => {
     const { container } = render(
       <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[aliceOwesBob, carolOwesBob]} />
     );
-    // · separators appear between debts, each followed by a <wbr> wrap opportunity
-    const separators = container.querySelectorAll("span");
-    const dotSeparators = Array.from(separators).filter((el) => el.textContent?.trim() === "·");
-    expect(dotSeparators.length).toBeGreaterThanOrEqual(1);
-    // Each separator is followed by a <wbr> so the browser can break before the next phrase
-    const wbrs = container.querySelectorAll("wbr");
-    expect(wbrs.length).toBe(dotSeparators.length);
-  });
-
-  it("does not render · separator when there is only one debt", () => {
-    const expense = makeExpense({
-      amountCents: 1000,
-      paidById: "user-b",
-      paidByDisplayName: "Bob",
-      participantIds: ["user-a", "user-b"],
-    });
-    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    const separators = Array.from(container.querySelectorAll("span")).filter(
+    // No · separator characters — items are separated by flex gap instead
+    const dotSeparators = Array.from(container.querySelectorAll("span")).filter(
       (el) => el.textContent?.trim() === "·"
     );
-    expect(separators.length).toBe(0);
+    expect(dotSeparators.length).toBe(0);
+    // No <wbr> elements either
+    expect(container.querySelectorAll("wbr").length).toBe(0);
+    // Both debt phrases are present
+    expect(container.textContent).toContain("You owe");
+    expect(container.textContent).toContain("Carol owes");
   });
 
   it("uses lowercase 'you' when current user is the recipient", () => {
