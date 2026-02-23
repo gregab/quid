@@ -1085,6 +1085,326 @@ describe("buildRawDebts — payer excluded from participants", () => {
   });
 });
 
+// ─── Departed member scenarios ──────────────────────────────────────────────
+//
+// When a member leaves a group or deletes their account, their expenses and
+// splits remain in the database. The balance computation must continue to
+// produce correct results — the departed member's user ID still appears in
+// expense/split records and must be handled like any other participant.
+
+describe("buildRawDebts — departed member balances", () => {
+  it("departed member who paid an expense is still owed money", () => {
+    // charlie left the group but had paid a $90 dinner split 3 ways
+    const expense = makeEqualExpense({
+      paidById: "charlie",
+      amountCents: 9000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+    const debts = buildRawDebts([expense]);
+    const simplified = simplifyDebts(debts);
+
+    // alice and bob each owe charlie $30
+    expect(getNet(simplified, "charlie")).toBe(6000);
+    expect(getNet(simplified, "alice")).toBe(-3000);
+    expect(getNet(simplified, "bob")).toBe(-3000);
+  });
+
+  it("departed member who owes money still shows as debtor", () => {
+    // alice paid $60 split 3 ways, then charlie left
+    const expense = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 6000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+    const debts = buildRawDebts([expense]);
+    const simplified = simplifyDebts(debts);
+
+    expect(getNet(simplified, "charlie")).toBe(-2000);
+    expect(getNet(simplified, "alice")).toBe(4000);
+  });
+
+  it("departed member with zero net balance — no dangling debts", () => {
+    // charlie paid $60, then alice paid $60, both split 3 ways
+    // charlie's net: +4000 (paid) - 2000 (alice's expense) - 2000 (bob doesn't apply here...)
+    // Actually let's make it simple: charlie paid and was split participant equally
+    const exp1 = makeEqualExpense({
+      paidById: "charlie",
+      amountCents: 6000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+    const exp2 = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 6000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+    const exp3 = makeEqualExpense({
+      paidById: "bob",
+      amountCents: 6000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+
+    const simplified = simplifyDebts(buildRawDebts([exp1, exp2, exp3]));
+
+    // Everyone paid $60 for the same 3 people → all balanced
+    expect(simplified).toHaveLength(0);
+    expect(getNet(simplified, "charlie")).toBe(0);
+  });
+
+  it("multiple departed members — balances between them still computed", () => {
+    // bob and charlie both left. alice paid $90 split 3 ways.
+    const expense = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 9000,
+      participantIds: ["alice", "bob", "charlie"],
+    });
+    const simplified = simplifyDebts(buildRawDebts([expense]));
+
+    // Both bob and charlie still owe alice
+    expect(getNet(simplified, "bob")).toBe(-3000);
+    expect(getNet(simplified, "charlie")).toBe(-3000);
+    expect(getNet(simplified, "alice")).toBe(6000);
+  });
+
+  it("departed member's payment still reduces debts correctly", () => {
+    // alice paid $100 split with bob, then bob paid alice $50 (payment), then bob left
+    const expense = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 10000,
+      participantIds: ["alice", "bob"],
+    });
+    const payment = makePayment({
+      senderId: "bob",
+      recipientId: "alice",
+      amountCents: 5000,
+    });
+    const simplified = simplifyDebts(buildRawDebts([expense, payment]));
+
+    // bob owed $50, paid $50 → settled
+    expect(simplified).toHaveLength(0);
+  });
+
+  it("departed member's expenses still count in multi-person simplification", () => {
+    // 4-person group: alice, bob, carol, dave. dave left.
+    // dave paid $100 hotel split 4 ways, alice paid $80 dinner split 4 ways
+    const hotel = makeEqualExpense({
+      paidById: "dave",
+      amountCents: 10000,
+      participantIds: ["alice", "bob", "carol", "dave"],
+    });
+    const dinner = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 8000,
+      participantIds: ["alice", "bob", "carol", "dave"],
+    });
+    const simplified = simplifyDebts(buildRawDebts([hotel, dinner]));
+
+    // Net dave: +7500(hotel owed) - 2000(dinner share) = +5500
+    // Net alice: +6000(dinner owed) - 2500(hotel share) = +3500
+    // Net bob: -2500(hotel) - 2000(dinner) = -4500
+    // Net carol: -2500(hotel) - 2000(dinner) = -4500
+    // Check: 5500 + 3500 - 4500 - 4500 = 0 ✓
+    expect(getNet(simplified, "dave")).toBe(5500);
+    expect(getNet(simplified, "alice")).toBe(3500);
+    expect(getNet(simplified, "bob")).toBe(-4500);
+    expect(getNet(simplified, "carol")).toBe(-4500);
+  });
+
+  it("account deletion mid-group — user's expenses and splits preserved in computation", () => {
+    // Simulates: dave deleted account. His expenses remain with orphaned paidById.
+    // Balance computation uses IDs, not user lookups, so it just works.
+    const expenses: ExpenseForDebt[] = [
+      // dave (deleted) paid $120, split 3 ways with alice and bob
+      makeEqualExpense({
+        paidById: "deleted-user-dave",
+        amountCents: 12000,
+        participantIds: ["alice", "bob", "deleted-user-dave"],
+      }),
+      // alice paid $60, split 3 ways
+      makeEqualExpense({
+        paidById: "alice",
+        amountCents: 6000,
+        participantIds: ["alice", "bob", "deleted-user-dave"],
+      }),
+    ];
+    const simplified = simplifyDebts(buildRawDebts(expenses));
+
+    // dave: +8000(hotel owed) - 2000(dinner share) = +6000
+    // alice: +4000(dinner owed) - 4000(hotel share) = 0
+    // bob: -4000(hotel) - 2000(dinner) = -6000
+    expect(getNet(simplified, "deleted-user-dave")).toBe(6000);
+    expect(getNet(simplified, "alice")).toBe(0);
+    expect(getNet(simplified, "bob")).toBe(-6000);
+  });
+});
+
+describe("E2E scenarios — member departure lifecycle", () => {
+  it("member leaves after settling — no effect on remaining balances", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // 3 people: alice, bob, carol. Alice pays $90 dinner split 3 ways.
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 9000, participantIds: ["alice", "bob", "carol"] })
+    );
+    // carol settles up: pays alice $30
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 3000 }));
+
+    let s = balances(expenses);
+    expect(net(s, "carol")).toBe(0); // carol settled
+
+    // carol leaves. Her expenses and payment remain in the list.
+    // Remaining balances should still be correct.
+    expect(net(s, "bob")).toBe(-3000); // bob still owes alice $30
+    expect(net(s, "alice")).toBe(3000);
+  });
+
+  it("member leaves while owing money — debt remains in computation for others", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // alice pays $120 split 4 ways
+    expenses.push(
+      makeEqualExpense({
+        paidById: "alice",
+        amountCents: 12000,
+        participantIds: ["alice", "bob", "carol", "dave"],
+      })
+    );
+
+    let s = balances(expenses);
+    // Everyone owes alice $30 each
+    expect(net(s, "bob")).toBe(-3000);
+    expect(net(s, "carol")).toBe(-3000);
+    expect(net(s, "dave")).toBe(-3000);
+
+    // dave deletes account (bypasses balance check). His split still exists.
+    // The balance computation doesn't care about membership — only about expense data.
+    // alice is still owed $90 total ($30 from each of 3 others).
+    expect(net(s, "alice")).toBe(9000);
+
+    // bob settles up
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 3000 }));
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(0);
+    // alice is still owed $60 ($30 each from carol and dave-who-left)
+    expect(net(s, "alice")).toBe(6000);
+    expect(net(s, "dave")).toBe(-3000);
+  });
+
+  it("member leaves after being owed money — creditor ID preserved in debts", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // bob paid $100 split with alice
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 10000, participantIds: ["alice", "bob"] })
+    );
+
+    let s = balances(expenses);
+    expect(net(s, "alice")).toBe(-5000);
+    expect(net(s, "bob")).toBe(5000);
+
+    // bob leaves (net balance is positive — allowed since he doesn't owe money).
+    // alice still owes bob $50. The debt remains computed correctly.
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(-5000);
+    expect(net(s, "bob")).toBe(5000);
+    // Simplified debts still reference bob's ID
+    expect(s.some((d) => d.to === "bob")).toBe(true);
+  });
+
+  it("new expenses after member departure don't affect departed member's balance", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // 3 people: alice, bob, carol. bob pays $60 split 3 ways.
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 6000, participantIds: ["alice", "bob", "carol"] })
+    );
+
+    let s = balances(expenses);
+    expect(net(s, "bob")).toBe(4000);
+
+    // carol leaves. New expense added by alice for just alice and bob.
+    // carol's balance from the first expense is unaffected.
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 4000, participantIds: ["alice", "bob"] })
+    );
+
+    s = balances(expenses);
+    // carol still owes from first expense
+    expect(net(s, "carol")).toBe(-2000);
+    // bob: owed $40 from first, owes $20 from second = +$20
+    expect(net(s, "bob")).toBe(2000);
+    // alice: owes $20 from first, owed $20 from second = $0
+    expect(net(s, "alice")).toBe(0);
+  });
+
+  it("two members depart at different times — running balance stays correct", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // alice pays $100, 4 ways
+    expenses.push(
+      makeEqualExpense({
+        paidById: "alice",
+        amountCents: 10000,
+        participantIds: ["alice", "bob", "carol", "dave"],
+      })
+    );
+
+    // bob settles and leaves
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 2500 }));
+    let s = balances(expenses);
+    expect(net(s, "bob")).toBe(0);
+
+    // dave pays $40 for carol and dave only
+    expenses.push(
+      makeEqualExpense({ paidById: "dave", amountCents: 4000, participantIds: ["carol", "dave"] })
+    );
+
+    // carol settles with alice and dave, then leaves
+    // carol owes alice $25 (from first expense) and dave $20 (from second)
+    s = balances(expenses);
+    expect(net(s, "carol")).toBe(-4500); // -2500 to alice, -2000 to dave
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 2500 }));
+    expenses.push(makePayment({ senderId: "carol", recipientId: "dave", amountCents: 2000 }));
+    s = balances(expenses);
+    expect(net(s, "carol")).toBe(0);
+
+    // Only alice and dave remain. dave still owes alice $25 from first expense,
+    // minus the $20 dave is owed from his own expense = net dave owes alice $5
+    // Wait: dave's net from expense 1: -2500 (owes alice)
+    //       dave's net from expense 3: +2000 (owed by carol, but carol paid him)
+    //       carol→dave payment: dave gets +2000
+    // Net dave: -2500 + 2000 + 2000 = wait, I need to think about this more carefully
+    // Actually the payment carol→dave creates a debt from dave to carol, meaning dave's net goes up
+    // Let me just check net dave:
+    // expense 1: dave owes alice 2500 → -2500
+    // expense 3: carol owes dave 2000 → +2000
+    // payment carol→alice: no effect on dave
+    // payment carol→dave: alice owes carol... no. carol sent dave $20.
+    //   makePayment: senderId=carol, recipientId=dave. paidById=carol, split=[{userId:dave, amountCents:2000}]
+    //   This means dave owes carol 2000 (debt: from dave to carol)
+    //   But carol's expense (exp3): carol was a participant, dave paid, carol owes dave 2000
+    //   Payment: debt from dave to carol 2000
+    //   Net: carol→dave debt (from exp3) and dave→carol debt (from payment) cancel out ✓
+    //
+    // Net dave: -2500(exp1) + 2000(exp3) - 2000(carol payment) = -2500
+    // Hmm that doesn't sound right. Let me reconsider.
+    //
+    // Actually: expense 3 is dave pays $40 for carol and dave.
+    //   splits: carol=2000, dave=2000.
+    //   buildRawDebts: carol owes dave 2000 (dave's own split excluded). That's only 1 debt.
+    //   dave's net from exp3: +2000
+    //
+    // payment bob→alice (2500): debt from alice to bob. bob net: +2500
+    // payment carol→alice (2500): debt from alice to carol. carol net: +2500, alice net: -2500
+    // payment carol→dave (2000): debt from dave to carol. dave net: -2000, carol net: +2000
+    //
+    // dave total: -2500(exp1) + 2000(exp3) - 2000(payment) = -2500
+    // alice total: +7500(exp1) - 2500(bob payment) - 2500(carol payment) = +2500
+    // So dave owes alice $25. That's correct.
+    expect(net(s, "dave")).toBe(-2500);
+    expect(net(s, "alice")).toBe(2500);
+  });
+});
+
 // ─── E2E-style sequential scenarios ─────────────────────────────────────────
 //
 // These tests simulate a group's lifecycle: expenses added over time, edits,

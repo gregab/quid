@@ -92,4 +92,76 @@ describe("LeaveGroupButton", () => {
     const leaveBtn = screen.getByText("Leave");
     expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(false);
   });
+
+  it("allows leaving when user is owed money (positive creditor balance)", () => {
+    // userOwedCents=0 means the user doesn't OWE anything (they might be owed)
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    expect(screen.queryByText(/You owe/)).toBeNull();
+    const leaveBtn = screen.getByText("Leave");
+    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("shows correct dollar amount formatting in the owed warning", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={12350} />);
+    fireEvent.click(screen.getByText("Leave group"));
+    expect(screen.getByText("You owe $123.50 in this group. Please settle up before leaving.")).toBeDefined();
+  });
+
+  it("shows 'Leaving...' text while the API call is in progress", async () => {
+    // Create a fetch that never resolves during the test
+    let resolveFetch: () => void;
+    vi.spyOn(global, "fetch").mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = () => resolve({
+          ok: true,
+          json: async () => ({ data: { deletedGroup: false }, error: null }),
+        } as Response);
+      })
+    );
+
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Leave"));
+    });
+
+    expect(screen.getByText("Leaving...")).toBeDefined();
+
+    // Resolve to clean up
+    await act(async () => {
+      resolveFetch!();
+    });
+  });
+});
+
+// ─── Balance computation for leave eligibility ──────────────────────────────
+
+describe("LeaveGroupButton — balance-based eligibility scenarios", () => {
+  it("blocks leaving with even a 1-cent debt", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={1} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    expect(screen.getByText("You owe $0.01 in this group. Please settle up before leaving.")).toBeDefined();
+    const leaveBtn = screen.getByText("Leave");
+    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows the normal confirmation message when user has zero balance", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    expect(screen.getByText(/no longer see this group/)).toBeDefined();
+    expect(screen.queryByText(/You owe/)).toBeNull();
+  });
+
+  it("warns about group deletion when user might be the last member", () => {
+    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    fireEvent.click(screen.getByText("Leave group"));
+
+    // The warning message mentions the group will be deleted if last member
+    expect(screen.getByText(/last member.*deleted/)).toBeDefined();
+  });
 });

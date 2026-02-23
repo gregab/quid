@@ -556,6 +556,208 @@ describe("ExpensesList — custom splits personal stake display", () => {
   });
 });
 
+// ----------------------------
+// Departed / deleted member name resolution
+// ----------------------------
+
+describe("ExpensesList — departed member name resolution", () => {
+  it("shows departed payer name from allUserNames when payer is not in members", () => {
+    const expense = makeExpense({
+      paidById: "user-99",
+      paidByDisplayName: "Charlie",
+      participantIds: ["user-1"],
+      amountCents: 3000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie" }}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Charlie paid");
+  });
+
+  it("shows 'Unknown' when payer is not in members or allUserNames", () => {
+    const expense = makeExpense({
+      paidById: "ghost-user",
+      paidByDisplayName: "???",
+      participantIds: ["user-1"],
+      amountCents: 3000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Unknown paid");
+  });
+
+  it("shows correct personal stake when departed member paid the expense", () => {
+    // Charlie (departed) paid $60 split with alice (user-1). Alice owes $30.
+    const expense = makeExpense({
+      paidById: "user-99",
+      paidByDisplayName: "Charlie",
+      participantIds: ["user-1", "user-99"],
+      amountCents: 6000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie" }}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("you owe");
+    expect(list?.textContent).toContain("$30.00");
+  });
+
+  it("shows 'you lent' when current user paid and departed member is a participant", () => {
+    // Alice (user-1) paid $80 split with charlie (departed, user-99)
+    const expense = makeExpense({
+      paidById: "user-1",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-1", "user-99"],
+      amountCents: 8000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie" }}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("you lent");
+    expect(list?.textContent).toContain("$40.00");
+  });
+
+  it("shows departed payer name in payment direction for payments between departed member and current user", () => {
+    // Payment: Charlie (departed) paid Alice $50
+    const payment: ExpenseRow = {
+      id: "pay-1",
+      description: "Payment",
+      amountCents: 5000,
+      date: "2024-03-01",
+      paidById: "user-99",
+      paidByDisplayName: "Charlie",
+      participantIds: ["user-1"],
+      splits: [{ userId: "user-1", amountCents: 5000 }],
+      splitType: "equal",
+      canEdit: false,
+      canDelete: false,
+      isPayment: true,
+      createdById: "user-99",
+    };
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie" }}
+        initialExpenses={[payment]}
+      />
+    );
+    const list = document.querySelector("ul");
+    // Charlie paid you
+    expect(list?.textContent).toContain("Charlie");
+    expect(list?.textContent).toContain("paid you");
+  });
+
+  it("shows both departed members' names in payment direction between two departed users", () => {
+    // Payment: Dave (departed) paid Charlie (departed) $30
+    const payment: ExpenseRow = {
+      id: "pay-2",
+      description: "Payment",
+      amountCents: 3000,
+      date: "2024-03-01",
+      paidById: "user-88",
+      paidByDisplayName: "Dave",
+      participantIds: ["user-99"],
+      splits: [{ userId: "user-99", amountCents: 3000 }],
+      splitType: "equal",
+      canEdit: false,
+      canDelete: false,
+      isPayment: true,
+      createdById: "user-88",
+    };
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie", "user-88": "Dave" }}
+        initialExpenses={[payment]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Dave");
+    expect(list?.textContent).toContain("Charlie");
+    expect(list?.textContent).toContain("→");
+  });
+});
+
+// ----------------------------
+// Deleted account scenarios (User row completely gone)
+// ----------------------------
+
+describe("ExpensesList — deleted account display", () => {
+  it("shows 'Unknown' for a deleted user whose ID is not in allUserNames", () => {
+    const expense = makeExpense({
+      paidById: "deleted-user-id",
+      paidByDisplayName: "Deleted User",
+      participantIds: ["user-1"],
+      amountCents: 5000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Unknown paid");
+  });
+
+  it("shows the original name when allUserNames captured it from expense joins", () => {
+    const expense = makeExpense({
+      paidById: "deleted-user-id",
+      paidByDisplayName: "Dave",
+      participantIds: ["user-1"],
+      amountCents: 5000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "deleted-user-id": "Dave" }}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Dave paid");
+  });
+
+  it("still calculates correct personal stake when the payer account was deleted", () => {
+    // Deleted Dave paid $100 split with alice
+    const expense = makeExpense({
+      paidById: "deleted-user-id",
+      paidByDisplayName: "Dave",
+      participantIds: ["user-1", "deleted-user-id"],
+      amountCents: 10000,
+    });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "deleted-user-id": "Dave" }}
+        initialExpenses={[expense]}
+      />
+    );
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("you owe");
+    expect(list?.textContent).toContain("$50.00");
+  });
+});
+
 describe("ExpensesList — display truncation", () => {
   function makeExpenses(count: number): ExpenseRow[] {
     return Array.from({ length: count }, (_, i) =>

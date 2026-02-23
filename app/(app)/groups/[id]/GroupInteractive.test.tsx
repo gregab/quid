@@ -240,3 +240,147 @@ describe("GroupInteractive — Balances with custom (uneven) splits", () => {
     expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 });
+
+// ─── Deleted account — balance correctness ──────────────────────────────────
+
+describe("GroupInteractive — deleted account balance integrity", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: {}, error: null }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("shows 'Unknown' when deleted user ID is absent from allUserNames entirely", () => {
+    // A user deleted their account and their User row is gone.
+    // The page.tsx User join returns null, so their ID isn't in allUserNames.
+    const expense = makeExpense({
+      amountCents: 4000,
+      paidById: "deleted-xyz",
+      paidByDisplayName: "Deleted User",
+      participantIds: ["user-a", "deleted-xyz"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getAllByText("Unknown").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("preserves deleted user name when allUserNames was populated from expense joins", () => {
+    // In practice, page.tsx builds allUserNames from expense.User joins.
+    // If the User row still exists (or was captured before deletion), the name persists.
+    const expense = makeExpense({
+      amountCents: 6000,
+      paidById: "deleted-xyz",
+      paidByDisplayName: "Dave",
+      participantIds: ["user-a", "deleted-xyz"],
+    });
+    render(
+      <GroupInteractive
+        {...BASE_PROPS}
+        allUserNames={{ "user-a": "Alice", "user-b": "Bob", "deleted-xyz": "Dave" }}
+        initialExpenses={[expense]}
+      />
+    );
+    expect(screen.getAllByText("Dave").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
+  });
+
+  it("balance amount is correct with a deleted user as payer", () => {
+    // Deleted Dave paid $80 split equally with Alice (current user)
+    // Alice owes Dave $40
+    const expense = makeExpense({
+      amountCents: 8000,
+      paidById: "deleted-xyz",
+      paidByDisplayName: "Dave",
+      participantIds: ["user-a", "deleted-xyz"],
+    });
+    render(
+      <GroupInteractive
+        {...BASE_PROPS}
+        allUserNames={{ "user-a": "Alice", "user-b": "Bob", "deleted-xyz": "Dave" }}
+        initialExpenses={[expense]}
+      />
+    );
+    expect(screen.getByText("You")).toBeDefined();
+    expect(screen.getByText("owe")).toBeDefined();
+    expect(screen.getByText("Dave")).toBeDefined();
+    expect(screen.getAllByText("$40.00").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("balance amount is correct with a deleted user as debtor", () => {
+    // Alice (current user) paid $80 split equally with deleted Dave
+    // Dave owes Alice $40
+    const expense = makeExpense({
+      amountCents: 8000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "deleted-xyz"],
+    });
+    render(
+      <GroupInteractive
+        {...BASE_PROPS}
+        allUserNames={{ "user-a": "Alice", "user-b": "Bob", "deleted-xyz": "Dave" }}
+        initialExpenses={[expense]}
+      />
+    );
+    expect(screen.getByText("Dave")).toBeDefined();
+    expect(screen.getByText("owes")).toBeDefined();
+    expect(screen.getByText("You")).toBeDefined();
+    expect(screen.getAllByText("$40.00").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("multiple departed/deleted users render distinct names in balances", () => {
+    // Alice paid $90 split 3 ways with Carol (left) and Dave (deleted)
+    const expense = makeExpense({
+      amountCents: 9000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-c", "deleted-xyz"],
+    });
+    render(
+      <GroupInteractive
+        {...BASE_PROPS}
+        allUserNames={{
+          "user-a": "Alice",
+          "user-b": "Bob",
+          "user-c": "Carol",
+          "deleted-xyz": "Dave",
+        }}
+        initialExpenses={[expense]}
+      />
+    );
+    expect(screen.getAllByText("Carol").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Dave").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
+  });
+
+  it("settled-up state with departed members shows no debts", () => {
+    // Carol (departed) paid $60 split 2 ways with Alice, then Alice paid $60 split 2 ways with Carol
+    // Net zero
+    const exp1 = makeExpense({
+      id: "exp-1",
+      amountCents: 6000,
+      paidById: "user-c",
+      paidByDisplayName: "Carol",
+      participantIds: ["user-a", "user-c"],
+    });
+    const exp2 = makeExpense({
+      id: "exp-2",
+      amountCents: 6000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-c"],
+    });
+    render(
+      <GroupInteractive
+        {...BASE_PROPS}
+        allUserNames={{ "user-a": "Alice", "user-b": "Bob", "user-c": "Carol" }}
+        initialExpenses={[exp1, exp2]}
+      />
+    );
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+  });
+});
