@@ -46,7 +46,6 @@ export function RecordPaymentForm({
     return members.find((m) => m.userId !== currentUserId)?.userId ?? members[0]?.userId ?? "";
   });
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]!);
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState(false);
   const [amountErrorMessage, setAmountErrorMessage] = useState<string | null>(null);
@@ -112,7 +111,7 @@ export function RecordPaymentForm({
     const amountCents = Math.round(parsedAmount * 100);
     const submittedFromId = fromUserId;
     const submittedToId = toUserId;
-    const submittedDate = date;
+    const submittedDate = new Date().toISOString().split("T")[0]!;
 
     const fromMember = members.find((m) => m.userId === submittedFromId);
     const toMember = members.find((m) => m.userId === submittedToId);
@@ -176,7 +175,6 @@ export function RecordPaymentForm({
 
   function resetForm() {
     setAmount("");
-    setDate(new Date().toISOString().split("T")[0]!);
     setFromUserId(currentUserId);
     setToUserId(members.find((m) => m.userId !== currentUserId)?.userId ?? members[0]?.userId ?? "");
     setError(null);
@@ -427,21 +425,6 @@ export function RecordPaymentForm({
                         Full balance owed — you can pay a partial amount too.
                       </p>
                     )}
-                  </div>
-
-                  {/* Date */}
-                  <div>
-                    <label htmlFor="paymentDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
-                      Date
-                    </label>
-                    <Input
-                      id="paymentDate"
-                      type="date"
-                      required
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="appearance-none"
-                    />
                   </div>
 
                   {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

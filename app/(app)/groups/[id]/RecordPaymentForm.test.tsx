@@ -314,6 +314,12 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     expect(body.paidById).toBe("user-a");
     expect(body.recipientId).toBe("user-b");
     expect(body.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(body.date).toBe(new Date().toISOString().split("T")[0]);
+  });
+
+  it("does not render a date input field", () => {
+    renderAndSelectBob();
+    expect(document.querySelector("input[type=date]")).toBeNull();
   });
 
   it("calls onOptimisticAdd with correct isPayment expense", async () => {
@@ -540,23 +546,3 @@ describe("RecordPaymentForm — Hint text in preset mode", () => {
   });
 });
 
-// ─── Date field ───────────────────────────────────────────────────────────────
-
-describe("RecordPaymentForm — Date field", () => {
-  it("date field defaults to today", () => {
-    render(<RecordPaymentForm {...BASE_PROPS} userOwesDebts={[BOB_DEBT]} />);
-    openModal();
-    clickDebtRow("Bob");
-    const dateInput = document.querySelector("input[type=date]") as HTMLInputElement;
-    expect(dateInput.value).toBe(new Date().toISOString().split("T")[0]);
-  });
-
-  it("date field is editable", () => {
-    render(<RecordPaymentForm {...BASE_PROPS} userOwesDebts={[BOB_DEBT]} />);
-    openModal();
-    clickDebtRow("Bob");
-    const dateInput = document.querySelector("input[type=date]") as HTMLInputElement;
-    fireEvent.change(dateInput, { target: { value: "2025-01-15" } });
-    expect(dateInput.value).toBe("2025-01-15");
-  });
-});
