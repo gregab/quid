@@ -30,17 +30,17 @@ describe("SettingsClient", () => {
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
     expect(screen.getByText("Delete your account?")).toBeDefined();
-    expect(screen.getByPlaceholderText("DELETE")).toBeDefined();
+    expect(screen.getByPlaceholderText("FAREWELL")).toBeDefined();
   });
 
-  it("disables confirm button until user types DELETE", () => {
+  it("disables confirm button until user types FAREWELL", () => {
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
     const confirmBtn = screen.getByRole("button", { name: /delete my account/i }) as HTMLButtonElement;
     expect(confirmBtn.disabled).toBe(true);
 
-    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+    fireEvent.change(screen.getByPlaceholderText("FAREWELL"), { target: { value: "FAREWELL" } });
     expect(confirmBtn.disabled).toBe(false);
   });
 
@@ -48,12 +48,21 @@ describe("SettingsClient", () => {
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
-    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "delete" } });
+    fireEvent.change(screen.getByPlaceholderText("FAREWELL"), { target: { value: "farewell" } });
     const confirmBtn = screen.getByRole("button", { name: /delete my account/i }) as HTMLButtonElement;
     expect(confirmBtn.disabled).toBe(true);
   });
 
-  it("shows balance warnings when user has outstanding balances", () => {
+  it("does not enable confirm button when typing DELETE (old word)", () => {
+    render(<SettingsClient {...BASE_PROPS} />);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
+    fireEvent.change(screen.getByPlaceholderText("FAREWELL"), { target: { value: "DELETE" } });
+    const confirmBtn = screen.getByRole("button", { name: /delete my account/i }) as HTMLButtonElement;
+    expect(confirmBtn.disabled).toBe(true);
+  });
+
+  it("shows blocking message and group list when user has outstanding balances", () => {
     const balances = [
       { groupId: "g1", groupName: "Trip", balanceCents: 1500 },
       { groupId: "g2", groupName: "Rent", balanceCents: -2000 },
@@ -61,28 +70,36 @@ describe("SettingsClient", () => {
     render(<SettingsClient {...BASE_PROPS} groupBalances={balances} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
-    expect(screen.getByText("You have outstanding balances:")).toBeDefined();
+    expect(screen.getByText(/You must settle up before deleting your account/)).toBeDefined();
     expect(screen.getByText(/Trip/)).toBeDefined();
     expect(screen.getByText(/you are owed \$15\.00/)).toBeDefined();
     expect(screen.getByText(/Rent/)).toBeDefined();
     expect(screen.getByText(/you owe \$20\.00/)).toBeDefined();
   });
 
-  it("keeps confirm button disabled even after typing DELETE when balances exist", () => {
+  it("hides confirmation input and delete button when balances exist", () => {
     const balances = [{ groupId: "g1", groupName: "Trip", balanceCents: 1500 }];
     render(<SettingsClient {...BASE_PROPS} groupBalances={balances} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
-    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
-    const confirmBtn = screen.getByRole("button", { name: /delete my account/i }) as HTMLButtonElement;
-    expect(confirmBtn.disabled).toBe(true);
+    expect(screen.queryByPlaceholderText("FAREWELL")).toBeNull();
+    expect(screen.queryByRole("button", { name: /delete my account/i })).toBeNull();
+  });
+
+  it("shows Close button (not Cancel) when balances exist", () => {
+    const balances = [{ groupId: "g1", groupName: "Trip", balanceCents: 1500 }];
+    render(<SettingsClient {...BASE_PROPS} groupBalances={balances} />);
+    fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
+
+    expect(screen.getByRole("button", { name: /close/i })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /cancel/i })).toBeNull();
   });
 
   it("does not show balance warnings when no outstanding balances", () => {
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
 
-    expect(screen.queryByText("You have outstanding balances:")).toBeNull();
+    expect(screen.queryByText(/settle up/)).toBeNull();
   });
 
   it("calls DELETE /api/account on confirm", async () => {
@@ -93,7 +110,7 @@ describe("SettingsClient", () => {
 
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
-    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+    fireEvent.change(screen.getByPlaceholderText("FAREWELL"), { target: { value: "FAREWELL" } });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /delete my account/i }));
@@ -115,7 +132,7 @@ describe("SettingsClient", () => {
 
     render(<SettingsClient {...BASE_PROPS} />);
     fireEvent.click(screen.getByRole("button", { name: /delete account/i }));
-    fireEvent.change(screen.getByPlaceholderText("DELETE"), { target: { value: "DELETE" } });
+    fireEvent.change(screen.getByPlaceholderText("FAREWELL"), { target: { value: "FAREWELL" } });
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /delete my account/i }));
