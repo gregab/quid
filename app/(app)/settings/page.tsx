@@ -32,7 +32,7 @@ export default async function SettingsPage() {
           .from("Expense")
           .select("groupId, paidById, ExpenseSplit(userId, amountCents)")
           .in("groupId", groupIds)
-      : { data: [] };
+      : { data: null };
 
   // Group expenses by groupId for O(1) lookup
   const expensesByGroup = new Map<string, NonNullable<typeof allExpenses>>();

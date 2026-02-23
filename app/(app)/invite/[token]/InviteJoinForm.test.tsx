@@ -4,11 +4,12 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
 import { InviteJoinForm } from "./InviteJoinForm";
+import { useRouter } from "next/navigation";
 
 afterEach(cleanup);
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: vi.fn(() => ({ push: vi.fn(), refresh: vi.fn() })),
 }));
 
 const SITE_URL = "http://localhost:3000";
@@ -41,7 +42,7 @@ describe("InviteJoinForm", () => {
 
   it("calls the join API and redirects on success", async () => {
     const push = vi.fn();
-    vi.mocked(await import("next/navigation")).useRouter = () => ({ push, refresh: vi.fn() } as never);
+    vi.mocked(useRouter).mockReturnValue({ push, refresh: vi.fn() } as unknown as ReturnType<typeof useRouter>);
 
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
@@ -95,7 +96,7 @@ describe("InviteJoinForm", () => {
 
   it("redirects to the correct group path after joining", async () => {
     const push = vi.fn();
-    vi.mocked(await import("next/navigation")).useRouter = () => ({ push, refresh: vi.fn() } as never);
+    vi.mocked(useRouter).mockReturnValue({ push, refresh: vi.fn() } as unknown as ReturnType<typeof useRouter>);
 
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
@@ -112,7 +113,7 @@ describe("InviteJoinForm", () => {
 
   it("redirects to the group even when alreadyMember is true", async () => {
     const push = vi.fn();
-    vi.mocked(await import("next/navigation")).useRouter = () => ({ push, refresh: vi.fn() } as never);
+    vi.mocked(useRouter).mockReturnValue({ push, refresh: vi.fn() } as unknown as ReturnType<typeof useRouter>);
 
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,

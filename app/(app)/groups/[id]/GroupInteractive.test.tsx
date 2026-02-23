@@ -22,6 +22,7 @@ const BASE_PROPS = {
   currentUserId: "user-a",
   currentUserDisplayName: "Alice",
   initialLogs: [],
+  hasMoreLogs: false,
   members: MEMBERS,
   allUserNames: { "user-a": "Alice", "user-b": "Bob" },
 };
@@ -624,7 +625,7 @@ describe("GroupInteractive — Settle Up modal shows correct debts", () => {
     render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[expense]} />);
     openSettleUpModal();
     // Scope to the modal so we don't collide with Bob appearing in the Balances section
-    const modal = document.querySelector(".modal-content")!;
+    const modal = document.querySelector(".modal-content") as HTMLElement;
     expect(within(modal).getByText("Bob")).toBeTruthy();
     expect(within(modal).getByText("$5.00")).toBeTruthy();
   });
@@ -640,7 +641,7 @@ describe("GroupInteractive — Settle Up modal shows correct debts", () => {
     render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[expense]} />);
     openSettleUpModal();
     // Scope to the modal — Bob appears in the Balances section but NOT as a debt row in the modal
-    const modal = document.querySelector(".modal-content")!;
+    const modal = document.querySelector(".modal-content") as HTMLElement;
     expect(within(modal).getByText(/you're all settled up/i)).toBeTruthy();
     expect(within(modal).queryByText("Bob")).toBeNull();
   });

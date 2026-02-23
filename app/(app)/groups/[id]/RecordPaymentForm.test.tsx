@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
 
-import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach, type Mock } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { RecordPaymentForm } from "./RecordPaymentForm";
+import type { ExpenseRow } from "./ExpensesList";
+import type { ActivityLog } from "./ActivityFeed";
 
 afterEach(cleanup);
 
@@ -271,14 +273,14 @@ describe("RecordPaymentForm — Form step via 'Record other payment'", () => {
 // ─── Submission: preset mode ──────────────────────────────────────────────────
 
 describe("RecordPaymentForm — Submission (preset mode)", () => {
-  let onOptimisticAdd: ReturnType<typeof vi.fn>;
-  let onSettled: ReturnType<typeof vi.fn>;
-  let onOptimisticActivity: ReturnType<typeof vi.fn>;
+  let onOptimisticAdd: Mock<(expense: ExpenseRow) => void>;
+  let onSettled: Mock<() => void>;
+  let onOptimisticActivity: Mock<(log: ActivityLog) => void>;
 
   beforeEach(() => {
-    onOptimisticAdd = vi.fn();
-    onSettled = vi.fn();
-    onOptimisticActivity = vi.fn();
+    onOptimisticAdd = vi.fn<(expense: ExpenseRow) => void>();
+    onSettled = vi.fn<() => void>();
+    onOptimisticActivity = vi.fn<(log: ActivityLog) => void>();
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({}),
@@ -340,10 +342,11 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     await act(async () => { fireEvent.submit(getForm()); });
     expect(onOptimisticActivity).toHaveBeenCalledOnce();
     const log = onOptimisticActivity.mock.calls[0][0];
+    const payload = log.payload as Record<string, unknown>;
     expect(log.action).toBe("payment_recorded");
-    expect(log.payload.amountCents).toBe(4250);
-    expect(log.payload.fromDisplayName).toBe("Alice");
-    expect(log.payload.toDisplayName).toBe("Bob");
+    expect(payload.amountCents).toBe(4250);
+    expect(payload.fromDisplayName).toBe("Alice");
+    expect(payload.toDisplayName).toBe("Bob");
     expect(log.isPending).toBe(true);
   });
 
@@ -355,7 +358,7 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.amountCents).toBe(2000);
     expect(onOptimisticAdd.mock.calls[0][0].amountCents).toBe(2000);
-    expect(onOptimisticActivity.mock.calls[0][0].payload.amountCents).toBe(2000);
+    expect((onOptimisticActivity.mock.calls[0][0].payload as Record<string, unknown>).amountCents).toBe(2000);
   });
 
   it("sets settledUp: true when preset amount is paid in full", async () => {
@@ -363,7 +366,7 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     await act(async () => { fireEvent.submit(getForm()); });
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.settledUp).toBe(true);
-    expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(true);
+    expect((onOptimisticActivity.mock.calls[0][0].payload as Record<string, unknown>).settledUp).toBe(true);
     expect(onOptimisticAdd.mock.calls[0][0].settledUp).toBe(true);
   });
 
@@ -373,7 +376,7 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     await act(async () => { fireEvent.submit(getForm()); });
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.settledUp).toBe(false);
-    expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(false);
+    expect((onOptimisticActivity.mock.calls[0][0].payload as Record<string, unknown>).settledUp).toBe(false);
     expect(onOptimisticAdd.mock.calls[0][0].settledUp).toBe(false);
   });
 
@@ -401,10 +404,10 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
 // ─── Submission: free-form ("Record other payment") ──────────────────────────
 
 describe("RecordPaymentForm — Submission (Record other payment mode)", () => {
-  let onOptimisticAdd: ReturnType<typeof vi.fn>;
+  let onOptimisticAdd: Mock<(expense: ExpenseRow) => void>;
 
   beforeEach(() => {
-    onOptimisticAdd = vi.fn();
+    onOptimisticAdd = vi.fn<(expense: ExpenseRow) => void>();
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({}),
