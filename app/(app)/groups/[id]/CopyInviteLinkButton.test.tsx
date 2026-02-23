@@ -10,6 +10,12 @@ afterEach(cleanup);
 const SITE_URL = "http://localhost:3000";
 
 beforeEach(() => {
+  // Ensure navigator.share is absent by default (clipboard path)
+  Object.defineProperty(navigator, "share", {
+    value: undefined,
+    writable: true,
+    configurable: true,
+  });
   // Mock clipboard
   Object.defineProperty(navigator, "clipboard", {
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
@@ -25,8 +31,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("CopyInviteLinkButton", () => {
-  it("renders the button", () => {
+describe("CopyInviteLinkButton — clipboard (no navigator.share)", () => {
+  it("renders the button with 'Copy invite link' label", () => {
     render(<CopyInviteLinkButton inviteToken="abc123" />);
     expect(screen.getByRole("button", { name: /copy invite link/i })).toBeDefined();
   });
@@ -62,5 +68,48 @@ describe("CopyInviteLinkButton", () => {
     expect(screen.getByRole("button").textContent).toBe("Copy invite link");
 
     vi.useRealTimers();
+  });
+});
+
+describe("CopyInviteLinkButton — share sheet (navigator.share available)", () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, "share", {
+      value: vi.fn().mockResolvedValue(undefined),
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  it("renders the button with 'Share invite' label", async () => {
+    render(<CopyInviteLinkButton inviteToken="abc123" />);
+    // useEffect sets canShare after mount
+    await act(async () => {});
+    expect(screen.getByRole("button", { name: /share invite/i })).toBeDefined();
+  });
+
+  it("calls navigator.share with the correct invite URL", async () => {
+    render(<CopyInviteLinkButton inviteToken="abc123" />);
+    await act(async () => {});
+    const button = screen.getByRole("button", { name: /share invite/i });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(navigator.share).toHaveBeenCalledWith({
+      url: `${SITE_URL}/invite/abc123`,
+    });
+  });
+
+  it("does not write to clipboard when navigator.share is available", async () => {
+    render(<CopyInviteLinkButton inviteToken="abc123" />);
+    await act(async () => {});
+    const button = screen.getByRole("button", { name: /share invite/i });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
   });
 });
