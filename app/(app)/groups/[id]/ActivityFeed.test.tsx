@@ -378,7 +378,7 @@ describe("ActivityFeed — deleted account fallback", () => {
         ]}
       />
     );
-    expect(screen.getByText("Deleted User")).toBeDefined();
+    expect(screen.getByText("Deleted U.")).toBeDefined();
     // The rest of the log still renders
     expect(screen.getByText("added")).toBeDefined();
     expect(screen.getByText("Dinner")).toBeDefined();
@@ -396,7 +396,7 @@ describe("ActivityFeed — deleted account fallback", () => {
         ]}
       />
     );
-    expect(screen.getByText("Deleted User")).toBeDefined();
+    expect(screen.getByText("Deleted U.")).toBeDefined();
     expect(screen.getByText("left the group")).toBeDefined();
   });
 });

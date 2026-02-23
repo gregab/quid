@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { formatDisplayName } from "@/lib/formatDisplayName";
 
 export type ActivityLog = {
   id: string;
@@ -88,8 +89,8 @@ function buildEditInfo(payload: Payload): EditInfo {
   const details: string[] = [];
 
   if (changes.participants) {
-    const added = changes.participants.added ?? [];
-    const removed = changes.participants.removed ?? [];
+    const added = (changes.participants.added ?? []).map(formatDisplayName);
+    const removed = (changes.participants.removed ?? []).map(formatDisplayName);
     if (added.length > 0 && removed.length > 0) {
       verbs.push(`added ${formatNameList(added)}, removed ${formatNameList(removed)}`);
     } else if (added.length > 0) {
@@ -111,7 +112,7 @@ function buildEditInfo(payload: Payload): EditInfo {
 
   if (changes.paidBy) {
     verbs.push("changed the payer");
-    details.push(`${changes.paidBy.from} → ${changes.paidBy.to}`);
+    details.push(`${formatDisplayName(changes.paidBy.from)} → ${formatDisplayName(changes.paidBy.to)}`);
   }
 
   if (changes.description) {
@@ -164,7 +165,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
               return (
                 <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
                   <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{log.actor.displayName}</span>
+                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                     {" "}{verbAndPrep}
                     {showExpenseName && payload.description && (
                       <>{" "}<span className="font-medium">{payload.description}</span></>
@@ -185,14 +186,14 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
               return (
                 <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
                   <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{log.actor.displayName}</span>
+                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                     {" "}{verb}
                     {payload.fromDisplayName && payload.toDisplayName && (
                       <>
                         {": "}
-                        <span className="font-medium">{payload.fromDisplayName}</span>
+                        <span className="font-medium">{formatDisplayName(payload.fromDisplayName)}</span>
                         {" → "}
-                        <span className="font-medium">{payload.toDisplayName}</span>
+                        <span className="font-medium">{formatDisplayName(payload.toDisplayName)}</span>
                       </>
                     )}
                     {typeof payload.amountCents === "number" && (
@@ -210,7 +211,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
               return (
                 <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
                   <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{log.actor.displayName}</span>
+                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                     {" "}left the group
                   </p>
                   <span className="text-xs text-gray-400 shrink-0 mt-0.5">
@@ -229,7 +230,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
             return (
               <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
                 <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                  <span className="font-semibold">{log.actor.displayName}</span>
+                  <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                   {" "}{verb}{" "}
                   {payload.description && (
                     <span className="font-medium">{payload.description}</span>

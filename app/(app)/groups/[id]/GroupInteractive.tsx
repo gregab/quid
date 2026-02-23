@@ -8,6 +8,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import { simplifyDebts } from "@/lib/balances/simplify";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { Card } from "@/components/ui/Card";
+import { formatDisplayName } from "@/lib/formatDisplayName";
 
 interface GroupInteractiveProps {
   groupId: string;
@@ -73,9 +74,9 @@ export function GroupInteractive({
     for (const m of members) nameMap.set(m.userId, m.displayName);
     return simplified.map((debt) => ({
       fromId: debt.from,
-      fromName: nameMap.get(debt.from) ?? "Unknown",
+      fromName: formatDisplayName(nameMap.get(debt.from) ?? "Unknown"),
       toId: debt.to,
-      toName: nameMap.get(debt.to) ?? "Unknown",
+      toName: formatDisplayName(nameMap.get(debt.to) ?? "Unknown"),
       amountCents: debt.amount,
     }));
   }, [balancesExpenses, members, allUserNames]);

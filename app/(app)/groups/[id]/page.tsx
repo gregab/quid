@@ -6,6 +6,7 @@ import { CopyInviteLinkButton } from "./CopyInviteLinkButton";
 import { LeaveGroupButton } from "./LeaveGroupButton";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
+import { formatDisplayName } from "@/lib/formatDisplayName";
 
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
@@ -158,7 +159,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               }`}
             >
               <span className="text-sm leading-none">{memberEmojiMap.get(m.userId)}</span>
-              <span>{m.User!.displayName}</span>
+              <span>{formatDisplayName(m.User!.displayName)}</span>
               {m.userId === user.id && <span className="opacity-50">· you</span>}
             </div>
           ))}

@@ -7,6 +7,7 @@ import { AddExpenseForm } from "./AddExpenseForm";
 import { RecordPaymentForm } from "./RecordPaymentForm";
 import { ExpenseActions } from "./ExpenseActions";
 import type { ActivityLog } from "./ActivityFeed";
+import { formatDisplayName } from "@/lib/formatDisplayName";
 
 export interface Member {
   userId: string;
@@ -183,10 +184,10 @@ export function ExpensesList({
                         Payment
                       </span>
                       <p className="text-sm text-gray-700 truncate dark:text-gray-300">
-                        <span className="font-semibold">{expense.paidByDisplayName}</span>
+                        <span className="font-semibold">{formatDisplayName(expense.paidByDisplayName)}</span>
                         {" → "}
                         <span className="font-semibold">
-                          {members.find((m) => m.userId === expense.participantIds[0])?.displayName ?? "Unknown"}
+                          {formatDisplayName(members.find((m) => m.userId === expense.participantIds[0])?.displayName ?? allUserNames[expense.participantIds[0]!] ?? "Unknown")}
                         </span>
                         <span className="text-gray-400 ml-1.5">· {formatDate(expense.date)}</span>
                       </p>
@@ -215,11 +216,11 @@ export function ExpensesList({
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        Paid by {expense.paidByDisplayName} · {formatDate(expense.date)}
+                        Paid by {formatDisplayName(expense.paidByDisplayName)} · {formatDate(expense.date)}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5 truncate">
                         {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
-                          .map((id) => allUserNames[id] ?? members.find((m) => m.userId === id)?.displayName ?? "Unknown")
+                          .map((id) => formatDisplayName(allUserNames[id] ?? members.find((m) => m.userId === id)?.displayName ?? "Unknown"))
                           .join(", ")}
                       </p>
                     </div>
