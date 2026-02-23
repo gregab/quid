@@ -251,9 +251,9 @@ export function ExpensesList({
                     <div className="min-w-0">
                       <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        <span className="text-xs text-gray-400">Paid by</span>
-                        <MemberPill {...getMemberPillProps(expense.paidById, members, allUserNames)} />
-                        <span className="text-xs text-gray-400">· {formatDate(expense.date)}</span>
+                        <span className="text-xs text-gray-400">
+                          Paid by {getMemberPillProps(expense.paidById, members, allUserNames).name} · {formatDate(expense.date)}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
