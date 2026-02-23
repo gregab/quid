@@ -347,8 +347,8 @@ describe("ExpensesList — expense row display", () => {
     // Payer line: "[payer] paid $X"
     expect(list?.textContent).toContain("Bob paid");
     expect(list?.textContent).toContain("$20.00");
-    // Personal stake uses "[Name] lent you" language when someone else paid
-    expect(list?.textContent).toContain("Bob lent you");
+    // Personal stake shows "you owe" when someone else paid
+    expect(list?.textContent).toContain("you owe");
   });
 
   it("does not show a comma-separated participant list on expense rows", () => {
@@ -381,7 +381,7 @@ describe("ExpensesList — expense row display", () => {
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
     const list = document.querySelector("ul");
     expect(list?.textContent).not.toContain("you lent");
-    expect(list?.textContent).not.toContain("lent you");
+    expect(list?.textContent).not.toContain("you owe");
   });
 
   it("falls back to all members for personal stake calculation when participantIds is empty", () => {
@@ -407,8 +407,8 @@ describe("ExpensesList — expense row display", () => {
     );
     const list = document.querySelector("ul");
     expect(list?.textContent).toContain("Charlie paid");
-    // Departed payer name also appears in the stake label
-    expect(list?.textContent).toContain("Charlie lent you");
+    // Personal stake shows "you owe" when someone else paid
+    expect(list?.textContent).toContain("you owe");
   });
 
   it("shows edit and delete buttons for the expense creator", () => {

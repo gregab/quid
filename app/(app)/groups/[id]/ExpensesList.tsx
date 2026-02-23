@@ -50,11 +50,14 @@ function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-function formatDate(dateStr: string): string {
+function formatDateBlock(dateStr: string): { month: string; day: string } {
   // Parse YYYY-MM-DD as local date to avoid UTC-shift issues
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year!, month! - 1, day!);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return {
+    month: date.toLocaleDateString("en-US", { month: "short" }).toUpperCase(),
+    day: String(day!),
+  };
 }
 
 function getMemberPillProps(
@@ -280,108 +283,80 @@ export function ExpensesList({
               ? "you"
               : getMemberPillProps(expense.paidById, members, allUserNames).name;
             const payerLine = `${payerName} paid ${formatCents(expense.amountCents)}`;
-            // "you lent $X" when you paid; "[Name] lent you $X" when they paid
-            const stakeLabel = personalContext
-              ? personalContext.positive
-                ? "you lent"
-                : `${getMemberPillProps(expense.paidById, members, allUserNames).name} lent you`
-              : null;
             const paymentDirection = expense.isPayment
               ? getPaymentDirection(expense, currentUserId, members, allUserNames)
               : null;
+            const dateParts = formatDateBlock(expense.date);
             return (
               <li
                 key={expense.id}
                 className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
               >
                 <Card
-                  className={`px-4 py-3 flex items-center justify-between gap-4 ${
-                    expense.isPending ? "opacity-60" : ""
-                  }`}
+                  className={`px-3 sm:px-4 py-3 ${expense.isPending ? "opacity-60" : ""}`}
                 >
-                  {expense.isPayment ? (
-                    <>
-                      {/* Left: title + mobile subtitle */}
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Payment</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          <span className="sm:hidden">{paymentDirection} · </span>
-                          {formatDate(expense.date)}
-                        </p>
-                      </div>
-                      {/* Right: direction (desktop) + amount + actions */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {paymentDirection}
-                          </span>
-                          <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
-                            {formatCents(expense.amountCents)}
-                          </span>
+                  <div className="flex items-center gap-3">
+                    {/* Date block */}
+                    <div className="flex flex-col items-center w-9 shrink-0 text-center">
+                      <span className="text-[9px] font-bold tracking-wider text-gray-400 dark:text-gray-500 leading-none">
+                        {dateParts.month}
+                      </span>
+                      <span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight mt-px">
+                        {dateParts.day}
+                      </span>
+                    </div>
+
+                    {/* Vertical divider */}
+                    <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0" />
+
+                    {/* Info: title + subtitle */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                        {expense.isPayment ? "Payment" : expense.description}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                        {expense.isPayment ? paymentDirection : payerLine}
+                      </p>
+                    </div>
+
+                    {/* Right: personal stake (expenses) or amount (payments) + actions */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {expense.isPayment ? (
+                        <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
+                          {formatCents(expense.amountCents)}
+                        </span>
+                      ) : personalContext ? (
+                        <div className="text-right">
+                          <p className="text-[10px] leading-none text-gray-400 dark:text-gray-500">
+                            {personalContext.label}
+                          </p>
+                          <p className={`text-sm font-bold leading-tight mt-px whitespace-nowrap ${
+                            personalContext.positive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                          }`}>
+                            {formatCents(personalContext.amountCents)}
+                          </p>
                         </div>
-                        <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
-                          <ExpenseActions
-                            groupId={groupId}
-                            expense={expense}
-                            members={members}
-                            isPending={expense.isPending}
-                            currentUserDisplayName={currentUserDisplayName}
-                            onOptimisticDelete={handleOptimisticDelete}
-                            onDeleteFailed={handleDeleteFailed}
-                            onDeleteSettled={handleDeleteSettled}
-                            onOptimisticUpdate={handleOptimisticUpdate}
-                            onUpdateSettled={handleUpdateSettled}
-                            onOptimisticActivity={onOptimisticActivity}
-                          />
-                        </div>
+                      ) : null}
+
+                      <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
+                        <ExpenseActions
+                          groupId={groupId}
+                          expense={expense}
+                          members={members}
+                          isPending={expense.isPending}
+                          currentUserDisplayName={currentUserDisplayName}
+                          onOptimisticDelete={handleOptimisticDelete}
+                          onDeleteFailed={handleDeleteFailed}
+                          onDeleteSettled={handleDeleteSettled}
+                          onOptimisticUpdate={handleOptimisticUpdate}
+                          onUpdateSettled={handleUpdateSettled}
+                          onOptimisticActivity={onOptimisticActivity}
+                        />
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      {/* Left: description + mobile subtitle (payer + date) */}
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          <span className="sm:hidden">{payerLine} · </span>
-                          {formatDate(expense.date)}
-                        </p>
-                      </div>
-                      {/* Right: payer (desktop) + personal stake + actions */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {payerLine}
-                          </span>
-                          {stakeLabel && (
-                            <span
-                              className={`text-sm font-semibold whitespace-nowrap ${
-                                personalContext!.positive
-                                  ? "text-emerald-600 dark:text-emerald-400"
-                                  : "text-rose-500 dark:text-rose-400"
-                              }`}
-                            >
-                              {stakeLabel} {formatCents(personalContext!.amountCents)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
-                          <ExpenseActions
-                            groupId={groupId}
-                            expense={expense}
-                            members={members}
-                            isPending={expense.isPending}
-                            currentUserDisplayName={currentUserDisplayName}
-                            onOptimisticDelete={handleOptimisticDelete}
-                            onDeleteFailed={handleDeleteFailed}
-                            onDeleteSettled={handleDeleteSettled}
-                            onOptimisticUpdate={handleOptimisticUpdate}
-                            onUpdateSettled={handleUpdateSettled}
-                            onOptimisticActivity={onOptimisticActivity}
-                          />
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </Card>
               </li>
             );
