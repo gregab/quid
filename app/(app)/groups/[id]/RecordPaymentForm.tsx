@@ -139,13 +139,15 @@ export function RecordPaymentForm({
       <button
         onClick={() => setOpen(true)}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition-all duration-150 hover:bg-emerald-100 hover:border-emerald-300 hover:shadow active:scale-[0.97] cursor-pointer disabled:opacity-50 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50 dark:hover:border-emerald-600"
+        title="Record payment"
+        aria-label="Record payment"
+        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 p-2 sm:px-4 sm:py-2 text-sm font-semibold text-emerald-800 shadow-sm transition-all duration-150 hover:bg-emerald-100 hover:border-emerald-300 hover:shadow active:scale-[0.97] cursor-pointer disabled:opacity-50 dark:border-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50 dark:hover:border-emerald-600"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
           <circle cx="12" cy="12" r="10" strokeWidth={2} stroke="currentColor" fill="none" />
         </svg>
-        {loading ? "Recording…" : "Record payment"}
+        <span className="hidden sm:inline">{loading ? "Recording…" : "Record payment"}</span>
       </button>
 
       {open && (
