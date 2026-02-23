@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_AMOUNT_CENTS } from "@/lib/amount";
 
 const updateExpenseSchema = z.object({
   description: z.string().min(1).max(200),
-  amountCents: z.number().int().positive("Amount must be greater than zero"),
+  amountCents: z
+    .number()
+    .int()
+    .positive("Amount must be greater than zero")
+    .max(MAX_AMOUNT_CENTS, "Amount cannot exceed $1,000,000"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   paidById: z.string().uuid().optional(),
   participantIds: z.array(z.string().uuid()).min(1).optional(),

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
+import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -61,10 +62,11 @@ export function AddExpenseForm({
   const [customAmounts, setCustomAmounts] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState(false);
+  const [amountErrorMessage, setAmountErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const parsedTotalCents = Math.round(parseFloat(amount) * 100);
-  const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0;
+  const parsedTotalCents = Math.round(parseFloat(stripAmountFormatting(amount)) * 100);
+  const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0 && parsedTotalCents <= MAX_AMOUNT_CENTS;
 
   // When switching to custom, pre-fill equal amounts
   function handleSplitTypeChange(type: SplitType) {
@@ -131,13 +133,44 @@ export function AddExpenseForm({
       : 0;
   const customRemaining = totalCentsValid ? parsedTotalCents - customSumCents : null;
 
+  function validateAmount(raw: string): string | null {
+    const num = parseFloat(stripAmountFormatting(raw));
+    if (raw.trim() === "" || isNaN(num) || num <= 0) return "Please enter a valid amount greater than zero.";
+    if (Math.round(num * 100) > MAX_AMOUNT_CENTS) return `Amount cannot exceed $${MAX_AMOUNT_DOLLARS.toLocaleString()}.`;
+    return null;
+  }
+
+  function handleAmountBlur() {
+    const msg = validateAmount(amount);
+    if (msg) {
+      setAmountError(true);
+      setAmountErrorMessage(msg);
+    } else {
+      setAmountError(false);
+      setAmountErrorMessage(null);
+      setAmount(formatAmountDisplay(amount));
+    }
+  }
+
+  function handleAmountFocus() {
+    setAmount(stripAmountFormatting(amount));
+    setAmountError(false);
+    setAmountErrorMessage(null);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = parseFloat(stripAmountFormatting(amount));
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError("Please enter a valid amount greater than zero.");
+      setAmountErrorMessage("Please enter a valid amount greater than zero.");
+      setAmountError(true);
+      return;
+    }
+    const amountCentsCheck = Math.round(parsedAmount * 100);
+    if (amountCentsCheck > MAX_AMOUNT_CENTS) {
+      setAmountErrorMessage(`Amount cannot exceed $${MAX_AMOUNT_DOLLARS.toLocaleString()}.`);
       setAmountError(true);
       return;
     }
@@ -254,6 +287,7 @@ export function AddExpenseForm({
     setCustomAmounts(new Map());
     setError(null);
     setAmountError(false);
+    setAmountErrorMessage(null);
   }
 
   function handleClose() {
@@ -307,15 +341,24 @@ export function AddExpenseForm({
                 </label>
                 <Input
                   id="expenseAmount"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   required
-                  min="0.01"
-                  step="0.01"
                   placeholder="0.00"
                   value={amount}
                   hasError={amountError}
-                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setError(null); }}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                  onBlur={handleAmountBlur}
+                  onFocus={handleAmountFocus}
                 />
+                {amountErrorMessage && (
+                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                    <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {amountErrorMessage}
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="expenseDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
