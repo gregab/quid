@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { percentagesToCents, centsToPercentages } from "./percentageSplit";
+import { splitAmount } from "./balances/splitAmount";
 
 describe("percentagesToCents", () => {
   it("splits evenly with no remainder", () => {
@@ -108,5 +109,63 @@ describe("round-trip: percentagesToCents → centsToPercentages", () => {
       const derived = parseFloat(derivedPcts.get(id) ?? "0");
       expect(Math.abs(derived - orig)).toBeLessThan(0.5);
     }
+  });
+});
+
+/**
+ * Tests for the "Equal → Percentage" transition pattern used in the UI.
+ * The correct approach: derive percentages from splitAmount() cent values,
+ * NOT from (100 / N).toFixed(2) which produces truncation error for N=3 etc.
+ */
+describe("equal-split-to-percentages pattern (UI: Equal → % toggle)", () => {
+  it("$50 split 3 ways: percentages sum to exactly 100%", () => {
+    const ids = ["a", "b", "c"];
+    const totalCents = 5000;
+    const equalCents = splitAmount(totalCents, ids.length); // [1667, 1667, 1666]
+    const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
+    const pcts = centsToPercentages(dollarsMap, ids, totalCents);
+    const sum = ids.reduce((s, id) => s + parseFloat(pcts.get(id) ?? "0"), 0);
+    expect(Math.abs(sum - 100)).toBeLessThan(0.005);
+  });
+
+  it("$50 split 3 ways: naive (100/3) approach produces the off-by-0.01% bug", () => {
+    // This test documents the bug that was fixed. Using (100/3).toFixed(2) = "33.33"
+    // causes 33.33 * 3 = 99.99, leaving 0.01% unaccounted.
+    const naivePct = (100 / 3).toFixed(2); // "33.33"
+    const naiveSum = parseFloat(naivePct) * 3; // 99.99
+    expect(naiveSum).toBeLessThan(100); // proves the bug
+  });
+
+  it("$100 split 3 ways: percentages sum to exactly 100%", () => {
+    const ids = ["a", "b", "c"];
+    const totalCents = 10000;
+    const equalCents = splitAmount(totalCents, ids.length); // [3334, 3333, 3333]
+    const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
+    const pcts = centsToPercentages(dollarsMap, ids, totalCents);
+    const sum = ids.reduce((s, id) => s + parseFloat(pcts.get(id) ?? "0"), 0);
+    expect(Math.abs(sum - 100)).toBeLessThan(0.005);
+  });
+
+  it("$10 split 3 ways: percentages derived from cent amounts round-trip back to original cents", () => {
+    const ids = ["a", "b", "c"];
+    const totalCents = 1000;
+    const equalCents = splitAmount(totalCents, ids.length); // [334, 333, 333]
+    const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
+    const pcts = centsToPercentages(dollarsMap, ids, totalCents);
+    // Converting those percentages back to cents should reproduce the original amounts
+    const roundTripped = percentagesToCents(pcts, ids, totalCents);
+    ids.forEach((id, i) => {
+      expect(roundTripped.get(id)).toBe(equalCents[i]);
+    });
+  });
+
+  it("equal split 2 ways always gives exactly 50/50", () => {
+    const ids = ["a", "b"];
+    const totalCents = 5000;
+    const equalCents = splitAmount(totalCents, ids.length);
+    const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
+    const pcts = centsToPercentages(dollarsMap, ids, totalCents);
+    expect(pcts.get("a")).toBe("50.00");
+    expect(pcts.get("b")).toBe("50.00");
   });
 });

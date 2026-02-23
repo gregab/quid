@@ -162,10 +162,14 @@ export function ExpenseDetailModal({
   function handleEditSplitTypeChange(type: SplitType) {
     const ids = [...participantIds];
     if (type === "percentage" && editSplitType === "equal") {
-      const equalPct = ids.length > 0 ? (100 / ids.length).toFixed(2) : "0.00";
-      const map = new Map<string, string>();
-      ids.forEach((id) => map.set(id, equalPct));
-      setEditPercentages(map);
+      // Derive percentages from the penny-distributed equal cent split (same data as Custom view)
+      if (ids.length > 0 && totalCentsValid) {
+        const equal = splitAmount(parsedAmountCents, ids.length);
+        const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
+        setEditPercentages(centsToPercentages(dollarsMap, ids, parsedAmountCents));
+      } else {
+        setEditPercentages(new Map(ids.map((id) => [id, "0.00"])));
+      }
     } else if (type === "percentage" && editSplitType === "custom") {
       setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
     } else if (type === "custom" && editSplitType === "equal") {

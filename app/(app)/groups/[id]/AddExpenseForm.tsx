@@ -73,11 +73,14 @@ export function AddExpenseForm({
   function handleSplitTypeChange(type: SplitType) {
     const ids = [...participantIds];
     if (type === "percentage" && splitType === "equal") {
-      // Prefill equal percentages
-      const equalPct = ids.length > 0 ? (100 / ids.length).toFixed(2) : "0.00";
-      const map = new Map<string, string>();
-      ids.forEach((id) => map.set(id, equalPct));
-      setPercentages(map);
+      // Derive percentages from the penny-distributed equal cent split (same data as Custom view)
+      if (ids.length > 0 && totalCentsValid) {
+        const equal = splitAmount(parsedTotalCents, ids.length);
+        const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
+        setPercentages(centsToPercentages(dollarsMap, ids, parsedTotalCents));
+      } else {
+        setPercentages(new Map(ids.map((id) => [id, "0.00"])));
+      }
     } else if (type === "percentage" && splitType === "custom") {
       // Derive percentages from current dollar amounts
       setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
