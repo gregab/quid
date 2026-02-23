@@ -57,14 +57,26 @@ export function GroupInteractive({
     // override with current members so optimistic updates always resolve.
     const nameMap = new Map<string, string>(Object.entries(allUserNames));
     for (const m of members) nameMap.set(m.userId, m.displayName);
-    return simplified.map((debt) => ({
+    const debts = simplified.map((debt) => ({
       fromId: debt.from,
       fromName: formatDisplayName(nameMap.get(debt.from) ?? "Unknown"),
       toId: debt.to,
       toName: formatDisplayName(nameMap.get(debt.to) ?? "Unknown"),
       amountCents: debt.amount,
     }));
-  }, [balancesExpenses, allUserNames, members]);
+    // Current user's rows always appear first.
+    return [...debts].sort((a, b) => {
+      const aInvolves = a.fromId === currentUserId || a.toId === currentUserId;
+      const bInvolves = b.fromId === currentUserId || b.toId === currentUserId;
+      if (aInvolves && !bInvolves) return -1;
+      if (!aInvolves && bInvolves) return 1;
+      return 0;
+    });
+  }, [balancesExpenses, allUserNames, members, currentUserId]);
+
+  const userIsSettledUp =
+    resolvedDebts.length > 0 &&
+    !resolvedDebts.some((d) => d.fromId === currentUserId || d.toId === currentUserId);
 
   return (
     <>
@@ -79,37 +91,69 @@ export function GroupInteractive({
             Everyone&apos;s settled up!
           </div>
         ) : (
-          <Card className="divide-y divide-gray-100 dark:divide-gray-700">
-            {resolvedDebts.map((debt, i) => {
-              const isCurrentUserOwing = debt.fromId === currentUserId;
-              const isCurrentUserReceiving = debt.toId === currentUserId;
-              const verb = isCurrentUserOwing ? "owe" : "owes";
+          <>
+            {userIsSettledUp && (
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-3">
+                <span className="text-base leading-none">🎉</span>
+                You&apos;re all settled up!
+              </div>
+            )}
+            <Card className="divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
+              {resolvedDebts.map((debt, i) => {
+                const isCurrentUserOwing = debt.fromId === currentUserId;
+                const isCurrentUserReceiving = debt.toId === currentUserId;
+                const involvesUser = isCurrentUserOwing || isCurrentUserReceiving;
+                const verb = isCurrentUserOwing ? "owe" : "owes";
 
-              const fromName = isCurrentUserOwing ? "You" : debt.fromName;
-              const toName = isCurrentUserReceiving ? "You" : debt.toName;
+                const fromName = isCurrentUserOwing ? "You" : debt.fromName;
+                const toName = isCurrentUserReceiving ? "You" : debt.toName;
 
-              return (
-                <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">{fromName}</span>
-                    <span>{verb}</span>
-                    <span className="font-medium">{toName}</span>
-                  </div>
-                  <span
-                    className={`text-sm font-bold tabular-nums shrink-0 ${
-                      isCurrentUserOwing
-                        ? "text-red-600 dark:text-red-400"
-                        : isCurrentUserReceiving
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-gray-700 dark:text-gray-300"
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                      involvesUser ? "bg-gray-50 dark:bg-white/[0.03]" : ""
                     }`}
                   >
-                    {formatCents(debt.amountCents)}
-                  </span>
-                </div>
-              );
-            })}
-          </Card>
+                    <div className="flex items-center gap-1.5 flex-wrap text-sm text-gray-700 dark:text-gray-300">
+                      <span
+                        className={`font-semibold ${
+                          isCurrentUserOwing
+                            ? "text-gray-900 dark:text-white"
+                            : isCurrentUserReceiving
+                            ? "text-gray-700 dark:text-gray-300"
+                            : "text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        {fromName}
+                      </span>
+                      <span className="text-gray-400 dark:text-gray-500">{verb}</span>
+                      <span
+                        className={`font-semibold ${
+                          isCurrentUserReceiving
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        {toName}
+                      </span>
+                    </div>
+                    <span
+                      className={`text-sm font-bold tabular-nums shrink-0 ${
+                        isCurrentUserOwing
+                          ? "text-red-600 dark:text-red-400"
+                          : isCurrentUserReceiving
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      {formatCents(debt.amountCents)}
+                    </span>
+                  </div>
+                );
+              })}
+            </Card>
+          </>
         )}
       </section>
 
