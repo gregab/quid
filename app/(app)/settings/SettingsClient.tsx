@@ -53,6 +53,15 @@ export function SettingsClient({
   return (
     <div className="space-y-8">
       <div>
+        <button
+          onClick={() => router.back()}
+          className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
+            <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+          Back
+        </button>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Manage your account
