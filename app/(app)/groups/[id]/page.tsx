@@ -149,6 +149,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       canEdit: expense.isPayment ? false : expense.createdById === user.id,
       canDelete: expense.createdById === user.id,
       isPayment: expense.isPayment,
+      settledUp: expense.settledUp ?? false,
       createdById: expense.createdById ?? undefined,
       createdAt: expense.createdAt,
       updatedAt: expense.updatedAt,

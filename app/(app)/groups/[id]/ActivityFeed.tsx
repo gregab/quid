@@ -479,7 +479,6 @@ export function ActivityFeed({
                   return (
                     <div key={log.id} className={rowClass} onClick={handleClick}>
                       <p className="text-sm leading-snug">
-                        <span className="mr-1">✨</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.fromDisplayName)}</span>
                         <span className="text-gray-700 dark:text-gray-300">{" "}settled up with{" "}</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.toDisplayName)}</span>
@@ -487,6 +486,7 @@ export function ActivityFeed({
                         {typeof payload.amountCents === "number" && (
                           <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
                         )}
+                        <span className="ml-1">✨</span>
                       </p>
                       <span className="text-xs text-gray-400 shrink-0 mt-0.5">
                         {formatRelativeTime(log.createdAt)}

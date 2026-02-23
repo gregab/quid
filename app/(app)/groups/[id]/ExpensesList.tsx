@@ -32,6 +32,7 @@ export interface ExpenseRow {
   canDelete: boolean;
   isPending?: boolean;
   isPayment?: boolean;
+  settledUp?: boolean;
   createdById?: string;
   createdAt?: string;
   updatedAt?: string | null;
@@ -285,19 +286,25 @@ export function ExpensesList({
               : null;
             const dateParts = formatDateBlock(expense.date);
 
+            const isSettledUp = expense.isPayment && expense.settledUp;
+
             // Left accent bar color
-            const accentColor = expense.isPayment
-              ? "border-l-indigo-400"
-              : personalContext?.positive
-                ? "border-l-emerald-500"
-                : personalContext
-                  ? "border-l-rose-400"
-                  : "border-l-gray-200 dark:border-l-gray-700";
+            const accentColor = isSettledUp
+              ? "border-l-emerald-500"
+              : expense.isPayment
+                ? "border-l-indigo-400"
+                : personalContext?.positive
+                  ? "border-l-emerald-500"
+                  : personalContext
+                    ? "border-l-rose-400"
+                    : "border-l-gray-200 dark:border-l-gray-700";
 
             // Payment row background tint
-            const paymentBg = expense.isPayment
-              ? "bg-indigo-50/40 dark:bg-indigo-950/20"
-              : "";
+            const paymentBg = isSettledUp
+              ? "bg-emerald-50/40 dark:bg-emerald-950/20"
+              : expense.isPayment
+                ? "bg-indigo-50/40 dark:bg-indigo-950/20"
+                : "";
 
             return (
               <li
@@ -328,8 +335,10 @@ export function ExpensesList({
 
                       {/* Info: title + subtitle */}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                          {expense.isPayment ? (
+                        <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-gray-900 dark:text-gray-100"}`}>
+                          {isSettledUp ? (
+                            <>{paymentDirection} ✨</>
+                          ) : expense.isPayment ? (
                             <>{paymentDirection}</>
                           ) : expense.description}
                         </p>
@@ -341,7 +350,7 @@ export function ExpensesList({
                       {/* Right: personal stake (expenses) or amount (payments) + chevron */}
                       <div className="flex items-center gap-1.5 shrink-0">
                         {expense.isPayment ? (
-                          <span className="text-base font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
+                          <span className={`text-base font-bold whitespace-nowrap ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-indigo-700 dark:text-indigo-400"}`}>
                             {formatCents(expense.amountCents)}
                           </span>
                         ) : personalContext ? (

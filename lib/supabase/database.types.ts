@@ -92,6 +92,7 @@ export type Database = {
           id: string
           isPayment: boolean
           paidById: string
+          settledUp: boolean
           splitType: string
           updatedAt: string | null
         }
@@ -105,6 +106,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById: string
+          settledUp?: boolean
           splitType?: string
           updatedAt?: string | null
         }
@@ -118,6 +120,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById?: string
+          settledUp?: boolean
           splitType?: string
           updatedAt?: string | null
         }
@@ -302,8 +305,8 @@ export type Database = {
           _group_id: string
           _paid_by_id: string
           _recipient_id: string
-          _to_display_name: string
           _settled_up?: boolean
+          _to_display_name: string
         }
         Returns: string
       }
