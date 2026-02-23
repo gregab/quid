@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
+// Tests for ExpenseDetailModal — the detail/edit modal that replaced ExpenseActions.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
-import { ExpenseActions } from "./ExpenseActions";
+import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import type { ExpenseRow, Member } from "./ExpensesList";
 
 afterEach(cleanup);
@@ -34,7 +35,10 @@ function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
 const BASE_PROPS = {
   groupId: "group-1",
   members: MEMBERS,
+  allUserNames: { "user-1": "Alice", "user-2": "Bob" },
+  currentUserId: "user-1",
   currentUserDisplayName: "Alice",
+  onClose: vi.fn(),
   onOptimisticDelete: vi.fn(),
   onDeleteFailed: vi.fn(),
   onDeleteSettled: vi.fn(),
@@ -43,12 +47,41 @@ const BASE_PROPS = {
   onOptimisticActivity: vi.fn(),
 };
 
+/** Renders the modal in view mode, then clicks Edit to enter edit mode. */
 function openEditModal(expense: ExpenseRow = makeExpense()) {
-  render(<ExpenseActions {...BASE_PROPS} expense={expense} />);
+  render(<ExpenseDetailModal {...BASE_PROPS} expense={expense} />);
   fireEvent.click(screen.getByRole("button", { name: /edit expense/i }));
 }
 
-describe("Save changes button — disabled until something changes", () => {
+describe("ExpenseDetailModal — view mode", () => {
+  it("shows the expense description as the title", () => {
+    render(<ExpenseDetailModal {...BASE_PROPS} expense={makeExpense()} />);
+    expect(screen.getByRole("heading", { name: "Dinner" })).toBeDefined();
+  });
+
+  it("shows amount, date, paid-by, and split-with details", () => {
+    render(<ExpenseDetailModal {...BASE_PROPS} expense={makeExpense()} />);
+    expect(screen.getByText("$25.00")).toBeDefined();
+    expect(screen.getByText("January 15, 2024")).toBeDefined();
+    // paidById = user-1 = currentUserId, so shows "(you)"
+    expect(screen.getByText(/alice.*\(you\)/i)).toBeDefined();
+  });
+
+  it("shows 'Added by [name]' for a non-creator expense", () => {
+    const expense = makeExpense({ canEdit: false, canDelete: false, createdById: "user-2" });
+    render(<ExpenseDetailModal {...BASE_PROPS} expense={expense} />);
+    const addedBy = screen.getByText(/added by/i);
+    expect(addedBy.textContent).toContain("Bob");
+  });
+
+  it("does not show 'Added by' when the current user is the creator", () => {
+    const expense = makeExpense({ canEdit: true, canDelete: true, createdById: "user-1" });
+    render(<ExpenseDetailModal {...BASE_PROPS} expense={expense} />);
+    expect(screen.queryByText(/added by/i)).toBeNull();
+  });
+});
+
+describe("ExpenseDetailModal — Save changes button disabled until something changes", () => {
   it("is disabled when the form is opened with no changes", () => {
     openEditModal();
     expect((screen.getByRole("button", { name: /save changes/i }) as HTMLButtonElement).disabled).toBe(true);
@@ -80,10 +113,10 @@ describe("Save changes button — disabled until something changes", () => {
 
   it("becomes enabled after toggling a participant", () => {
     openEditModal();
-    // Uncheck Bob
+    // Uncheck one of the checked participants
     const checkboxes = screen.getAllByRole("checkbox");
-    const bobCheckbox = checkboxes.find((cb) => (cb as HTMLInputElement).checked) ?? checkboxes[1];
-    fireEvent.click(bobCheckbox);
+    const checkedBox = checkboxes.find((cb) => (cb as HTMLInputElement).checked) ?? checkboxes[1];
+    fireEvent.click(checkedBox!);
     expect((screen.getByRole("button", { name: /save changes/i }) as HTMLButtonElement).disabled).toBe(false);
   });
 

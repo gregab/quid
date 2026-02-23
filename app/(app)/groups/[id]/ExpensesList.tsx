@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
 import { RecordPaymentForm } from "./RecordPaymentForm";
-import { ExpenseActions } from "./ExpenseActions";
+import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import type { MemberColor } from "./MemberPill";
@@ -148,6 +148,7 @@ export function ExpensesList({
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+  const [openDetailExpenseId, setOpenDetailExpenseId] = useState<string | null>(null);
 
   // When router.refresh() delivers fresh server data, replace any pending items.
   // useState(initialExpenses) only uses the prop as the initial value and ignores
@@ -307,85 +308,107 @@ export function ExpensesList({
                 key={expense.id}
                 className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
               >
-                <Card
-                  className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""}`}
+                <button
+                  type="button"
+                  className="w-full text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  onClick={() => setOpenDetailExpenseId(expense.id)}
                 >
-                  <div className="flex items-center gap-3">
-                    {/* Date block */}
-                    <div className="flex flex-col items-center w-9 shrink-0 text-center">
-                      <span className="text-[9px] font-bold tracking-wider text-gray-400 dark:text-gray-500 leading-none">
-                        {dateParts.month}
-                      </span>
-                      <span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight mt-px">
-                        {dateParts.day}
-                      </span>
-                    </div>
-
-                    {/* Vertical divider */}
-                    <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0" />
-
-                    {/* Info: title + subtitle */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                        {expense.isPayment ? (
-                          <>{paymentDirection}</>
-                        ) : expense.description}
-                      </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                        {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
-                      </p>
-                    </div>
-
-                    {/* Right: personal stake (expenses) or amount (payments) + actions */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      {expense.isPayment ? (
-                        <span className="text-base font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
-                          {formatCents(expense.amountCents)}
+                  <Card
+                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:border-gray-300 dark:hover:border-gray-600 transition-colors`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* Date block */}
+                      <div className="flex flex-col items-center w-9 shrink-0 text-center">
+                        <span className="text-[9px] font-bold tracking-wider text-gray-400 dark:text-gray-500 leading-none">
+                          {dateParts.month}
                         </span>
-                      ) : personalContext ? (
-                        <div className="text-right">
-                          <p className={`text-xs leading-none ${
-                            personalContext.positive
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-500 dark:text-rose-400"
-                          }`}>
-                            {personalContext.label}
-                          </p>
-                          <p className={`text-base font-bold leading-tight mt-px whitespace-nowrap ${
-                            personalContext.positive
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-rose-500 dark:text-rose-400"
-                          }`}>
-                            {formatCents(personalContext.amountCents)}
-                          </p>
-                        </div>
-                      ) : null}
+                        <span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight mt-px">
+                          {dateParts.day}
+                        </span>
+                      </div>
 
-                      <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
-                        <ExpenseActions
-                          groupId={groupId}
-                          expense={expense}
-                          members={members}
-                          isPending={expense.isPending}
-                          currentUserDisplayName={currentUserDisplayName}
-                          onOptimisticDelete={handleOptimisticDelete}
-                          onDeleteFailed={handleDeleteFailed}
-                          onDeleteSettled={handleDeleteSettled}
-                          onOptimisticUpdate={handleOptimisticUpdate}
-                          onUpdateSettled={handleUpdateSettled}
-                          onOptimisticActivity={onOptimisticActivity}
-                        />
+                      {/* Vertical divider */}
+                      <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0" />
+
+                      {/* Info: title + subtitle */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
+                          {expense.isPayment ? (
+                            <>{paymentDirection}</>
+                          ) : expense.description}
+                        </p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                          {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
+                        </p>
+                      </div>
+
+                      {/* Right: personal stake (expenses) or amount (payments) + chevron */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {expense.isPayment ? (
+                          <span className="text-base font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
+                            {formatCents(expense.amountCents)}
+                          </span>
+                        ) : personalContext ? (
+                          <div className="text-right">
+                            <p className={`text-xs leading-none ${
+                              personalContext.positive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-500 dark:text-rose-400"
+                            }`}>
+                              {personalContext.label}
+                            </p>
+                            <p className={`text-base font-bold leading-tight mt-px whitespace-nowrap ${
+                              personalContext.positive
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-rose-500 dark:text-rose-400"
+                            }`}>
+                              {formatCents(personalContext.amountCents)}
+                            </p>
+                          </div>
+                        ) : null}
+                        <svg
+                          className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M9 18l6-6-6-6" />
+                        </svg>
                       </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-
+      {/* Detail / edit modal — rendered once at list level */}
+      {openDetailExpenseId && (() => {
+        const expense = expenses.find((e) => e.id === openDetailExpenseId);
+        if (!expense) return null;
+        return (
+          <ExpenseDetailModal
+            groupId={groupId}
+            expense={expense}
+            members={members}
+            allUserNames={allUserNames}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            onClose={() => setOpenDetailExpenseId(null)}
+            onOptimisticDelete={handleOptimisticDelete}
+            onDeleteFailed={handleDeleteFailed}
+            onDeleteSettled={handleDeleteSettled}
+            onOptimisticUpdate={handleOptimisticUpdate}
+            onUpdateSettled={handleUpdateSettled}
+            onOptimisticActivity={onOptimisticActivity}
+          />
+        );
+      })()}
     </section>
   );
 }

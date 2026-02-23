@@ -41,80 +41,113 @@ function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
   };
 }
 
+/** Clicks the first expense row button to open its detail modal. */
+function openDetailModal(container: HTMLElement) {
+  const rowBtn = container.querySelector("li button") as HTMLElement;
+  fireEvent.click(rowBtn);
+}
+
 // ----------------------------
-// Bug 2: pending items hide edit/delete buttons entirely
+// Detail modal: edit/delete button visibility based on canEdit/canDelete
 // ----------------------------
 
-describe("ExpensesList — edit/delete buttons on pending expenses", () => {
-  it("shows edit and delete buttons when expense is NOT pending (baseline)", () => {
-    render(
-      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: false })]} />
+describe("ExpensesList — detail modal shows correct actions for creator vs non-creator", () => {
+  it("shows Edit and Delete buttons in the modal for the expense creator (canEdit=true, canDelete=true)", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ canEdit: true, canDelete: true })]} />
     );
-    // getByRole throws if absent — that IS the assertion
-    screen.getByRole("button", { name: /edit expense/i });
-    screen.getByRole("button", { name: /delete expense/i });
+    openDetailModal(container);
+    expect(screen.queryByRole("button", { name: /edit expense/i }), "creator should see Edit button").not.toBeNull();
+    expect(screen.queryByRole("button", { name: /delete expense/i }), "creator should see Delete button").not.toBeNull();
   });
 
-  it("shows edit and delete buttons even when expense IS pending", () => {
-    // Bug: `{!expense.isPending && <ExpenseActions />}` hides buttons entirely.
-    // Expected: buttons rendered (but disabled) so the card layout is consistent.
-    render(
-      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: true })]} />
+  it("hides Edit and Delete buttons in the modal for a non-creator (canEdit=false, canDelete=false)", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ canEdit: false, canDelete: false })]} />
     );
-    const editBtn = screen.queryByRole("button", { name: /edit expense/i });
-    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i });
-    expect(editBtn, "edit button should be in the DOM even while pending").not.toBeNull();
-    expect(deleteBtn, "delete button should be in the DOM even while pending").not.toBeNull();
+    openDetailModal(container);
+    expect(screen.queryByRole("button", { name: /edit expense/i }), "non-creator should not see Edit button").toBeNull();
+    expect(screen.queryByRole("button", { name: /delete expense/i }), "non-creator should not see Delete button").toBeNull();
   });
 
-  it("disables edit and delete buttons while expense is pending", () => {
-    render(
-      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: true })]} />
+  it("shows 'Added by' the creator's name when the current user is not the creator", () => {
+    const expense = makeExpense({ canEdit: false, canDelete: false, createdById: "user-2" });
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
     );
-    const editBtn = screen.queryByRole("button", { name: /edit expense/i }) as HTMLButtonElement | null;
-    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i }) as HTMLButtonElement | null;
-    // Existence is a prerequisite — if these fail, fix Bug 2 first
-    expect(editBtn, "edit button must exist before checking disabled").not.toBeNull();
-    expect(deleteBtn, "delete button must exist before checking disabled").not.toBeNull();
-    expect(editBtn!.disabled, "edit button should be disabled while pending").toBe(true);
-    expect(deleteBtn!.disabled, "delete button should be disabled while pending").toBe(true);
+    openDetailModal(container);
+    expect(screen.getByText(/added by/i).textContent).toContain("Bob");
   });
 
-  it("enables edit and delete buttons once expense is no longer pending", () => {
-    render(
-      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: false })]} />
+  it("does not show 'Added by' when the current user is the creator", () => {
+    const expense = makeExpense({ canEdit: true, canDelete: true, createdById: "user-1" });
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
     );
-    const editBtn = screen.getByRole("button", { name: /edit expense/i }) as HTMLButtonElement;
-    const deleteBtn = screen.getByRole("button", { name: /delete expense/i }) as HTMLButtonElement;
-    expect(editBtn.disabled).toBe(false);
-    expect(deleteBtn.disabled).toBe(false);
+    openDetailModal(container);
+    expect(screen.queryByText(/added by/i)).toBeNull();
   });
 });
 
 // ----------------------------
-// Bug 1: pending item never replaced after router.refresh()
+// Detail modal: pending expense behavior
+// ----------------------------
+
+describe("ExpensesList — detail modal disables Edit/Delete while expense is pending", () => {
+  it("Edit and Delete buttons are present in the modal for a pending expense (creator)", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: true, canEdit: true, canDelete: true })]} />
+    );
+    openDetailModal(container);
+    expect(screen.queryByRole("button", { name: /edit expense/i })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: /delete expense/i })).not.toBeNull();
+  });
+
+  it("Edit and Delete buttons are disabled in the modal while the expense is pending", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: true, canEdit: true, canDelete: true })]} />
+    );
+    openDetailModal(container);
+    const editBtn = screen.queryByRole("button", { name: /edit expense/i }) as HTMLButtonElement | null;
+    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i }) as HTMLButtonElement | null;
+    expect(editBtn!.disabled, "Edit should be disabled while pending").toBe(true);
+    expect(deleteBtn!.disabled, "Delete should be disabled while pending").toBe(true);
+  });
+
+  it("Edit and Delete buttons are enabled in the modal once the expense is no longer pending", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makeExpense({ isPending: false, canEdit: true, canDelete: true })]} />
+    );
+    openDetailModal(container);
+    const editBtn = screen.queryByRole("button", { name: /edit expense/i }) as HTMLButtonElement | null;
+    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i }) as HTMLButtonElement | null;
+    expect(editBtn!.disabled).toBe(false);
+    expect(deleteBtn!.disabled).toBe(false);
+  });
+});
+
+// ----------------------------
+// Bug: pending item never replaced after router.refresh()
 // ----------------------------
 
 describe("ExpensesList — optimistic add: pending item resolved after prop update", () => {
   it("replaces pending item with real item when initialExpenses prop updates", () => {
-    // When the server re-renders (via router.refresh()), ExpensesList receives fresh
-    // initialExpenses. Because useState(initialExpenses) ignores subsequent prop changes,
-    // the pending ghost stays in the list forever.
-    const pending = makeExpense({ id: "pending-1", isPending: true });
-    const real = makeExpense({ id: "real-1", isPending: false });
+    // After router.refresh(), the pending ghost should be replaced by the real item.
+    // We verify by opening the detail modal: the Edit button should be enabled on the real item.
+    const pending = makeExpense({ id: "pending-1", isPending: true, canEdit: true, canDelete: true });
+    const real = makeExpense({ id: "real-1", isPending: false, canEdit: true, canDelete: true });
 
-    const { rerender } = render(
+    const { rerender, container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[pending]} />
     );
 
     // Simulate router.refresh() delivering real server data
     rerender(<ExpensesList {...BASE_PROPS} initialExpenses={[real]} />);
 
-    // The edit button must be present AND enabled — only true if the real item replaced
-    // the pending one. (This test requires Bug 2 to be fixed first.)
+    openDetailModal(container);
     const editBtn = screen.queryByRole("button", { name: /edit expense/i }) as HTMLButtonElement | null;
-    expect(editBtn, "edit button must exist after real item arrives").not.toBeNull();
-    expect(editBtn!.disabled, "edit button should be enabled once item is no longer pending").toBe(false);
+    expect(editBtn, "Edit button must exist after real item arrives").not.toBeNull();
+    expect(editBtn!.disabled, "Edit button should be enabled once item is no longer pending").toBe(false);
   });
 
   it("does not show both the pending ghost and the real expense simultaneously", () => {
@@ -181,15 +214,18 @@ describe("ExpensesList — auto-reorder when expense date is edited", () => {
     expect(items[0]!.textContent).toContain("Newer");
     expect(items[1]!.textContent).toContain("Older");
 
-    // Open edit modal for "Newer" (first edit button)
-    const editButtons = screen.getAllByRole("button", { name: /edit expense/i });
-    fireEvent.click(editButtons[0]!);
+    // Open detail modal for "Newer" (first row)
+    const rowBtns = container.querySelectorAll("li button");
+    fireEvent.click(rowBtns[0]!);
+
+    // Click the Edit button in the detail modal
+    fireEvent.click(screen.getByRole("button", { name: /edit expense/i }));
 
     // Change its date to be earlier than "Older"
     const dateInput = screen.getByLabelText("Date");
     fireEvent.change(dateInput, { target: { value: "2024-01-05" } });
 
-    // Submit via the form (fireEvent.click on a submit button doesn't trigger onSubmit in happy-dom)
+    // Submit via the form
     const form = screen.getByRole("button", { name: /save changes/i }).closest("form")!;
     await act(async () => {
       fireEvent.submit(form);
@@ -213,16 +249,17 @@ describe("ExpensesList — auto-reorder when expense date is edited", () => {
       />
     );
 
-    // Edit "Newer" but give it an even more recent date — order should not change
-    const editButtons = screen.getAllByRole("button", { name: /edit expense/i });
-    fireEvent.click(editButtons[0]!);
+    // Open detail modal for "Newer" and edit to an even more recent date
+    const rowBtns = container.querySelectorAll("li button");
+    fireEvent.click(rowBtns[0]!);
+    fireEvent.click(screen.getByRole("button", { name: /edit expense/i }));
 
     const dateInput = screen.getByLabelText("Date");
     fireEvent.change(dateInput, { target: { value: "2024-01-25" } });
 
-    const form2 = screen.getByRole("button", { name: /save changes/i }).closest("form")!;
+    const form = screen.getByRole("button", { name: /save changes/i }).closest("form")!;
     await act(async () => {
-      fireEvent.submit(form2);
+      fireEvent.submit(form);
     });
 
     const items = container.querySelectorAll("li");
@@ -297,32 +334,35 @@ describe("ExpensesList — payment card rendering", () => {
     expect(amountEl!.textContent).toContain("$50.00");
   });
 
-  it("does NOT render edit button for payment rows", () => {
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
+  it("does NOT show Edit button in detail modal for payment rows", () => {
+    const { container } = render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
+    openDetailModal(container);
     const editBtn = screen.queryByRole("button", { name: /edit expense/i });
-    expect(editBtn, "payments should not have an edit button").toBeNull();
+    expect(editBtn, "payments should not have an Edit button").toBeNull();
   });
 
-  it("renders delete button for payments the current user created", () => {
-    render(
+  it("shows Delete button in detail modal for payments the current user created", () => {
+    const { container } = render(
       <ExpensesList
         {...BASE_PROPS}
         initialExpenses={[makePayment({ canDelete: true })]}
       />
     );
+    openDetailModal(container);
     const deleteBtn = screen.queryByRole("button", { name: /delete expense/i });
-    expect(deleteBtn, "creator should see delete button").not.toBeNull();
+    expect(deleteBtn, "creator should see Delete button").not.toBeNull();
   });
 
-  it("does not render delete button for payments the current user did not create", () => {
-    render(
+  it("does not show Delete button in detail modal for payments the current user did not create", () => {
+    const { container } = render(
       <ExpensesList
         {...BASE_PROPS}
         initialExpenses={[makePayment({ canDelete: false, createdById: "user-2" })]}
       />
     );
+    openDetailModal(container);
     const deleteBtn = screen.queryByRole("button", { name: /delete expense/i });
-    expect(deleteBtn, "non-creator should not see delete button").toBeNull();
+    expect(deleteBtn, "non-creator should not see Delete button").toBeNull();
   });
 
   it("renders regular expense description for non-payment rows", () => {
@@ -409,22 +449,6 @@ describe("ExpensesList — expense row display", () => {
     expect(list?.textContent).toContain("Charlie paid");
     // Personal stake shows "you owe" when someone else paid
     expect(list?.textContent).toContain("you owe");
-  });
-
-  it("shows edit and delete buttons for the expense creator", () => {
-    // canEdit/canDelete = true when createdById matches currentUserId (set in page.tsx)
-    const expense = makeExpense({ canEdit: true, canDelete: true });
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    expect(screen.queryByRole("button", { name: /edit expense/i }), "creator should see edit button").not.toBeNull();
-    expect(screen.queryByRole("button", { name: /delete expense/i }), "creator should see delete button").not.toBeNull();
-  });
-
-  it("hides edit and delete buttons for a non-creator", () => {
-    // canEdit/canDelete = false when createdById is set and doesn't match currentUserId
-    const expense = makeExpense({ canEdit: false, canDelete: false });
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    expect(screen.queryByRole("button", { name: /edit expense/i }), "non-creator should not see edit button").toBeNull();
-    expect(screen.queryByRole("button", { name: /delete expense/i }), "non-creator should not see delete button").toBeNull();
   });
 
   it("does not show a comma-separated participant line for payment rows", () => {
