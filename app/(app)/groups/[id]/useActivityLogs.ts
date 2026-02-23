@@ -32,10 +32,15 @@ export function useActivityLogs(
     const lastLog = nonPendingLogs[nonPendingLogs.length - 1];
     if (!lastLog) return;
 
-    const createdAt =
+    const rawCreatedAt =
       typeof lastLog.createdAt === "string"
         ? lastLog.createdAt
         : lastLog.createdAt.toISOString();
+    // Supabase timestamps lack timezone suffix; append Z so the API's
+    // z.string().datetime() validator accepts them.
+    const createdAt = /[Z+]/.test(rawCreatedAt.slice(-6))
+      ? rawCreatedAt
+      : rawCreatedAt + "Z";
 
     setIsLoadingMore(true);
     try {

@@ -161,6 +161,39 @@ describe("useActivityLogs", () => {
       expect(result.current.logs.filter((l) => l.id === "log-older")).toHaveLength(1);
     });
 
+    it("appends Z to Supabase-style timestamps missing a timezone suffix", async () => {
+      // Supabase returns timestamps without timezone info (e.g. "2024-01-15T12:00:00.889").
+      // Without normalization the API's z.string().datetime() validator rejects the cursor
+      // with a 400, silently breaking load-more.
+      const initial = [makeLog({ id: "log-1", createdAt: "2024-01-15T12:00:00.889" })];
+      const { result } = renderHook(() =>
+        useActivityLogs(initial, GROUP_ID, true)
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const before = new URL(calledUrl, "http://localhost").searchParams.get("before");
+      expect(before).toBe("2024-01-15T12:00:00.889Z");
+    });
+
+    it("does not double-append Z when timestamp already has a timezone suffix", async () => {
+      const initial = [makeLog({ id: "log-1", createdAt: "2024-01-15T12:00:00.000Z" })];
+      const { result } = renderHook(() =>
+        useActivityLogs(initial, GROUP_ID, true)
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      const calledUrl = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const before = new URL(calledUrl, "http://localhost").searchParams.get("before");
+      expect(before).toBe("2024-01-15T12:00:00.000Z");
+    });
+
     it("does not fetch when hasMore is false", async () => {
       const { result } = renderHook(() =>
         useActivityLogs([makeLog()], GROUP_ID, false)
