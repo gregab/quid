@@ -224,7 +224,7 @@ export function ExpensesList({
                 {expense.isPayment ? (
                   <>
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm italic text-emerald-600 truncate dark:text-emerald-400">Payment</p>
+                      <p className="font-semibold text-sm text-emerald-600 truncate dark:text-emerald-400">Payment</p>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
                         <span className="text-xs text-gray-400">
                           {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
