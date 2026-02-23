@@ -4,23 +4,31 @@ import CreateGroupButton from "./CreateGroupButton";
 
 const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
 
-// Collective nouns for groups of birds (no murder!)
-const FLOCK_NAMES = [
-  "Your flocks",
-  "Your parliaments (of owls)",
-  "Your colonies (of penguins)",
-  "Your charms (of finches)",
-  "Your coveys (of quail)",
-  "Your broods (of hens)",
-  "Your gaggles (of geese)",
-  "Your kettles (of hawks)",
-  "Your unkindnesses (of ravens)",
-  "Your conspiracies (lemurs... 😄)",
-  "Your descents (of woodpeckers)",
-  "Your sieges (of herons)",
-  "Your bouquets (of pheasants)",
-  "Your wedges (of swans)",
-  "Your pandemoniums (of parrots)",
+const BIRD_FACTS = [
+  "A group of owls is called a parliament.",
+  "A group of penguins is called a colony.",
+  "A group of finches is called a charm.",
+  "A group of geese is called a gaggle.",
+  "A group of hawks is called a kettle.",
+  "A group of ravens is called an unkindness.",
+  "A group of woodpeckers is called a descent.",
+  "A group of herons is called a siege.",
+  "A group of parrots is called a pandemonium.",
+  "A group of pheasants is called a bouquet.",
+  "A group of swans is called a wedge.",
+  "A group of flamingos is called a flamboyance.",
+  "A group of crows is called a murder. Wait — we said no murder.",
+  "Arctic terns migrate 44,000 miles a year — the longest of any bird.",
+  "Crows can recognize human faces and hold grudges for years.",
+  "A woodpecker's tongue wraps around its skull to cushion its brain.",
+  "Pigeons can do math at roughly the level of primates.",
+  "Albatrosses can sleep while flying.",
+  "The bar-tailed godwit flies 7,000 miles nonstop — no food, no rest.",
+  "Chickadees grow new brain cells every autumn to remember where they hid seeds.",
+  "A peregrine falcon can dive at over 240 mph.",
+  "Hummingbirds are the only birds that can fly backwards.",
+  "Owls can't move their eyeballs — they rotate their heads up to 270 degrees instead.",
+  "Kiwis are the only birds with nostrils at the tip of their beak.",
 ];
 
 // Hash-based emoji assignment: each group gets a unique emoji derived from its ID.
@@ -90,7 +98,7 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{FLOCK_NAMES[Math.floor(Math.random() * FLOCK_NAMES.length)]}</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your groups</h2>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               {groups.length === 0
                 ? "None yet — you're either incredibly generous or very new here."
@@ -144,6 +152,16 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Bird fact */}
+      <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-stone-50/80 px-5 py-4 dark:border-amber-900/40 dark:from-amber-950/30 dark:to-stone-900/30">
+        <p className="text-xs font-semibold uppercase tracking-wider text-amber-700/70 dark:text-amber-400/70">
+          Bird fact
+        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+          {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
+        </p>
       </div>
 
       {/* Footer quip — only when there are groups */}
