@@ -113,6 +113,8 @@ Expense
   amountCents   Int
   date          DateTime
   createdAt     DateTime  @default(now())
+  isPayment     Boolean   @default(false)   // true for payments recorded via Record Payment
+  createdById   String?   → User            // set for payments; creator-only delete enforced in RPC
 
 ExpenseSplit
   id            String    @id @default(uuid)
@@ -204,6 +206,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `delete_account()` | Removes user from all groups (no balance check), logs departures, auto-deletes empty groups, deletes User row. Auth user deletion handled by API route via admin client. Orphaned expenses/activity logs retain their `paidById`/`actorId` references. | `DELETE /api/account` |
 | `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
+| `create_payment(...)` | Creates payment expense + single split for recipient + activity log | `POST /api/groups/[id]/payments` |
 
 Split computation (integer division + remainder distribution) is replicated in PL/pgSQL to match the JS logic exactly.
 
@@ -244,6 +247,12 @@ Edits an expense and recalculates all splits atomically (via `update_expense` RP
 Deletes an expense (via `delete_expense` RPC). Cascade delete handles splits.
 - Only the expense creator can delete (NULL `createdById` = legacy, any member allowed)
 - Returns 403 if the caller is not the creator
+
+### `POST /api/groups/[id]/payments`
+Records a payment (money sent outside the app) as a special expense (via `create_payment` RPC).
+- Body: `{ amountCents: number, date: "YYYY-MM-DD", paidById?: string, recipientId: string }`
+- `paidById` defaults to current user (the sender); `recipientId` is who received the money
+- The payment is stored as an Expense with `isPayment=true`; a single ExpenseSplit covers the recipient for the full amount — so it flows through `simplifyDebts` with zero changes
 
 ### `GET /api/groups/[id]/balances`
 Computes simplified debts from all expenses and splits in the group. Uses the greedy algorithm in `lib/balances/simplify.ts`.
@@ -359,6 +368,12 @@ The activity log records every expense mutation (add, edit, delete) with enough 
 ```json
 { "description": "Dinner", "amountCents": 3000, "paidByDisplayName": "Alice" }
 ```
+
+**`payment_recorded`** and **`payment_deleted`**:
+```json
+{ "amountCents": 5000, "fromDisplayName": "Alice", "toDisplayName": "Bob" }
+```
+For `payment_deleted`, the from/to names are looked up inside the `delete_expense` RPC (not passed as params).
 
 **`member_left`**:
 ```json
