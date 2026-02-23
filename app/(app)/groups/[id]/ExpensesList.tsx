@@ -303,11 +303,11 @@ export function ExpensesList({
               >
                 <button
                   type="button"
-                  className="w-full text-left rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  className="w-full text-left rounded-xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
                   onClick={() => setOpenDetailExpenseId(expense.id)}
                 >
                   <Card
-                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:border-gray-300 dark:hover:border-gray-600 transition-colors`}
+                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Date block */}
