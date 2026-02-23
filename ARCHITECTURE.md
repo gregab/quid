@@ -10,7 +10,7 @@ Aviary is an expense-splitting app for groups of people. Three concepts drive th
 
 2. **Payments**: Records of money sent from one person to another outside the app (Venmo, cash, etc.). Stored as a special expense (`isPayment=true`) where `paidById` = sender and a single `ExpenseSplit` covers the recipient for the full amount. This means payments flow through the same balance computation pipeline as expenses with zero special-casing.
 
-3. **Balances**: A simplified summary of who owes whom within a group, computed on-demand from all expenses and payments. The pipeline is: `buildRawDebts(expenses)` converts each expense's splits into raw debt pairs (each non-payer participant owes the payer their split amount), then `simplifyDebts(rawDebts)` minimizes the number of transactions using a greedy creditor/debtor matching algorithm. No balance data is stored — it's always derived from the source of truth (expense + split records).
+3. **Balances**: A simplified summary of who owes whom within a group, computed on-demand from all expenses and payments. The pipeline is: `buildRawDebts(expenses)` → `simplifyDebts(rawDebts)`. Convenience wrappers: `getUserDebtCents(expenses, userId)` returns how much a user owes (unsigned), `getUserBalanceCents(expenses, userId)` returns signed net balance (positive = owed money, negative = owes money). No balance data is stored — it's always derived from the source of truth (expense + split records). All balance functions live in `lib/balances/` and are the **single source of truth** — never re-derive balances with a manual loop.
 
 Both expenses and payments can be edited and deleted, which immediately affects the computed balances.
 
@@ -47,9 +47,10 @@ app/
                                          #   manages pending state and animations
       AddExpenseForm.tsx                 # Modal: description, amount, date, payer dropdown,
                                          #   participant checkboxes; POSTs to expenses API
-      ExpenseActions.tsx                 # Per-expense edit/delete: inline buttons, edit modal,
-                                         #   delete confirmation dialog
+      ExpenseDetailModal.tsx             # Modal: view/edit/delete expense details; split breakdown
+      RecordPaymentForm.tsx              # Modal: record payment between two members
       AddMemberForm.tsx                  # Modal: add member by email; POSTs to members API
+      CopyInviteLinkButton.tsx           # Copy invite link to clipboard
       LeaveGroupButton.tsx               # Leave group: confirmation dialog, DELETE call, redirect
       ActivityFeed.tsx                   # Renders activity log entries with relative timestamps
       useActivityLogs.ts                 # Hook: manages activity log state with optimistic additions
@@ -63,11 +64,15 @@ app/
   api/groups/
     route.ts                             # GET: list user's groups; POST: create group (via RPC)
     [id]/
-      members/route.ts                   # POST: add member by email (creates User if needed via upsert)
+      members/route.ts                   # POST: add member; DELETE: leave group (via leave_group RPC)
       expenses/route.ts                  # POST: create expense + equal splits + activity log (via RPC)
       expenses/[expenseId]/route.ts      # PUT: edit expense + recalculate splits (via RPC)
                                          # DELETE: delete expense + log (via RPC)
       balances/route.ts                  # GET: compute simplified debts from expenses/splits
+      payments/route.ts                  # POST: record payment (via create_payment RPC)
+      activity/route.ts                  # GET: paginated activity logs for group
+  api/invite/[token]/
+    join/route.ts                        # POST: join group via invite token (via join_group_by_token RPC)
 
 components/
   Nav.tsx                                # Top nav: app name, user display name, logout button (client)
@@ -80,14 +85,17 @@ lib/
   supabase/server.ts                     # Server Supabase client (cookie-aware, for RSC + route handlers)
   supabase/admin.ts                      # Server-only admin client (service role key, bypasses RLS)
   supabase/database.types.ts             # Auto-generated types from Supabase schema (run npm run db:types)
-  balances/simplify.ts                   # Debt simplification: pure function, zero framework deps,
-                                         #   greedy algorithm matching creditors ↔ debtors
+  balances/simplify.ts                   # Debt simplification: greedy algorithm, zero framework deps
+  balances/buildRawDebts.ts              # Converts expenses+splits → raw Debt[] pairs
+  balances/getUserDebt.ts                # getUserDebtCents() + getUserBalanceCents() — convenience wrappers
+  balances/splitAmount.ts                # Equal-split math: integer division + remainder distribution
+  format.ts                              # formatCents() — single source of truth for "$X.XX" display
+  formatDisplayName.ts                   # "First Last" → "First L." abbreviation
 
 supabase/
   migrations/                            # SQL migrations applied via `npx supabase db push`
   config.toml                            # Supabase CLI config (auto-generated by supabase init)
 
-prisma/migrations/                       # Historical Prisma migrations (kept for reference)
 proxy.ts                                 # Auth middleware (Next.js 16 uses proxy.ts, NOT middleware.ts)
 next.config.ts                           # turbopack config
 ```
@@ -183,18 +191,6 @@ const { data } = await supabase
   .maybeSingle();
 ```
 
-### Key differences from Prisma
-
-| Prisma | Supabase |
-|--------|----------|
-| `expense.paidBy.displayName` | `expense.User.displayName` (relation = table name) |
-| `member.user.displayName` | `member.User.displayName` |
-| `expense.splits` | `expense.ExpenseSplit` |
-| `expense.date.toISOString()` | `expense.date` (already a string) |
-| `prisma.$transaction(...)` | `supabase.rpc("function_name", {...})` |
-| `prisma.groupMember.findUnique({ where: { groupId_userId: {...} } })` | `.select("id").eq("groupId", x).eq("userId", y).maybeSingle()` |
-| `orderBy: { group: { createdAt: "desc" } }` | Sort in JS after fetching (Supabase doesn't support ordering by joined relation) |
-
 ### RLS Policies
 
 RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_member(group_id)` checks membership using `auth.uid()` from the JWT.
@@ -218,7 +214,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `create_expense(...)` | Creates expense + splits + activity log | `POST /api/groups/[id]/expenses` |
 | `update_expense(...)` | Updates expense + replaces splits + activity log | `PUT /api/groups/[id]/expenses/[expenseId]` |
 | `delete_expense(...)` | Activity log + deletes expense (cascade handles splits) | `DELETE /api/groups/[id]/expenses/[expenseId]` |
-| `leave_group(_group_id)` | Verifies membership, blocks if |balance| > $2, deletes member row, logs `member_left`, deletes group if last member | `DELETE /api/groups/[id]/members` |
+| `leave_group(_group_id)` | Verifies membership, blocks if user has any outstanding debt, deletes member row, logs `member_left`, deletes group if last member | `DELETE /api/groups/[id]/members` |
 | `delete_account()` | Removes user from all groups (no balance check), logs departures, auto-deletes empty groups, deletes User row. Auth user deletion handled by API route via admin client. Orphaned expenses/activity logs retain their `paidById`/`actorId` references. | `DELETE /api/account` |
 | `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
@@ -244,7 +240,7 @@ Adds a member by email. If the user doesn't exist yet (hasn't signed up), this w
 - Returns: 201, or 409 if already a member, 404 if user not found
 
 ### `DELETE /api/groups/[id]/members`
-Leaves the group (self-removal via `leave_group` RPC). Blocked if the caller's absolute balance exceeds $2.
+Leaves the group (self-removal via `leave_group` RPC). Blocked if the caller has any outstanding debt (owes money).
 - Returns: `{ data: { deletedGroup: boolean }, error: null }` — `deletedGroup` is true when the last member left
 
 ### `POST /api/groups/[id]/expenses`
@@ -438,7 +434,7 @@ The PUT handler fetches the expense with paidBy user, splits (with user display 
 ## Design Decisions
 
 ### Why Supabase JS client for both auth and data?
-Single client, no connection management, no SSL cert bundling, no pg.Pool. RLS handles authorization at the DB layer. PostgREST (which powers the JS client) eliminates serverless connection pooling concerns entirely. Previously we used Prisma for data, but the pg.Pool + SSL cert + adapter bridge added unnecessary complexity.
+Single client, no connection management, no SSL cert bundling, no pg.Pool. RLS handles authorization at the DB layer. PostgREST (which powers the JS client) eliminates serverless connection pooling concerns entirely.
 
 ### Why RPC functions for mutations?
 Supabase JS doesn't support multi-table transactions natively. `SECURITY DEFINER` PL/pgSQL functions run as a single transaction and can write to multiple tables atomically. They bypass RLS (since they run as the function owner) and do their own auth checks via `auth.uid()`.
@@ -471,7 +467,7 @@ Plan: Hard delete. Cascade deletes handle all cleanup. No soft delete until audi
 Users can delete their account from the settings page. The `delete_account` RPC removes the user from all groups (skipping the $2 balance check that `leave_group` enforces), logs departures, auto-deletes empty groups, and deletes the User row. The API route then deletes the Supabase auth user via the admin client. Orphaned expenses and activity logs are intentional — they retain `paidById`/`actorId` references so other group members' financial history is preserved.
 
 ### Member self-removal (leave group)
-Implemented via `leave_group` RPC. Members can leave if their absolute balance is ≤ $2 (200 cents). When the last member leaves, the group is cascade-deleted. Activity log records `member_left` with the leaver's display name.
+Implemented via `leave_group` RPC. Members can leave if they have no outstanding debt (net balance ≥ 0). When the last member leaves, the group is cascade-deleted. Activity log records `member_left` with the leaver's display name.
 
 ## Testing
 

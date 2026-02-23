@@ -18,3 +18,21 @@ export function getUserDebtCents(
   }
   return total;
 }
+
+/**
+ * Returns a user's net balance (in cents) after debt simplification.
+ * Positive = others owe the user (creditor). Negative = user owes others (debtor).
+ * Returns 0 if the user has no outstanding debts in either direction.
+ */
+export function getUserBalanceCents(
+  expenses: ExpenseForDebt[],
+  userId: string
+): number {
+  const simplified = simplifyDebts(buildRawDebts(expenses));
+  let balance = 0;
+  for (const debt of simplified) {
+    if (debt.to === userId) balance += debt.amount;
+    if (debt.from === userId) balance -= debt.amount;
+  }
+  return balance;
+}

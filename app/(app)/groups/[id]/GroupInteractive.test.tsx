@@ -261,7 +261,7 @@ describe("GroupInteractive — deleted account balance integrity", () => {
     const expense = makeExpense({
       amountCents: 4000,
       paidById: "deleted-xyz",
-      paidByDisplayName: "Deleted User",
+      paidByDisplayName: "Unknown",
       participantIds: ["user-a", "deleted-xyz"],
     });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);

@@ -705,7 +705,7 @@ describe("ExpensesList — deleted account display", () => {
   it("shows 'Unknown' for a deleted user whose ID is not in allUserNames", () => {
     const expense = makeExpense({
       paidById: "deleted-user-id",
-      paidByDisplayName: "Deleted User",
+      paidByDisplayName: "Unknown",
       participantIds: ["user-1"],
       amountCents: 5000,
     });

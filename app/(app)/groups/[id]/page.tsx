@@ -104,7 +104,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   // (Prisma returned { actor: { displayName } }, Supabase returns { User: { displayName } })
   const transformedLogs = (activityLogs ?? []).map((log) => ({
     ...log,
-    actor: log.User ?? { displayName: "Deleted User" },
+    actor: log.User ?? { displayName: "Unknown" },
   }));
 
   const currentMember = groupMembers.find((m) => m.userId === user.id);
@@ -142,7 +142,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       amountCents: expense.amountCents,
       date: expense.date.split("T")[0]!,
       paidById: expense.paidById,
-      paidByDisplayName: expense.User?.displayName ?? "Deleted User",
+      paidByDisplayName: expense.User?.displayName ?? "Unknown",
       participantIds: expenseSplits.map((s) => s.userId),
       splits: expenseSplits,
       splitType: (expense.splitType as "equal" | "custom") ?? "equal",

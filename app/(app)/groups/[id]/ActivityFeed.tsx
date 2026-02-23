@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatDisplayName } from "@/lib/formatDisplayName";
+import { formatCents } from "@/lib/format";
 
 export type ActivityLog = {
   id: string;
@@ -40,9 +41,6 @@ type Payload = {
   splitsBefore?: SplitEntry[];
 };
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatRelativeTime(date: Date | string): string {
   // Supabase returns TIMESTAMP WITHOUT TIME ZONE strings with no timezone suffix.

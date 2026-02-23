@@ -9,6 +9,7 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { buildRawDebts } from "@/lib/balances/buildRawDebts";
 import { Card } from "@/components/ui/Card";
 import { formatDisplayName } from "@/lib/formatDisplayName";
+import { formatCents } from "@/lib/format";
 
 interface GroupInteractiveProps {
   groupId: string;
@@ -22,9 +23,6 @@ interface GroupInteractiveProps {
   allUserNames: Record<string, string>;
 }
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 export function GroupInteractive({
   groupId,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { buildRawDebts } from "@/lib/balances/buildRawDebts";
 import { simplifyDebts } from "@/lib/balances/simplify";
 
 export async function GET(
@@ -56,18 +57,15 @@ export async function GET(
     }
   }
 
-  // Build raw debts: each split creates a debt from the split user to the payer
-  const rawDebts = expenses.flatMap((expense) =>
-    (expense.ExpenseSplit ?? [])
-      .filter((split) => split.userId !== expense.paidById)
-      .map((split) => ({
-        from: split.userId,
-        to: expense.paidById,
-        amount: split.amountCents,
-      }))
-  );
+  const expensesForDebt = expenses.map((e) => ({
+    paidById: e.paidById,
+    splits: (e.ExpenseSplit ?? []).map((s) => ({
+      userId: s.userId,
+      amountCents: s.amountCents,
+    })),
+  }));
 
-  const simplified = simplifyDebts(rawDebts);
+  const simplified = simplifyDebts(buildRawDebts(expensesForDebt));
 
   const data = simplified.map((debt) => ({
     fromId: debt.from,

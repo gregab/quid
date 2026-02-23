@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { SettingsClient } from "./SettingsClient";
 
 interface GroupBalance {
@@ -22,29 +23,26 @@ export default async function SettingsPage() {
     .select("groupId, Group(id, name)")
     .eq("userId", user.id);
 
-  // For each group, compute the user's net balance
+  // For each group, compute the user's simplified net balance
   const groupBalances: GroupBalance[] = [];
 
   for (const membership of memberships ?? []) {
     const group = membership.Group!;
 
-    // Compute net balance: sum of what user paid - sum of user's splits
     const { data: expenses } = await supabase
       .from("Expense")
-      .select("amountCents, paidById, ExpenseSplit(userId, amountCents)")
+      .select("paidById, ExpenseSplit(userId, amountCents)")
       .eq("groupId", group.id);
 
-    let balanceCents = 0;
-    for (const expense of expenses ?? []) {
-      if (expense.paidById === user.id) {
-        balanceCents += expense.amountCents;
-      }
-      for (const split of expense.ExpenseSplit ?? []) {
-        if (split.userId === user.id) {
-          balanceCents -= split.amountCents;
-        }
-      }
-    }
+    const expensesForDebt = (expenses ?? []).map((e) => ({
+      paidById: e.paidById,
+      splits: (e.ExpenseSplit ?? []).map((s) => ({
+        userId: s.userId,
+        amountCents: s.amountCents,
+      })),
+    }));
+
+    const balanceCents = getUserBalanceCents(expensesForDebt, user.id);
 
     if (balanceCents !== 0) {
       groupBalances.push({

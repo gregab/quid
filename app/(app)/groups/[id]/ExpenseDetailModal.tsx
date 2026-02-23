@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
+import { formatCents } from "@/lib/format";
 
 interface ExpenseDetailModalProps {
   groupId: string;
@@ -26,9 +27,6 @@ interface ExpenseDetailModalProps {
 type ModalMode = "view" | "edit" | "delete-confirm";
 type SplitType = "equal" | "custom";
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatDisplayDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);

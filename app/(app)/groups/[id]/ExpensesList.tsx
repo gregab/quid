@@ -8,6 +8,7 @@ import { RecordPaymentForm } from "./RecordPaymentForm";
 import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
+import { formatCents } from "@/lib/format";
 import type { MemberColor } from "./MemberPill";
 
 export interface Member {
@@ -48,9 +49,6 @@ interface ExpensesListProps {
   onExpensesChange?: (expenses: ExpenseRow[]) => void;
 }
 
-function formatCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
 
 function formatDateBlock(dateStr: string): { month: string; day: string } {
   // Parse YYYY-MM-DD as local date to avoid UTC-shift issues

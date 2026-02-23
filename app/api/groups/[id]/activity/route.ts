@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const QuerySchema = z.object({
-  before: z.string().optional(),
+  before: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
@@ -68,7 +68,7 @@ export async function GET(
 
   const transformed = sliced.map((log) => ({
     ...log,
-    actor: log.User ?? { displayName: "Deleted User" },
+    actor: log.User ?? { displayName: "Unknown" },
   }));
 
   return NextResponse.json({ data: { logs: transformed, hasMore } });

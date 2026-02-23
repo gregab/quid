@@ -287,38 +287,38 @@ describe("ActivityFeed — expense_edited list item", () => {
 });
 
 describe("ActivityFeed — deleted account fallback", () => {
-  it("renders 'Deleted User' as actor name when the account no longer exists", () => {
-    // page.tsx sets actor: log.User ?? { displayName: "Deleted User" } for null joins
+  it("renders 'Unknown' as actor name when the account no longer exists", () => {
+    // page.tsx sets actor: log.User ?? { displayName: "Unknown" } for null joins
     render(
       <ActivityFeed
         logs={[
           makeLog({
             action: "expense_added",
-            actor: { displayName: "Deleted User" },
+            actor: { displayName: "Unknown" },
             payload: { description: "Dinner", amountCents: 2500 },
           }),
         ]}
       />
     );
-    expect(screen.getByText("Deleted U.")).toBeDefined();
+    expect(screen.getByText("Unknown")).toBeDefined();
     // The rest of the log still renders
     expect(screen.getByText("added")).toBeDefined();
     expect(screen.getByText("Dinner")).toBeDefined();
   });
 
-  it("renders 'Deleted User' for a member_left log from a deleted account", () => {
+  it("renders 'Unknown' for a member_left log from a deleted account", () => {
     render(
       <ActivityFeed
         logs={[
           makeLog({
             action: "member_left",
-            actor: { displayName: "Deleted User" },
-            payload: { displayName: "Deleted User" },
+            actor: { displayName: "Unknown" },
+            payload: { displayName: "Unknown" },
           }),
         ]}
       />
     );
-    expect(screen.getByText("Deleted U.")).toBeDefined();
+    expect(screen.getByText("Unknown")).toBeDefined();
     expect(screen.getByText("left the group")).toBeDefined();
   });
 });
