@@ -399,6 +399,55 @@ describe("ActivityFeed — payment_recorded and payment_deleted", () => {
     expect(screen.getByText(/\$50\.00/)).toBeDefined();
   });
 
+  it("renders settled-up celebration when settledUp is true", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_recorded",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob", settledUp: true },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/settled up with/)).toBeDefined();
+    expect(screen.queryByText(/recorded a payment/)).toBeNull();
+    expect(screen.getByText(/\$50\.00/)).toBeDefined();
+  });
+
+  it("does not show settled-up display when settledUp is false", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_recorded",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob", settledUp: false },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/recorded a payment/)).toBeDefined();
+    expect(screen.queryByText(/settled up with/)).toBeNull();
+  });
+
+  it("does not show settled-up display for payment_deleted even if settledUp is true", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_deleted",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob", settledUp: true },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText(/deleted a payment/)).toBeDefined();
+    expect(screen.queryByText(/settled up with/)).toBeNull();
+  });
+
   it("applies opacity class to pending payment_recorded log", () => {
     const { container } = render(
       <ActivityFeed

@@ -352,6 +352,23 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     expect(onOptimisticActivity.mock.calls[0][0].payload.amountCents).toBe(2000);
   });
 
+  it("sets settledUp: true when preset amount is paid in full", async () => {
+    renderAndSelectBob(); // BOB_DEBT is 4250 cents, amount pre-filled as $42.50
+    await act(async () => { fireEvent.submit(getForm()); });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.settledUp).toBe(true);
+    expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(true);
+  });
+
+  it("sets settledUp: false when paying a partial amount", async () => {
+    renderAndSelectBob();
+    fireEvent.change(getAmountInput(), { target: { value: "20.00" } }); // less than $42.50
+    await act(async () => { fireEvent.submit(getForm()); });
+    const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
+    expect(body.settledUp).toBe(false);
+    expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(false);
+  });
+
   it("modal closes immediately after submit (before fetch resolves)", async () => {
     renderAndSelectBob();
     await act(async () => { fireEvent.submit(getForm()); });

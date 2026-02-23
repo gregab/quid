@@ -34,6 +34,7 @@ type Payload = {
   changes?: Changes;
   fromDisplayName?: string;
   toDisplayName?: string;
+  settledUp?: boolean;
   date?: string;
   participantDisplayNames?: string[];
   splitType?: string;
@@ -472,6 +473,28 @@ export function ActivityFeed({
               }
 
               if (log.action === "payment_recorded" || log.action === "payment_deleted") {
+                const isSettledUp = log.action === "payment_recorded" && payload.settledUp === true;
+
+                if (isSettledUp && payload.fromDisplayName && payload.toDisplayName) {
+                  return (
+                    <div key={log.id} className={rowClass} onClick={handleClick}>
+                      <p className="text-sm leading-snug">
+                        <span className="mr-1">✨</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.fromDisplayName)}</span>
+                        <span className="text-gray-700 dark:text-gray-300">{" "}settled up with{" "}</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.toDisplayName)}</span>
+                        <span className="text-gray-700 dark:text-gray-300">!</span>
+                        {typeof payload.amountCents === "number" && (
+                          <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
+                        )}
+                      </p>
+                      <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                        {formatRelativeTime(log.createdAt)}
+                      </span>
+                    </div>
+                  );
+                }
+
                 const verb = log.action === "payment_recorded" ? "recorded a payment" : "deleted a payment";
                 return (
                   <div key={log.id} className={rowClass} onClick={handleClick}>

@@ -12,6 +12,7 @@ const createPaymentSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   paidById: z.string().uuid().optional(),
   recipientId: z.string().uuid(),
+  settledUp: z.boolean().optional(),
 });
 
 export async function POST(
@@ -55,7 +56,7 @@ export async function POST(
     );
   }
 
-  const { amountCents, date, paidById: rawPaidById, recipientId } = parsed.data;
+  const { amountCents, date, paidById: rawPaidById, recipientId, settledUp } = parsed.data;
 
   const memberIds = new Set(members.map((m) => m.userId));
 
@@ -83,6 +84,7 @@ export async function POST(
     _recipient_id: recipientId,
     _from_display_name: fromMember.User!.displayName,
     _to_display_name: toMember.User!.displayName,
+    _settled_up: settledUp ?? false,
   });
 
   if (error) {

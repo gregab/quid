@@ -119,6 +119,9 @@ export function RecordPaymentForm({
     const fromDisplayName = fromMember?.displayName ?? currentUserDisplayName;
     const toDisplayName = presetToName ?? toMember?.displayName ?? "";
 
+    const debtForTo = userOwesDebts.find((d) => d.toId === submittedToId);
+    const settledUp = isPreset && debtForTo !== undefined && amountCents === debtForTo.amountCents;
+
     // Close modal and reset
     setOpen(false);
     resetForm();
@@ -146,7 +149,7 @@ export function RecordPaymentForm({
     onOptimisticActivity({
       id: `activity-pending-payment-${Date.now()}`,
       action: "payment_recorded",
-      payload: { amountCents, fromDisplayName, toDisplayName },
+      payload: { amountCents, fromDisplayName, toDisplayName, settledUp },
       createdAt: new Date(),
       actor: { displayName: currentUserDisplayName },
       isPending: true,
@@ -162,6 +165,7 @@ export function RecordPaymentForm({
         date: submittedDate,
         paidById: submittedFromId,
         recipientId: submittedToId,
+        settledUp,
       }),
     });
 

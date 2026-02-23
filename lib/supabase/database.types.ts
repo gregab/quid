@@ -303,6 +303,7 @@ export type Database = {
           _paid_by_id: string
           _recipient_id: string
           _to_display_name: string
+          _settled_up?: boolean
         }
         Returns: string
       }
