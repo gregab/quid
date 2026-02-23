@@ -8,7 +8,7 @@ import { RecordPaymentForm } from "./RecordPaymentForm";
 import { ExpenseActions } from "./ExpenseActions";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
-import { MemberPill, type MemberColor } from "./MemberPill";
+import type { MemberColor } from "./MemberPill";
 
 export interface Member {
   userId: string;
@@ -221,9 +221,9 @@ export function ExpensesList({
                         <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
                           Payment
                         </span>
-                        <MemberPill {...getMemberPillProps(expense.paidById, members, allUserNames)} />
-                        <span className="text-gray-400 text-xs">→</span>
-                        <MemberPill {...getMemberPillProps(expense.participantIds[0]!, members, allUserNames)} />
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name}
+                        </span>
                       </div>
                       <p className="text-xs text-gray-400 mt-1">{formatDate(expense.date)}</p>
                     </div>
@@ -255,12 +255,11 @@ export function ExpensesList({
                           Paid by {getMemberPillProps(expense.paidById, members, allUserNames).name} · {formatDate(expense.date)}
                         </span>
                       </div>
-                      <div className="flex flex-wrap gap-1 mt-1">
+                      <p className="text-xs text-gray-400 mt-1">
                         {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
-                          .map((id) => (
-                            <MemberPill key={id} {...getMemberPillProps(id, members, allUserNames)} />
-                          ))}
-                      </div>
+                          .map((id) => getMemberPillProps(id, members, allUserNames).name)
+                          .join(", ")}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">

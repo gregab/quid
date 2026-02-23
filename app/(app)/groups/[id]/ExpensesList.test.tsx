@@ -260,11 +260,10 @@ describe("ExpensesList — payment card rendering", () => {
 
   it("renders 'Alice → Bob' format for payment rows", () => {
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
-    // Each name renders as a pill — getAllByText since pill has nested spans with same text
-    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
-    // Arrow character should appear somewhere in the list item
+    // Names and arrow render as a single text span
     const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice");
+    expect(list?.textContent).toContain("Bob");
     expect(list?.textContent).toContain("→");
   });
 
@@ -322,24 +321,28 @@ describe("ExpensesList — participant display on regular expenses", () => {
   it("shows participant names for a regular expense", () => {
     const expense = makeExpense({ participantIds: ["user-1", "user-2"] });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    // Each participant renders as a separate pill — check both names appear
-    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
+    // Names render as a comma-separated string
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice");
+    expect(list?.textContent).toContain("Bob");
   });
 
   it("shows a single participant name when only one person split the expense", () => {
     const expense = makeExpense({ participantIds: ["user-1"] });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
-    // Bob should not appear as a participant pill
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice");
+    // Bob should not appear as a participant
+    expect(screen.getByText("Alice")).toBeDefined();
     expect(screen.queryByText("Bob")).toBeNull();
   });
 
   it("falls back to all members when participantIds is empty", () => {
     const expense = makeExpense({ participantIds: [] });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
-    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice");
+    expect(list?.textContent).toContain("Bob");
   });
 
   it("resolves names from allUserNames for departed members not in members list", () => {
@@ -351,10 +354,11 @@ describe("ExpensesList — participant display on regular expenses", () => {
         initialExpenses={[expense]}
       />
     );
-    expect(screen.getAllByText("Alice").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Charlie").length).toBeGreaterThanOrEqual(1);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("Alice");
+    expect(list?.textContent).toContain("Charlie");
     // Bob is not a participant in this expense
-    expect(screen.queryByText("Bob")).toBeNull();
+    expect(list?.textContent).not.toContain("Bob");
   });
 
   it("does not show a comma-separated participant line for payment rows", () => {
@@ -372,7 +376,7 @@ describe("ExpensesList — participant display on regular expenses", () => {
       createdById: "user-1",
     };
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[payment]} />);
-    // Payment renders "Alice → Bob" as separate pills, not a comma-separated list
+    // Payment renders "Alice → Bob", not "Alice, Bob"
     expect(screen.queryByText("Alice, Bob")).toBeNull();
   });
 });
