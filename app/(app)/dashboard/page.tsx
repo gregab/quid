@@ -4,6 +4,25 @@ import CreateGroupButton from "./CreateGroupButton";
 
 const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
 
+// Collective nouns for groups of birds (no murder!)
+const FLOCK_NAMES = [
+  "Your flocks",
+  "Your parliament",
+  "Your colony",
+  "Your charm",
+  "Your covey",
+  "Your brood",
+  "Your gaggle",
+  "Your kettle",
+  "Your unkindness",
+  "Your conspiracy",
+  "Your descent",
+  "Your siege",
+  "Your bouquet",
+  "Your wedge",
+  "Your pandemonium",
+];
+
 // Hash-based emoji assignment: each group gets a unique emoji derived from its ID.
 // Sorted by hash before assigning so collision resolution is stable regardless of input order.
 function assignGroupEmojis(groupIds: string[]): Map<string, string> {
@@ -71,7 +90,7 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your groups</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{FLOCK_NAMES[Math.floor(Math.random() * FLOCK_NAMES.length)]}</h2>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               {groups.length === 0
                 ? "None yet — you're either incredibly generous or very new here."
