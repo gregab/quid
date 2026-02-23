@@ -14,7 +14,7 @@ export function GoogleSignInButton({ next }: GoogleSignInButtonProps) {
     setLoading(true);
     const supabase = createClient();
     const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary";
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
     const redirectTo = next
       ? `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`
       : `${siteUrl}/auth/callback`;

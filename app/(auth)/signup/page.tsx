@@ -35,7 +35,7 @@ function SignupForm() {
     }
 
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
     const callbackUrl = next
       ? `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`
       : `${siteUrl}/auth/callback`;

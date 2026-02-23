@@ -5,7 +5,7 @@
  *   npm test tests/smoke.test.ts
  *
  * Against a local dev server (vercel dev or npm run dev):
- *   SMOKE_TEST_BASE_URL=http://localhost:3000/aviary npm test tests/smoke.test.ts
+ *   SMOKE_TEST_BASE_URL=http://localhost:3000 npm test tests/smoke.test.ts
  *
  * Authenticated tests require these env vars in .env.local:
  *   SMOKE_TEST_EMAIL     — email of a real test account
@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 
-const BASE = process.env.SMOKE_TEST_BASE_URL ?? "https://www.gregbigelow.com/aviary";
+const BASE = process.env.SMOKE_TEST_BASE_URL ?? "https://aviary.gregbigelow.com";
 const API = `${BASE}/api`;
 const isLocal = BASE.startsWith("http://localhost") || BASE.startsWith("http://127.");
 
@@ -135,39 +135,7 @@ describe.skipIf(skipAll)("auth-protected pages redirect unauthenticated users to
 });
 
 // ---------------------------------------------------------------------------
-// basePath sanity — routes must not exist at the root domain (without /aviary)
-//
-// Next.js serves the app under basePath: "/aviary". Client-side code that uses
-// raw fetch("/api/...") or <a href="/groups/..."> bypasses this and hits the
-// root domain instead. These tests verify that the root-level paths return
-// 404 so any regression immediately shows up as a broken client action.
-// ---------------------------------------------------------------------------
-
-describe.skipIf(skipAll || isLocal)("basePath sanity: routes only exist under /aviary, not at root", () => {
-  const ROOT = "https://www.gregbigelow.com";
-
-  const rootPaths = [
-    { method: "GET",  path: "/api/groups" },
-    { method: "POST", path: "/api/groups" },
-    { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
-    { method: "DELETE", path: "/api/groups/00000000-0000-0000-0000-000000000001/members" },
-    { method: "POST",   path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses" },
-    { method: "PUT",    path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
-    { method: "DELETE", path: "/api/groups/00000000-0000-0000-0000-000000000001/expenses/00000000-0000-0000-0000-000000000002" },
-    { method: "GET",    path: "/api/groups/00000000-0000-0000-0000-000000000001/balances" },
-  ];
-
-  for (const { method, path } of rootPaths) {
-    it(`${method} ${ROOT}${path} → 404 (no route exists without basePath)`, async () => {
-      const res = await fetch(`${ROOT}${path}`, {
-        method,
-        redirect: "manual",
-        headers: { "Content-Type": "application/json" },
-      });
-      expect(res.status).toBe(404);
-    });
-  }
-});
+// basePath sanity tests removed — app now lives on a subdomain with no basePath.
 
 // ---------------------------------------------------------------------------
 // API endpoints — unauthenticated
@@ -251,7 +219,7 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       createdGroupId = body.data?.id;
     });
 
-    it("dashboard HTML group links contain /aviary/ basePath prefix", async () => {
+    it("dashboard HTML group links point to /groups/", async () => {
       const res = await fetch(`${BASE}/dashboard`, {
         headers: { Cookie: authCookie },
         redirect: "follow",
@@ -263,11 +231,10 @@ describe.skipIf(skipAll || !hasTestCredentials)(
       const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]!);
       const groupHrefs = hrefs.filter((h) => /\/groups\/[0-9a-f-]{36}/.test(h));
 
-      // If the dashboard shows groups (it will after the create test above),
-      // every group link must start with /aviary/ — not /groups/ (bare path).
+      // If the dashboard shows groups, every group link must start with /groups/
       if (groupHrefs.length > 0) {
         for (const href of groupHrefs) {
-          expect(href).toMatch(/^\/aviary\/groups\//);
+          expect(href).toMatch(/^\/groups\//);
         }
       }
     });

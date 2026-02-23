@@ -52,8 +52,6 @@ export function ExpenseActions({
     return null;
   }
 
-  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
-
   const parsedAmountCents = Math.round(parseFloat(amount) * 100);
   const originalParticipantIds = new Set(
     expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId)
@@ -147,7 +145,7 @@ export function ExpenseActions({
     });
 
     setEditLoading(true);
-    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
+    const res = await fetch(`/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -207,7 +205,7 @@ export function ExpenseActions({
       });
     }
 
-    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
+    const res = await fetch(`/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "DELETE",
     });
 

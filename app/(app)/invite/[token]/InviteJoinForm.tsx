@@ -22,10 +22,7 @@ export function InviteJoinForm({
     setError(null);
 
     try {
-      const basePath = new URL(
-        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary"
-      ).pathname;
-      const res = await fetch(`${basePath}/api/invite/${token}/join`, {
+      const res = await fetch(`/api/invite/${token}/join`, {
         method: "POST",
       });
 

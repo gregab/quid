@@ -50,11 +50,10 @@ describe("navigation", () => {
     cy.contains(groupName).should("be.visible");
   });
 
-  it("404 paths outside basePath do not reach app routes", () => {
-    // /api/groups without /aviary prefix should 404
+  it("non-existent paths return 404", () => {
     cy.request({
       method: "GET",
-      url: "http://localhost:3000/api/groups",
+      url: "http://localhost:3000/api/nonexistent",
       failOnStatusCode: false,
     }).its("status").should("eq", 404);
   });

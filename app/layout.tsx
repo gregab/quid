@@ -26,13 +26,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.gregbigelow.com/aviary"),
+  metadataBase: new URL("https://aviary.gregbigelow.com"),
   title: "Aviary",
   description: "Expense splitting made simple",
   openGraph: {
     title: "Aviary",
     description: "Expense splitting made simple",
-    url: "https://www.gregbigelow.com/aviary",
+    url: "https://aviary.gregbigelow.com",
     siteName: "Aviary",
     locale: "en_US",
     images: [

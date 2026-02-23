@@ -47,19 +47,19 @@ describe("dashboard", () => {
     cy.contains(groupName).should("be.visible");
   });
 
-  it("group card links include the /aviary basePath prefix", () => {
+  it("group card links point to /groups/", () => {
     // Create a group so there is definitely at least one card
-    const groupName = `[cypress] BasePath ${Date.now()}`;
+    const groupName = `[cypress] Links ${Date.now()}`;
     cy.contains("+ New group").click();
     cy.get("#groupName").type(groupName);
     cy.contains("Create").click();
     cy.get(".modal-content").should("not.exist");
 
-    // The Link's rendered href must start with /aviary/groups/
+    // The Link's rendered href must start with /groups/
     cy.contains(groupName)
       .closest("a")
       .should("have.attr", "href")
-      .and("match", /^\/aviary\/groups\//);
+      .and("match", /^\/groups\//);
   });
 
   it("clicking a group card navigates to the group detail page", () => {

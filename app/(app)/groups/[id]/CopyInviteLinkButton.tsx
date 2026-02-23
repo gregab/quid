@@ -6,7 +6,7 @@ export function CopyInviteLinkButton({ inviteToken }: { inviteToken: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
     const inviteUrl = `${siteUrl}/invite/${inviteToken}`;
     await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);

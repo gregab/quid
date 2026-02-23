@@ -10,14 +10,13 @@ export function LeaveGroupButton({ groupId, userOwedCents }: { groupId: string; 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
   const blocked = userOwedCents > 200;
 
   async function handleLeave() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
+    const res = await fetch(`/api/groups/${groupId}/members`, {
       method: "DELETE",
     });
 

@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-const SITE_URL = "http://localhost:3000/aviary";
+const SITE_URL = "http://localhost:3000";
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_SITE_URL", SITE_URL);
@@ -55,9 +55,8 @@ describe("InviteJoinForm", () => {
       fireEvent.click(button);
     });
 
-    // Component uses pathname ("/aviary"), not the full SITE_URL origin
     expect(fetch).toHaveBeenCalledWith(
-      "/aviary/api/invite/abc123/join",
+      "/api/invite/abc123/join",
       expect.objectContaining({ method: "POST" })
     );
   });

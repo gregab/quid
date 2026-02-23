@@ -105,7 +105,7 @@ export default async function DashboardPage() {
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
         {/* Bird painting background */}
         <img
-          src="/aviary/birds.jpg"
+          src="/birds.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
         />

@@ -7,7 +7,7 @@ import { CopyInviteLinkButton } from "./CopyInviteLinkButton";
 
 afterEach(cleanup);
 
-const SITE_URL = "http://localhost:3000/aviary";
+const SITE_URL = "http://localhost:3000";
 
 beforeEach(() => {
   // Mock clipboard

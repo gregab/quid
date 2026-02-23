@@ -24,14 +24,13 @@ export function SettingsClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
   const hasOutstandingBalances = groupBalances.length > 0;
 
   async function handleDelete() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch(`${basePath}/api/account`, {
+    const res = await fetch(`/api/account`, {
       method: "DELETE",
     });
 

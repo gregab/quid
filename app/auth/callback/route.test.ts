@@ -30,14 +30,14 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000/aviary");
+vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function makeRequest(path: string) {
-  return new Request(`http://localhost:3000/aviary${path}`);
+  return new Request(`http://localhost:3000${path}`);
 }
 
 const fakeUser = {
@@ -61,13 +61,13 @@ describe("GET /auth/callback", () => {
     mockExchangeCode.mockResolvedValue({ data: { user: null } });
     const res = await GET(makeRequest("/auth/callback"));
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/aviary/dashboard");
+    expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
   });
 
   it("redirects to /dashboard after exchanging a code with no ?next=", async () => {
     const res = await GET(makeRequest("/auth/callback?code=abc123"));
     expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe("http://localhost:3000/aviary/dashboard");
+    expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
   });
 
   it("upserts the User row when a code is present", async () => {
@@ -94,7 +94,7 @@ describe("GET /auth/callback", () => {
       const res = await GET(
         makeRequest("/auth/callback?code=abc123&next=%2Fdashboard")
       );
-      expect(res.headers.get("location")).toBe("http://localhost:3000/aviary/dashboard");
+      expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
     });
 
     it("auto-joins the group and redirects to it when next= is an invite path", async () => {
@@ -109,7 +109,7 @@ describe("GET /auth/callback", () => {
 
       expect(mockRpc).toHaveBeenCalledWith("join_group_by_token", { _token: "my-token" });
       expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/aviary/groups/group-99"
+        "http://localhost:3000/groups/group-99"
       );
     });
 
@@ -121,7 +121,7 @@ describe("GET /auth/callback", () => {
       );
 
       expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/aviary/invite/bad-token"
+        "http://localhost:3000/invite/bad-token"
       );
     });
 
@@ -130,14 +130,14 @@ describe("GET /auth/callback", () => {
         makeRequest("/auth/callback?code=abc123&next=https%3A%2F%2Fevil.com")
       );
       // Should ignore the unsafe next and fall back to /dashboard
-      expect(res.headers.get("location")).toBe("http://localhost:3000/aviary/dashboard");
+      expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
     });
 
     it("rejects protocol-relative open-redirect attempts", async () => {
       const res = await GET(
         makeRequest("/auth/callback?code=abc123&next=%2F%2Fevil.com%2Fpath")
       );
-      expect(res.headers.get("location")).toBe("http://localhost:3000/aviary/dashboard");
+      expect(res.headers.get("location")).toBe("http://localhost:3000/dashboard");
     });
   });
 });

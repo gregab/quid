@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
             Aviary (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) is a personal
             expense-splitting application operated by Greg Bigelow. This Privacy Policy explains how
             we collect, use, disclose, and safeguard your information when you use our application at{" "}
-            <a href="https://gregbigelow.com/aviary">gregbigelow.com/aviary</a> (the
+            <a href="https://aviary.gregbigelow.com">aviary.gregbigelow.com</a> (the
             &quot;Service&quot;).
           </p>
           <p>

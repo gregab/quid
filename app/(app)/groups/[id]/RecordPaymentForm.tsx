@@ -109,8 +109,7 @@ export function RecordPaymentForm({
 
     setLoading(true);
 
-    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
-    await fetch(`${basePath}/api/groups/${groupId}/payments`, {
+    await fetch(`/api/groups/${groupId}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

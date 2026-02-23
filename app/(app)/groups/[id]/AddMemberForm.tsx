@@ -34,10 +34,7 @@ export function AddMemberForm({
     setLoading(true);
 
     try {
-      const basePath = new URL(
-        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary",
-      ).pathname;
-      const res = await fetch(`${basePath}/api/groups/${groupId}/members`, {
+      const res = await fetch(`/api/groups/${groupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: trimmed }),

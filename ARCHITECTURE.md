@@ -77,7 +77,7 @@ supabase/
 
 prisma/migrations/                       # Historical Prisma migrations (kept for reference)
 proxy.ts                                 # Auth middleware (Next.js 16 uses proxy.ts, NOT middleware.ts)
-next.config.ts                           # basePath: "/aviary", turbopack config
+next.config.ts                           # turbopack config
 ```
 
 ## Data Models
@@ -293,7 +293,7 @@ Browser → proxy.ts (auth check) → Page or Route Handler
 5. **User upsert**: `(app)/layout.tsx` upserts the User record on every authenticated page load, ensuring Supabase auth users always exist in the app database.
 
 ### Supabase configuration
-- Site URL in Supabase dashboard: `https://gregbigelow.com/aviary`
+- Site URL in Supabase dashboard: `https://aviary.gregbigelow.com`
 - Redirect allowlist must include the callback URL
 - Sessions are stored in HTTP-only cookies via `@supabase/ssr`
 
@@ -329,12 +329,10 @@ page.tsx (server)                    ← Fetches all data via Supabase
 ```
 
 ### Client-Side fetch Pattern
-**Never use `NEXT_PUBLIC_SITE_URL` in `fetch()` calls.** This hardcodes the domain and causes CORS failures when Vercel serves from `www.` vs non-`www.` (this bug has happened twice). Instead, derive a root-relative basePath:
+**Never use `NEXT_PUBLIC_SITE_URL` in `fetch()` calls.** This hardcodes the domain and causes CORS failures. Use root-relative paths directly:
 
 ```ts
-const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
-// → "/aviary"
-fetch(`${basePath}/api/groups/...`, { method: "POST", ... });
+fetch(`/api/groups/...`, { method: "POST", ... });
 ```
 
 ## Expense Splitting
@@ -423,11 +421,8 @@ Supabase JS doesn't support multi-table transactions natively. `SECURITY DEFINER
 ### Why `proxy.ts`?
 Next.js 16 renamed middleware to `proxy.ts`. We confirmed `middleware.ts` doesn't work.
 
-### Why `basePath: "/aviary"`?
-App lives at `gregbigelow.com/aviary`, not domain root. Vercel's basePath handles internal routing. External services (email redirects) need full URLs via `NEXT_PUBLIC_SITE_URL`.
-
-### Deployment: two separate Vercel projects
-`www.gregbigelow.com` is a separate Vercel project (personal website) that proxies `/aviary/*` to the Aviary Vercel project. This has an important implication for **Vercel Analytics**: the `<Analytics />` component in `app/layout.tsx` injects a script that loads `/_vercel/insights/script.js` as a relative URL. In the browser, that request goes to `www.gregbigelow.com`, which routes to the **personal website** Vercel project — not the Aviary project. So Vercel Analytics data for Aviary traffic shows up in the **personal website project's** Analytics dashboard, not the Aviary project's. The Aviary project's own Vercel Analytics dashboard only captures traffic hitting the Aviary deployment URL directly (e.g. `aviary.vercel.app`).
+### Deployment
+App lives on its own subdomain (`aviary.gregbigelow.com`) as a standalone Vercel project. No basePath — the app runs at the domain root. External services (email redirects, OAuth callbacks) use full URLs via `NEXT_PUBLIC_SITE_URL`.
 
 ### Why cents for money?
 `0.1 + 0.2 !== 0.3`. Integers avoid floating point errors entirely.
@@ -524,30 +519,29 @@ Wrap in `await act(async () => { ... })` when the handler is async (e.g. calls f
 
 Smoke tests are a **post-deploy health check**, not a pre-deploy safety net. Run them after pushing to verify production is working — not while developing. During development, use `SKIP_SMOKE_TESTS=1 npm test` to run only unit/integration tests (fast, no network).
 
-**Prefer Cypress for new E2E coverage.** Smoke tests hit live production and are slow. For any user-facing flow or API behaviour that can be tested against a local dev server, write a Cypress spec instead. Add to smoke tests only for things that can only be verified post-deploy: basePath sanity, production env var validation, etc.
+**Prefer Cypress for new E2E coverage.** Smoke tests hit live production and are slow. For any user-facing flow or API behaviour that can be tested against a local dev server, write a Cypress spec instead. Add to smoke tests only for things that can only be verified post-deploy: production env var validation, etc.
 
-**By default `npm test` hits live production** (`https://www.gregbigelow.com/aviary`). Override with:
+**By default `npm test` hits live production** (`https://aviary.gregbigelow.com`). Override with:
 ```bash
 SKIP_SMOKE_TESTS=1 npm test                                    # skip entirely
-SMOKE_TEST_BASE_URL=http://localhost:3000/aviary npm test tests/smoke.test.ts  # run against local dev
+SMOKE_TEST_BASE_URL=http://localhost:3000 npm test tests/smoke.test.ts  # run against local dev
 ```
 
 **What they cover:**
 - Site reachability and auth redirects (unauthenticated → /login)
-- basePath sanity: routes only exist under `/aviary`, not at the domain root
 - All API endpoints return 401 for unauthenticated requests
 - Full authenticated CRUD flow (requires `SMOKE_TEST_EMAIL` + `SMOKE_TEST_PASSWORD` in `.env.local`)
 
 **Authenticated tests mutate prod data:** they create a group, add/edit/delete an expense, then clean up. The group is named `[smoke test — safe to delete]` and gets left behind if a test fails mid-run — safe to delete manually.
 
-**When to run smoke tests:** after changes to `proxy.ts`, auth routes, API routes, basePath config, or env vars.
+**When to run smoke tests:** after changes to `proxy.ts`, auth routes, API routes, or env vars.
 
 ### E2E Tests (Cypress)
 
 **Stack:** Cypress 15 + TypeScript. Specs live in `cypress/e2e/`. Run against a local dev server.
 
 **Setup:**
-- `cypress.config.ts` — `baseUrl: http://localhost:3000/aviary`, video off, 10 s command timeout
+- `cypress.config.ts` — `baseUrl: http://localhost:3000`, video off, 10 s command timeout
 - `cypress/support/commands.ts` — `cy.login()` custom command
 - `cypress/support/e2e.ts` — imports commands
 - `cypress/tsconfig.json` — types: ["cypress"]
@@ -561,9 +555,9 @@ SMOKE_TEST_BASE_URL=http://localhost:3000/aviary npm test tests/smoke.test.ts  #
 | File | What it covers |
 |------|----------------|
 | `cypress/e2e/auth.cy.ts` | Unauthenticated redirects, UI login/logout, invalid-credentials error |
-| `cypress/e2e/dashboard.cy.ts` | Group list, create-group modal, basePath correctness on links |
+| `cypress/e2e/dashboard.cy.ts` | Group list, create-group modal, link correctness |
 | `cypress/e2e/group-detail.cy.ts` | Add/edit/delete expenses, activity feed, balances section |
-| `cypress/e2e/navigation.cy.ts` | Nav bar, browser history back/forward, basePath 404 |
+| `cypress/e2e/navigation.cy.ts` | Nav bar, browser history back/forward |
 
 **Selectors:** Prefer existing `id` attributes (`#email`, `#expenseDescription`) and `aria-label` attributes (`[aria-label="Edit expense"]`) over brittle class selectors. All modals have `.modal-content` for scoping assertions.
 

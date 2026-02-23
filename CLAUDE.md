@@ -2,7 +2,7 @@
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 
-**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://gregbigelow.com/aviary`.
+**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://aviary.gregbigelow.com`.
 
 ## Design Philosophy
 
@@ -23,7 +23,7 @@ For any change: understand the code first, make changes, write tests, run tests,
 
 ## Commands
 ```bash
-npm run dev                             # Dev server (localhost:3000/aviary)
+npm run dev                             # Dev server (localhost:3000)
 npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
@@ -66,7 +66,7 @@ npm run cy:run                          # Cypress headless (CI)
 
 1. **`params` is a Promise** in Next.js 16: `const { id } = await params`
 2. **Auth middleware is `proxy.ts`**, not `middleware.ts`
-3. **Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`** — causes CORS bugs. Use root-relative paths: `fetch(\`/aviary/api/...\`)`
+3. **Never use `NEXT_PUBLIC_SITE_URL` in client-side `fetch()`** — causes CORS bugs. Use root-relative paths: `fetch(\`/api/...\`)`
 4. **Money is always integers (cents).** Never floats. Display formatting converts at UI layer.
 5. **Supabase returns dates as ISO strings**, not `Date` objects. No `.toISOString()` needed — use `.split("T")[0]` directly.
 6. **Supabase relation names match table names**, not Prisma relation names. E.g. `expense.User` (not `expense.paidBy`), `member.User` (not `member.user`), `expense.ExpenseSplit` (not `expense.splits`).
@@ -97,9 +97,9 @@ tests/smoke.test.ts                              — production smoke tests (aut
 ### E2E tests (Cypress)
 ```
 cypress/e2e/auth.cy.ts           — auth redirects, UI login/logout, invalid-creds error
-cypress/e2e/dashboard.cy.ts      — group list, create-group modal, basePath on links
+cypress/e2e/dashboard.cy.ts      — group list, create-group modal, link correctness
 cypress/e2e/group-detail.cy.ts   — add/edit/delete expenses, activity feed, balances
-cypress/e2e/navigation.cy.ts     — nav bar, browser history, basePath 404
+cypress/e2e/navigation.cy.ts     — nav bar, browser history
 cypress/e2e/invite.cy.ts         — invite redirect, invalid token, already-member redirect
 ```
 
@@ -112,7 +112,7 @@ Cypress requires `npm run dev` running in a separate terminal. Set credentials i
 - New UI behavior or rendering logic → add to the relevant `*.test.tsx` co-located with the component
 - New pure function → co-locate a `*.test.ts` next to it
 - New user-facing flow → add or extend a Cypress spec in `cypress/e2e/`
-- New API route behavior → **prefer a Cypress spec**; only add smoke tests for things that can only be verified post-deploy against production (e.g. basePath sanity, env var validation). Smoke tests are a post-deploy health check, not a pre-deploy safety net. Don't add more of them.
+- New API route behavior → **prefer a Cypress spec**; only add smoke tests for things that can only be verified post-deploy against production (e.g. env var validation). Smoke tests are a post-deploy health check, not a pre-deploy safety net. Don't add more of them.
 
 Run smoke tests after changing: `proxy.ts`, auth routes, API routes, or env vars.
 
@@ -128,7 +128,7 @@ See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress d
 All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase anon/public key
-- `NEXT_PUBLIC_SITE_URL` — `https://gregbigelow.com/aviary` in prod, `http://localhost:3000/aviary` in dev
+- `NEXT_PUBLIC_SITE_URL` — `https://aviary.gregbigelow.com` in prod, `http://localhost:3000` in dev
 - `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for authenticated smoke tests + Cypress
 
 ## Reference Docs

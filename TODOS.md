@@ -19,6 +19,7 @@
 - **Migrate from Prisma to Supabase JS client** — RLS on all tables, RPC functions for atomic ops, removed Prisma/pg deps entirely
 - **Leave group** — Members can leave groups (blocked if |balance| > $2); last member leaving deletes the group
 - **Record payment** — Record out-of-app payments (Venmo, cash, etc.) to settle debts; green payment cards inline with expenses; creator-only delete; payment_recorded/payment_deleted activity log
+- **Subdomain migration** — Moved from `gregbigelow.com/aviary` (basePath) to `aviary.gregbigelow.com` (subdomain). Removed basePath config, simplified client-side fetch to root-relative `/api/...`, updated all tests and docs
 
 ## In Progress
 <!-- Move items here when actively working on them -->

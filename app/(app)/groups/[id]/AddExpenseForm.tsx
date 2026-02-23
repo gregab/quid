@@ -217,7 +217,6 @@ export function AddExpenseForm({
 
     setLoading(true);
 
-    const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
     const body: Record<string, unknown> = {
       description: submittedDescription,
       amountCents,
@@ -233,7 +232,7 @@ export function AddExpenseForm({
       }));
     }
 
-    await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
+    await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

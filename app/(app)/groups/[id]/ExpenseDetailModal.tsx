@@ -100,8 +100,6 @@ export function ExpenseDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
-  const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
-
   const parsedAmountCents = Math.round(parseFloat(amount) * 100);
   const totalCentsValid = !isNaN(parsedAmountCents) && parsedAmountCents > 0;
 
@@ -314,7 +312,7 @@ export function ExpenseDetailModal({
       }));
     }
 
-    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
+    const res = await fetch(`/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -367,7 +365,7 @@ export function ExpenseDetailModal({
       });
     }
 
-    const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
+    const res = await fetch(`/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "DELETE",
     });
     const json = (await res.json()) as { data?: unknown; error?: string };
