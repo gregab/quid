@@ -7,6 +7,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
+import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -18,7 +19,7 @@ interface AddExpenseFormProps {
   onOptimisticActivity: (log: ActivityLog) => void;
 }
 
-type SplitType = "equal" | "custom";
+type SplitType = "equal" | "percentage" | "custom";
 
 /**
  * Scales existing custom amounts proportionally when the total changes.
@@ -60,6 +61,7 @@ export function AddExpenseForm({
   const [participantIds, setParticipantIds] = useState<Set<string>>(new Set(allMemberIds));
   const [splitType, setSplitType] = useState<SplitType>("equal");
   const [customAmounts, setCustomAmounts] = useState<Map<string, string>>(new Map());
+  const [percentages, setPercentages] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState(false);
   const [amountErrorMessage, setAmountErrorMessage] = useState<string | null>(null);
@@ -68,10 +70,19 @@ export function AddExpenseForm({
   const parsedTotalCents = Math.round(parseFloat(stripAmountFormatting(amount)) * 100);
   const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0 && parsedTotalCents <= MAX_AMOUNT_CENTS;
 
-  // When switching to custom, pre-fill equal amounts
   function handleSplitTypeChange(type: SplitType) {
-    if (type === "custom" && splitType === "equal") {
-      const ids = [...participantIds];
+    const ids = [...participantIds];
+    if (type === "percentage" && splitType === "equal") {
+      // Prefill equal percentages
+      const equalPct = ids.length > 0 ? (100 / ids.length).toFixed(2) : "0.00";
+      const map = new Map<string, string>();
+      ids.forEach((id) => map.set(id, equalPct));
+      setPercentages(map);
+    } else if (type === "percentage" && splitType === "custom") {
+      // Derive percentages from current dollar amounts
+      setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
+    } else if (type === "custom" && splitType === "equal") {
+      // Prefill equal dollar amounts
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedTotalCents, ids.length);
         const map = new Map<string, string>();
@@ -79,7 +90,19 @@ export function AddExpenseForm({
         setCustomAmounts(map);
       } else {
         const map = new Map<string, string>();
-        [...participantIds].forEach((id) => map.set(id, "0.00"));
+        ids.forEach((id) => map.set(id, "0.00"));
+        setCustomAmounts(map);
+      }
+    } else if (type === "custom" && splitType === "percentage") {
+      // Derive dollars from current percentages
+      if (ids.length > 0 && totalCentsValid) {
+        const centMap = percentagesToCents(percentages, ids, parsedTotalCents);
+        const map = new Map<string, string>();
+        ids.forEach((id) => map.set(id, ((centMap.get(id) ?? 0) / 100).toFixed(2)));
+        setCustomAmounts(map);
+      } else {
+        const map = new Map<string, string>();
+        ids.forEach((id) => map.set(id, "0.00"));
         setCustomAmounts(map);
       }
     }
@@ -92,32 +115,31 @@ export function AddExpenseForm({
       if (next.has(userId)) {
         next.delete(userId);
         if (splitType === "custom") {
-          setCustomAmounts((m) => {
-            const n = new Map(m);
-            n.delete(userId);
-            return n;
-          });
+          setCustomAmounts((m) => { const n = new Map(m); n.delete(userId); return n; });
+        } else if (splitType === "percentage") {
+          setPercentages((m) => { const n = new Map(m); n.delete(userId); return n; });
         }
       } else {
         next.add(userId);
         if (splitType === "custom") {
           setCustomAmounts((m) => new Map(m).set(userId, "0.00"));
+        } else if (splitType === "percentage") {
+          setPercentages((m) => new Map(m).set(userId, "0.00"));
         }
       }
       return next;
     });
   }
 
-  // Scale custom amounts when total changes
+  // Scale custom amounts when total changes (percentage inputs stay fixed, dollar outputs update automatically)
   useEffect(() => {
     if (splitType !== "custom" || !totalCentsValid) return;
-    // Only scale if there's already data in customAmounts
     if (customAmounts.size === 0) return;
     const currentSum = [...customAmounts.values()].reduce(
       (s, v) => s + Math.round(parseFloat(v || "0") * 100),
       0
     );
-    if (currentSum === parsedTotalCents) return; // already matches, no scaling needed
+    if (currentSum === parsedTotalCents) return;
     setCustomAmounts((prev) =>
       scaleAmounts(prev, [...participantIds], currentSum, parsedTotalCents)
     );
@@ -132,6 +154,11 @@ export function AddExpenseForm({
         )
       : 0;
   const customRemaining = totalCentsValid ? parsedTotalCents - customSumCents : null;
+
+  const percentageSum = splitType === "percentage"
+    ? [...percentages.values()].reduce((s, v) => s + (parseFloat(v || "0") || 0), 0)
+    : 0;
+  const percentageRemaining = splitType === "percentage" ? 100 - percentageSum : null;
 
   function validateAmount(raw: string): string | null {
     const num = parseFloat(stripAmountFormatting(raw));
@@ -183,7 +210,24 @@ export function AddExpenseForm({
     const amountCents = Math.round(parsedAmount * 100);
     const submittedParticipantIds = [...participantIds];
 
-    if (splitType === "custom") {
+    // For percentage mode: convert to cents, validate sum, treat as custom
+    let resolvedCustomAmounts = new Map(customAmounts);
+    let resolvedSplitType: "equal" | "custom" = splitType === "equal" ? "equal" : "custom";
+
+    if (splitType === "percentage") {
+      const centMap = percentagesToCents(percentages, submittedParticipantIds, amountCents);
+      const sum = submittedParticipantIds.reduce((s, id) => s + (centMap.get(id) ?? 0), 0);
+      if (sum !== amountCents) {
+        setError(
+          `Percentages must total 100%. Adjust amounts so they add up to $${(amountCents / 100).toFixed(2)}.`
+        );
+        return;
+      }
+      resolvedCustomAmounts = new Map(
+        submittedParticipantIds.map((id) => [id, ((centMap.get(id) ?? 0) / 100).toFixed(2)])
+      );
+      resolvedSplitType = "custom";
+    } else if (splitType === "custom") {
       const sum = submittedParticipantIds.reduce(
         (s, id) => s + Math.round(parseFloat(customAmounts.get(id) ?? "0") * 100),
         0
@@ -199,8 +243,8 @@ export function AddExpenseForm({
     const submittedDescription = description;
     const submittedDate = date;
     const submittedPaidByUserId = paidByUserId;
-    const submittedSplitType = splitType;
-    const submittedCustomAmounts = new Map(customAmounts);
+    const submittedSplitType = resolvedSplitType;
+    const submittedCustomAmounts = resolvedCustomAmounts;
 
     const paidByMember = members.find((m) => m.userId === submittedPaidByUserId);
     const paidByDisplayName = paidByMember?.displayName ?? currentUserDisplayName;
@@ -285,6 +329,7 @@ export function AddExpenseForm({
     setParticipantIds(new Set(allMemberIds));
     setSplitType("equal");
     setCustomAmounts(new Map());
+    setPercentages(new Map());
     setError(null);
     setAmountError(false);
     setAmountErrorMessage(null);
@@ -415,29 +460,68 @@ export function AddExpenseForm({
                 {participantIds.size > 0 && (
                   <div className="mt-3">
                     <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
-                      <button
-                        type="button"
-                        onClick={() => handleSplitTypeChange("equal")}
-                        className={`px-3 py-1.5 transition-colors ${
-                          splitType === "equal"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        Equal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSplitTypeChange("custom")}
-                        className={`px-3 py-1.5 transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                          splitType === "custom"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        Custom
-                      </button>
+                      {(["equal", "percentage", "custom"] as SplitType[]).map((type, i) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => handleSplitTypeChange(type)}
+                          className={`px-3 py-1.5 transition-colors ${i > 0 ? "border-l border-gray-200 dark:border-gray-700" : ""} ${
+                            splitType === type
+                              ? "bg-indigo-600 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom"}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Percentage inputs */}
+                {splitType === "percentage" && participantIds.size > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {orderedParticipants.map((m) => (
+                      <div key={m.userId} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                          {m.displayName}
+                          {m.userId === currentUserId && (
+                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          )}
+                        </span>
+                        <div className="w-24 flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={percentages.get(m.userId) ?? "0.00"}
+                            onChange={(e) =>
+                              setPercentages((prev) => new Map(prev).set(m.userId, e.target.value))
+                            }
+                            className="text-right text-sm py-1"
+                          />
+                          <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">%</span>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Running total indicator for percentages */}
+                    {percentageRemaining !== null && (
+                      <p
+                        className={`text-xs font-medium text-right ${
+                          Math.abs(percentageRemaining) < 0.005
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}
+                      >
+                        {Math.abs(percentageRemaining) < 0.005
+                          ? "Adds up to 100% ✓"
+                          : percentageRemaining > 0
+                          ? `Remaining: ${percentageRemaining.toFixed(2)}%`
+                          : `Over by: ${Math.abs(percentageRemaining).toFixed(2)}%`}
+                      </p>
+                    )}
                   </div>
                 )}
 

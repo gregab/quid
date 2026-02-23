@@ -7,6 +7,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { formatCents } from "@/lib/format";
+import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 
 interface ExpenseDetailModalProps {
   groupId: string;
@@ -25,7 +26,7 @@ interface ExpenseDetailModalProps {
 }
 
 type ModalMode = "view" | "edit" | "delete-confirm";
-type SplitType = "equal" | "custom";
+type SplitType = "equal" | "percentage" | "custom";
 
 
 function formatDisplayDate(dateStr: string): string {
@@ -95,6 +96,7 @@ export function ExpenseDetailModal({
     }
     return map;
   });
+  const [editPercentages, setEditPercentages] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
@@ -114,6 +116,11 @@ export function ExpenseDetailModal({
         )
       : 0;
   const editCustomRemaining = totalCentsValid ? parsedAmountCents - editCustomSumCents : null;
+
+  const editPercentageSum = editSplitType === "percentage"
+    ? [...editPercentages.values()].reduce((s, v) => s + (parseFloat(v || "0") || 0), 0)
+    : 0;
+  const editPercentageRemaining = editSplitType === "percentage" ? 100 - editPercentageSum : null;
 
   const hasChanges =
     description !== expense.description ||
@@ -136,16 +143,16 @@ export function ExpenseDetailModal({
       if (next.has(userId)) {
         next.delete(userId);
         if (editSplitType === "custom") {
-          setEditCustomAmounts((m) => {
-            const n = new Map(m);
-            n.delete(userId);
-            return n;
-          });
+          setEditCustomAmounts((m) => { const n = new Map(m); n.delete(userId); return n; });
+        } else if (editSplitType === "percentage") {
+          setEditPercentages((m) => { const n = new Map(m); n.delete(userId); return n; });
         }
       } else {
         next.add(userId);
         if (editSplitType === "custom") {
           setEditCustomAmounts((m) => new Map(m).set(userId, "0.00"));
+        } else if (editSplitType === "percentage") {
+          setEditPercentages((m) => new Map(m).set(userId, "0.00"));
         }
       }
       return next;
@@ -153,8 +160,15 @@ export function ExpenseDetailModal({
   }
 
   function handleEditSplitTypeChange(type: SplitType) {
-    if (type === "custom" && editSplitType === "equal") {
-      const ids = [...participantIds];
+    const ids = [...participantIds];
+    if (type === "percentage" && editSplitType === "equal") {
+      const equalPct = ids.length > 0 ? (100 / ids.length).toFixed(2) : "0.00";
+      const map = new Map<string, string>();
+      ids.forEach((id) => map.set(id, equalPct));
+      setEditPercentages(map);
+    } else if (type === "percentage" && editSplitType === "custom") {
+      setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
+    } else if (type === "custom" && editSplitType === "equal") {
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedAmountCents, ids.length);
         const map = new Map<string, string>();
@@ -162,7 +176,18 @@ export function ExpenseDetailModal({
         setEditCustomAmounts(map);
       } else {
         const map = new Map<string, string>();
-        [...participantIds].forEach((id) => map.set(id, "0.00"));
+        ids.forEach((id) => map.set(id, "0.00"));
+        setEditCustomAmounts(map);
+      }
+    } else if (type === "custom" && editSplitType === "percentage") {
+      if (ids.length > 0 && totalCentsValid) {
+        const centMap = percentagesToCents(editPercentages, ids, parsedAmountCents);
+        const map = new Map<string, string>();
+        ids.forEach((id) => map.set(id, ((centMap.get(id) ?? 0) / 100).toFixed(2)));
+        setEditCustomAmounts(map);
+      } else {
+        const map = new Map<string, string>();
+        ids.forEach((id) => map.set(id, "0.00"));
         setEditCustomAmounts(map);
       }
     }
@@ -197,6 +222,7 @@ export function ExpenseDetailModal({
       map.set(s.userId, (s.amountCents / 100).toFixed(2));
     }
     setEditCustomAmounts(map);
+    setEditPercentages(new Map());
     setError(null);
   }
 
@@ -217,7 +243,24 @@ export function ExpenseDetailModal({
     const amountCents = Math.round(parsedAmount * 100);
     const submittedParticipantIds = [...participantIds];
 
-    if (editSplitType === "custom") {
+    // Resolve percentage mode → custom cents
+    let resolvedCustomAmounts = new Map(editCustomAmounts);
+    let resolvedSplitType: "equal" | "custom" = editSplitType === "equal" ? "equal" : "custom";
+
+    if (editSplitType === "percentage") {
+      const centMap = percentagesToCents(editPercentages, submittedParticipantIds, amountCents);
+      const sum = submittedParticipantIds.reduce((s, id) => s + (centMap.get(id) ?? 0), 0);
+      if (sum !== amountCents) {
+        setError(
+          `Percentages must total 100%. Adjust amounts so they add up to $${(amountCents / 100).toFixed(2)}.`
+        );
+        return;
+      }
+      resolvedCustomAmounts = new Map(
+        submittedParticipantIds.map((id) => [id, ((centMap.get(id) ?? 0) / 100).toFixed(2)])
+      );
+      resolvedSplitType = "custom";
+    } else if (editSplitType === "custom") {
       const sum = submittedParticipantIds.reduce(
         (s, id) => s + Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
         0
@@ -235,10 +278,10 @@ export function ExpenseDetailModal({
 
     // Build splits for optimistic update
     const updatedSplits =
-      editSplitType === "custom"
+      resolvedSplitType === "custom"
         ? submittedParticipantIds.map((id) => ({
             userId: id,
-            amountCents: Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
+            amountCents: Math.round(parseFloat(resolvedCustomAmounts.get(id) ?? "0") * 100),
           }))
         : splitAmount(amountCents, submittedParticipantIds.length).map((amt, i) => ({
             userId: submittedParticipantIds[i]!,
@@ -254,7 +297,7 @@ export function ExpenseDetailModal({
       paidByDisplayName,
       participantIds: submittedParticipantIds,
       splits: updatedSplits,
-      splitType: editSplitType,
+      splitType: resolvedSplitType,
       updatedAt: new Date().toISOString(),
     };
 
@@ -301,12 +344,12 @@ export function ExpenseDetailModal({
       date,
       paidById: paidByUserId,
       participantIds: submittedParticipantIds,
-      splitType: editSplitType,
+      splitType: resolvedSplitType,
     };
-    if (editSplitType === "custom") {
+    if (resolvedSplitType === "custom") {
       body.customSplits = submittedParticipantIds.map((id) => ({
         userId: id,
-        amountCents: Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
+        amountCents: Math.round(parseFloat(resolvedCustomAmounts.get(id) ?? "0") * 100),
       }));
     }
 
@@ -655,29 +698,69 @@ export function ExpenseDetailModal({
                 {participantIds.size > 0 && (
                   <div className="mt-3">
                     <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
-                      <button
-                        type="button"
-                        onClick={() => handleEditSplitTypeChange("equal")}
-                        className={`px-3 py-1.5 transition-colors ${
-                          editSplitType === "equal"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        Equal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEditSplitTypeChange("custom")}
-                        className={`px-3 py-1.5 transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                          editSplitType === "custom"
-                            ? "bg-indigo-600 text-white"
-                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        Custom
-                      </button>
+                      {(["equal", "percentage", "custom"] as SplitType[]).map((type, i) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => handleEditSplitTypeChange(type)}
+                          className={`px-3 py-1.5 transition-colors ${i > 0 ? "border-l border-gray-200 dark:border-gray-700" : ""} ${
+                            editSplitType === type
+                              ? "bg-indigo-600 text-white"
+                              : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom"}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Percentage inputs for edit mode */}
+                {editSplitType === "percentage" && participantIds.size > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {orderedEditParticipants.map((m) => (
+                      <div key={m.userId} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                          {m.displayName}
+                          {m.userId === currentUserId && (
+                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          )}
+                        </span>
+                        <div className="w-24 flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={editPercentages.get(m.userId) ?? "0.00"}
+                            onChange={(e) =>
+                              setEditPercentages((prev) =>
+                                new Map(prev).set(m.userId, e.target.value)
+                              )
+                            }
+                            className="text-right text-sm py-1"
+                          />
+                          <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">%</span>
+                        </div>
+                      </div>
+                    ))}
+                    {editPercentageRemaining !== null && (
+                      <p
+                        className={`text-xs font-medium text-right ${
+                          Math.abs(editPercentageRemaining) < 0.005
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}
+                      >
+                        {Math.abs(editPercentageRemaining) < 0.005
+                          ? "Adds up to 100% ✓"
+                          : editPercentageRemaining > 0
+                          ? `Remaining: ${editPercentageRemaining.toFixed(2)}%`
+                          : `Over by: ${Math.abs(editPercentageRemaining).toFixed(2)}%`}
+                      </p>
+                    )}
                   </div>
                 )}
 
