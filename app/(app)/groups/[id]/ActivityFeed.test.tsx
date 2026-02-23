@@ -363,3 +363,40 @@ describe("ActivityFeed — expense_edited rich descriptions", () => {
     expect(screen.getByText("edited")).toBeDefined();
   });
 });
+
+describe("ActivityFeed — deleted account fallback", () => {
+  it("renders 'Deleted User' as actor name when the account no longer exists", () => {
+    // page.tsx sets actor: log.User ?? { displayName: "Deleted User" } for null joins
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            actor: { displayName: "Deleted User" },
+            payload: { description: "Dinner", amountCents: 2500 },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("Deleted User")).toBeDefined();
+    // The rest of the log still renders
+    expect(screen.getByText("added")).toBeDefined();
+    expect(screen.getByText("Dinner")).toBeDefined();
+  });
+
+  it("renders 'Deleted User' for a member_left log from a deleted account", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "member_left",
+            actor: { displayName: "Deleted User" },
+            payload: { displayName: "Deleted User" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("Deleted User")).toBeDefined();
+    expect(screen.getByText("left the group")).toBeDefined();
+  });
+});

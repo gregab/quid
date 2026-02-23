@@ -96,3 +96,78 @@ describe("GroupInteractive — Balances section", () => {
     expect(screen.getByText("$10.00")).toBeTruthy();
   });
 });
+
+describe("GroupInteractive — Balances with departed members", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: {}, error: null }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // Carol (user-c) is a departed member: present in allUserNames but NOT in members.
+  const PROPS_WITH_DEPARTED = {
+    ...BASE_PROPS,
+    allUserNames: { "user-a": "Alice", "user-b": "Bob", "user-c": "Carol" },
+    // members intentionally omits Carol — she has left the group
+  };
+
+  it("shows departed payer's name (not 'Unknown') when current user owes them", () => {
+    // Carol paid $10, split between Alice and Carol. Alice owes Carol $5.
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-c",
+      paidByDisplayName: "Carol",
+      participantIds: ["user-a", "user-c"],
+    });
+    render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
+    expect(screen.getByText("Carol")).toBeTruthy();
+    expect(screen.queryByText("Unknown")).toBeNull();
+    expect(screen.getByText("$5.00")).toBeTruthy();
+  });
+
+  it("shows departed debtor's name (not 'Unknown') when they owe the current user", () => {
+    // Alice paid $10, split between Alice and Carol. Carol owes Alice $5.
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-c"],
+    });
+    render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
+    expect(screen.getByText("Carol")).toBeTruthy();
+    expect(screen.queryByText("Unknown")).toBeNull();
+    expect(screen.getByText("$5.00")).toBeTruthy();
+  });
+
+  it("resolves all names correctly when current and departed members share the same balance", () => {
+    // Alice paid $30 split 3 ways: Bob owes $10, Carol owes $10
+    const expense = makeExpense({
+      amountCents: 3000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-b", "user-c"],
+    });
+    render(<GroupInteractive {...PROPS_WITH_DEPARTED} initialExpenses={[expense]} />);
+    expect(screen.queryByText("Unknown")).toBeNull();
+    // Both current member (Bob) and departed member (Carol) appear by name
+    expect(screen.getByText("Bob")).toBeTruthy();
+    expect(screen.getByText("Carol")).toBeTruthy();
+  });
+
+  it("falls back to 'Unknown' only for a user with no name in allUserNames or members", () => {
+    // ghost-user is not in allUserNames or members
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "ghost-user",
+      paidByDisplayName: "Ghost",
+      participantIds: ["user-a", "ghost-user"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getByText("Unknown")).toBeTruthy();
+  });
+});
