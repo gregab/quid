@@ -20,7 +20,10 @@ type Changes = {
   description?: { from: string; to: string };
   paidBy?: { from: string; to: string };
   participants?: { added: string[]; removed: string[] };
+  splitType?: { from: string; to: string };
 };
+
+type SplitEntry = { displayName: string; amountCents: number };
 
 type Payload = {
   description?: string;
@@ -32,6 +35,9 @@ type Payload = {
   toDisplayName?: string;
   date?: string;
   participantDisplayNames?: string[];
+  splitType?: string;
+  splits?: SplitEntry[];
+  splitsBefore?: SplitEntry[];
 };
 
 function formatCents(cents: number): string {
@@ -76,93 +82,6 @@ function formatExpenseDate(dateStr: string): string {
   return new Date(
     Date.UTC(parseInt(yearStr!, 10), parseInt(monthStr!, 10) - 1, parseInt(dayStr!, 10))
   ).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-}
-
-type EditInfo = {
-  verbAndPrep: string;
-  showExpenseName: boolean;
-  detail: string | null;
-};
-
-function buildEditInfo(payload: Payload): EditInfo {
-  const { changes } = payload;
-
-  // Backward compat: old logs have no changes object
-  if (!changes) {
-    const amountChanged =
-      typeof payload.previousAmountCents === "number" &&
-      payload.previousAmountCents !== payload.amountCents;
-    const detail =
-      typeof payload.amountCents === "number"
-        ? amountChanged
-          ? `${formatCents(payload.previousAmountCents!)} → ${formatCents(payload.amountCents!)}`
-          : formatCents(payload.amountCents!)
-        : null;
-    return { verbAndPrep: "edited", showExpenseName: true, detail };
-  }
-
-  const verbs: string[] = [];
-  const details: string[] = [];
-
-  if (changes.participants) {
-    const added = (changes.participants.added ?? []).map(formatDisplayName);
-    const removed = (changes.participants.removed ?? []).map(formatDisplayName);
-    if (added.length > 0 && removed.length > 0) {
-      verbs.push(`added ${formatNameList(added)}, removed ${formatNameList(removed)}`);
-    } else if (added.length > 0) {
-      verbs.push(`added ${formatNameList(added)}`);
-    } else if (removed.length > 0) {
-      verbs.push(`removed ${formatNameList(removed)}`);
-    }
-  }
-
-  if (changes.amount) {
-    verbs.push("changed the price");
-    details.push(`${formatCents(changes.amount.from)} → ${formatCents(changes.amount.to)}`);
-  }
-
-  if (changes.date) {
-    verbs.push("changed the date");
-    details.push(`${formatExpenseDate(changes.date.from)} → ${formatExpenseDate(changes.date.to)}`);
-  }
-
-  if (changes.paidBy) {
-    verbs.push("changed the payer");
-    details.push(`${formatDisplayName(changes.paidBy.from)} → ${formatDisplayName(changes.paidBy.to)}`);
-  }
-
-  if (changes.description) {
-    verbs.push("renamed");
-    details.push(`${changes.description.from} → ${changes.description.to}`);
-  }
-
-  if (verbs.length === 0) {
-    return { verbAndPrep: "edited", showExpenseName: true, detail: null };
-  }
-
-  // Rename-only: don't show a separate expense name since the rename detail shows old → new
-  if (changes.description && verbs.length === 1) {
-    return {
-      verbAndPrep: "renamed",
-      showExpenseName: false,
-      detail: `${changes.description.from} → ${changes.description.to}`,
-    };
-  }
-
-  // Determine preposition
-  const ptc = changes.participants;
-  const isOnlyParticipantAdd =
-    ptc && (ptc.added?.length ?? 0) > 0 && (ptc.removed?.length ?? 0) === 0 && verbs.length === 1;
-  const isOnlyParticipantRemove =
-    ptc && (ptc.added?.length ?? 0) === 0 && (ptc.removed?.length ?? 0) > 0 && verbs.length === 1;
-
-  const preposition = isOnlyParticipantAdd ? "to" : isOnlyParticipantRemove ? "from" : "on";
-
-  return {
-    verbAndPrep: `${verbs.join(" and ")} ${preposition}`,
-    showExpenseName: true,
-    detail: details.length > 0 ? details.join(", ") : null,
-  };
 }
 
 const ACTION_TITLES: Record<string, string> = {
@@ -257,7 +176,20 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 </p>
               </div>
             )}
-            {payload.participantDisplayNames && payload.participantDisplayNames.length > 0 && (
+            {payload.splits && payload.splits.length > 0 ? (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
+                </p>
+                <div className="space-y-0.5">
+                  {payload.splits.map((s, i) => (
+                    <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                      {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : payload.participantDisplayNames && payload.participantDisplayNames.length > 0 ? (
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
                   Split between
@@ -266,7 +198,7 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                   {formatNameList(payload.participantDisplayNames.map(formatDisplayName))}
                 </p>
               </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -344,6 +276,13 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                       )}
                     </p>
                   )}
+                  {payload.changes.splitType && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Split type:</span>{" "}
+                      {payload.changes.splitType.from === "custom" ? "Custom" : "Equal"}{" → "}
+                      {payload.changes.splitType.to === "custom" ? "Custom" : "Equal"}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -376,6 +315,50 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 )}
               </>
             )}
+
+            {/* Splits before/after snapshot */}
+            {payload.splitsBefore && payload.splits ? (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                  Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
+                </p>
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Before</p>
+                    <div className="space-y-0.5">
+                      {payload.splitsBefore.map((s, i) => (
+                        <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                          {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">After</p>
+                    <div className="space-y-0.5">
+                      {payload.splits.map((s, i) => (
+                        <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                          {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : payload.splits ? (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
+                </p>
+                <div className="space-y-0.5">
+                  {payload.splits.map((s, i) => (
+                    <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                      {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -474,17 +457,13 @@ export function ActivityFeed({
               const handleClick = clickable ? () => setSelectedLog(log) : undefined;
 
               if (log.action === "expense_edited") {
-                const { verbAndPrep, showExpenseName, detail } = buildEditInfo(payload);
                 return (
                   <div key={log.id} className={rowClass} onClick={handleClick}>
                     <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
                       <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
-                      {" "}{verbAndPrep}
-                      {showExpenseName && payload.description && (
+                      {" "}edited
+                      {payload.description && (
                         <>{" "}<span className="font-medium">{payload.description}</span></>
-                      )}
-                      {detail && (
-                        <span className="text-gray-500 dark:text-gray-400"> ({detail})</span>
                       )}
                     </p>
                     <span className="text-xs text-gray-400 shrink-0 mt-0.5">

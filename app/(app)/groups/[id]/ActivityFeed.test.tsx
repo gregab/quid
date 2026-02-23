@@ -135,8 +135,8 @@ describe("ActivityFeed — member_left", () => {
   });
 });
 
-describe("ActivityFeed — expense_edited amount display", () => {
-  it("shows old → new amount when the amount changed", () => {
+describe("ActivityFeed — expense_edited modal fallback for old log entries", () => {
+  it("modal shows old → new amount for old-format logs (no changes object)", () => {
     render(
       <ActivityFeed
         logs={[
@@ -147,10 +147,14 @@ describe("ActivityFeed — expense_edited amount display", () => {
         ]}
       />
     );
+    // List item just shows "edited"
+    expect(screen.getByText("edited")).toBeDefined();
+    // Open modal to see amount detail
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
     expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
   });
 
-  it("shows only the new amount when the amount did not change (description-only edit)", () => {
+  it("modal shows only the new amount when amount did not change", () => {
     render(
       <ActivityFeed
         logs={[
@@ -161,11 +165,12 @@ describe("ActivityFeed — expense_edited amount display", () => {
         ]}
       />
     );
-    expect(screen.queryByText(/→/)).toBeNull();
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.queryByText(/\$25\.00 → /)).toBeNull();
     expect(screen.getByText(/\$25\.00/)).toBeDefined();
   });
 
-  it("shows only the amount when previousAmountCents is absent (older log entries)", () => {
+  it("modal shows only the amount when previousAmountCents is absent (older log entries)", () => {
     render(
       <ActivityFeed
         logs={[
@@ -176,11 +181,12 @@ describe("ActivityFeed — expense_edited amount display", () => {
         ]}
       />
     );
-    expect(screen.queryByText(/→/)).toBeNull();
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.queryByText(/\$25\.00 → /)).toBeNull();
     expect(screen.getByText(/\$25\.00/)).toBeDefined();
   });
 
-  it("does not show an arrow for expense_added even with a prior amount in payload", () => {
+  it("does not show an arrow in the list for expense_added even with a prior amount in payload", () => {
     render(
       <ActivityFeed
         logs={[
@@ -191,13 +197,13 @@ describe("ActivityFeed — expense_edited amount display", () => {
         ]}
       />
     );
-    // Arrow only shows for expense_edited
+    // No → in the list item
     expect(screen.queryByText(/→/)).toBeNull();
   });
 });
 
-describe("ActivityFeed — expense_edited rich descriptions", () => {
-  it("shows 'changed the price on' for amount change", () => {
+describe("ActivityFeed — expense_edited list item", () => {
+  it("always shows 'edited' for amount-only change", () => {
     render(
       <ActivityFeed
         logs={[
@@ -213,31 +219,13 @@ describe("ActivityFeed — expense_edited rich descriptions", () => {
         ]}
       />
     );
-    expect(screen.getByText(/changed the price on/)).toBeDefined();
-    expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
+    expect(screen.getByText("edited")).toBeDefined();
+    expect(screen.getByText("Dinner")).toBeDefined();
+    // Verbose descriptions are modal-only — not in the list item
+    expect(screen.queryByText(/changed the price/)).toBeNull();
   });
 
-  it("shows 'changed the date on' for date change", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 2500,
-              paidByDisplayName: "Alice",
-              changes: { date: { from: "2024-01-05", to: "2024-01-06" } },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/changed the date on/)).toBeDefined();
-    expect(screen.getByText(/Jan 5 → Jan 6/)).toBeDefined();
-  });
-
-  it("shows 'added [name] to' for a single participant addition", () => {
+  it("always shows 'edited' for participant change", () => {
     render(
       <ActivityFeed
         logs={[
@@ -253,67 +241,11 @@ describe("ActivityFeed — expense_edited rich descriptions", () => {
         ]}
       />
     );
-    expect(screen.getByText(/added Bob to/)).toBeDefined();
+    expect(screen.getByText("edited")).toBeDefined();
+    expect(screen.queryByText(/added Bob/)).toBeNull();
   });
 
-  it("shows 'added [names] to' for multiple participant additions", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 2500,
-              paidByDisplayName: "Alice",
-              changes: { participants: { added: ["Greg", "Alex"], removed: [] } },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/added Greg and Alex to/)).toBeDefined();
-  });
-
-  it("shows 'removed [name] from' for a participant removal", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 2500,
-              paidByDisplayName: "Alice",
-              changes: { participants: { added: [], removed: ["Bob"] } },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/removed Bob from/)).toBeDefined();
-  });
-
-  it("shows 'added X, removed Y on' when both adding and removing participants", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 2500,
-              paidByDisplayName: "Alice",
-              changes: { participants: { added: ["Greg"], removed: ["Bob"] } },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/added Greg, removed Bob on/)).toBeDefined();
-  });
-
-  it("shows 'renamed' with old→new names for a description-only change", () => {
+  it("always shows 'edited' for a description rename", () => {
     render(
       <ActivityFeed
         logs={[
@@ -329,55 +261,12 @@ describe("ActivityFeed — expense_edited rich descriptions", () => {
         ]}
       />
     );
-    expect(screen.getByText(/renamed/)).toBeDefined();
-    expect(screen.getByText(/Taxi → Uber/)).toBeDefined();
+    expect(screen.getByText("edited")).toBeDefined();
+    // Rename detail is modal-only
+    expect(screen.queryByText(/renamed/)).toBeNull();
   });
 
-  it("shows 'changed the payer on' for a paidBy change", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 2500,
-              paidByDisplayName: "Alice",
-              changes: { paidBy: { from: "Bob", to: "Alice" } },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/changed the payer on/)).toBeDefined();
-    expect(screen.getByText(/Bob → Alice/)).toBeDefined();
-  });
-
-  it("combines multiple change types joined by 'and'", () => {
-    render(
-      <ActivityFeed
-        logs={[
-          makeLog({
-            action: "expense_edited",
-            payload: {
-              description: "Dinner",
-              amountCents: 3000,
-              paidByDisplayName: "Alice",
-              changes: {
-                amount: { from: 2500, to: 3000 },
-                date: { from: "2024-01-05", to: "2024-01-06" },
-              },
-            },
-          }),
-        ]}
-      />
-    );
-    expect(screen.getByText(/changed the price and changed the date on/)).toBeDefined();
-    expect(screen.getByText(/\$25\.00 → \$30\.00/)).toBeDefined();
-    expect(screen.getByText(/Jan 5 → Jan 6/)).toBeDefined();
-  });
-
-  it("falls back to 'edited' when changes object is empty", () => {
+  it("shows 'edited' when changes object is empty", () => {
     render(
       <ActivityFeed
         logs={[
@@ -668,5 +557,147 @@ describe("ActivityFeed — click to open modal", () => {
     // Should show the old → new amount
     const modalAmounts = screen.getAllByText(/\$25\.00 → \$30\.00/);
     expect(modalAmounts.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("ActivityFeed — splits display in modals", () => {
+  it("expense_added modal shows per-person split amounts when splits present", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: {
+              description: "Birdseed",
+              amountCents: 3000,
+              paidByDisplayName: "Greg",
+              splitType: "equal",
+              splits: [
+                { displayName: "Greg", amountCents: 1000 },
+                { displayName: "Alice", amountCents: 1000 },
+                { displayName: "Bob", amountCents: 1000 },
+              ],
+            },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Birdseed").closest("div")!);
+    expect(screen.getByText("Expense added")).toBeDefined();
+    expect(screen.getByText(/Split/)).toBeDefined();
+    expect(screen.getByText(/Greg · \$10\.00/)).toBeDefined();
+    expect(screen.getByText(/Alice · \$10\.00/)).toBeDefined();
+    expect(screen.getByText(/Bob · \$10\.00/)).toBeDefined();
+  });
+
+  it("expense_added modal falls back to name list for old logs without splits", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: {
+              description: "Birdseed",
+              amountCents: 3000,
+              paidByDisplayName: "Greg",
+              participantDisplayNames: ["Greg", "Alice", "Bob"],
+            },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Birdseed").closest("div")!);
+    expect(screen.getByText("Split between")).toBeDefined();
+    expect(screen.getByText(/Greg, Alice, and Bob/)).toBeDefined();
+  });
+
+  it("expense_deleted modal shows split snapshot with amounts", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_deleted",
+            payload: {
+              description: "Lunch",
+              amountCents: 2000,
+              paidByDisplayName: "Alice",
+              splitType: "custom",
+              splits: [
+                { displayName: "Alice", amountCents: 1500 },
+                { displayName: "Bob", amountCents: 500 },
+              ],
+            },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Lunch").closest("div")!);
+    expect(screen.getByText("Expense deleted")).toBeDefined();
+    expect(screen.getByText(/Custom/)).toBeDefined();
+    expect(screen.getByText(/Alice · \$15\.00/)).toBeDefined();
+    expect(screen.getByText(/Bob · \$5\.00/)).toBeDefined();
+  });
+
+  it("expense_edited modal shows before/after splits when both present", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              paidByDisplayName: "Greg",
+              splitType: "equal",
+              splitsBefore: [
+                { displayName: "Greg", amountCents: 1500 },
+                { displayName: "Alice", amountCents: 1500 },
+              ],
+              splits: [
+                { displayName: "Greg", amountCents: 1000 },
+                { displayName: "Alice", amountCents: 1000 },
+                { displayName: "Bob", amountCents: 1000 },
+              ],
+              changes: { participants: { added: ["Bob"], removed: [] } },
+            },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.getByText("Expense edited")).toBeDefined();
+    expect(screen.getByText("Before")).toBeDefined();
+    expect(screen.getByText("After")).toBeDefined();
+    // Before amounts
+    expect(screen.getByText(/Greg · \$15\.00/)).toBeDefined();
+    // After amounts
+    expect(screen.getByText(/Bob · \$10\.00/)).toBeDefined();
+  });
+
+  it("expense_edited modal shows splitType change in Changes section", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              paidByDisplayName: "Greg",
+              splitType: "custom",
+              changes: { splitType: { from: "equal", to: "custom" } },
+            },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.getByText(/Split type:/)).toBeDefined();
+    expect(screen.getByText(/Equal.*Custom/)).toBeDefined();
   });
 });

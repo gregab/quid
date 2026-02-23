@@ -182,6 +182,29 @@ export async function PUT(
     (changes as Record<string, unknown>).splitType = { from: "custom", to: "equal" };
   }
 
+  // Build splitsBefore snapshot from existing splits
+  const splitsBefore = (splits ?? []).map((s) => ({
+    displayName: (s.User as { id: string; displayName: string } | null)?.displayName ?? "Unknown",
+    amountCents: s.amountCents,
+  }));
+
+  // Build splitsAfter snapshot
+  let splitsAfter: { displayName: string; amountCents: number }[];
+  if (effectiveSplitType === "custom" && splitAmounts) {
+    splitsAfter = participants.map((m, i) => ({
+      displayName: m.User!.displayName,
+      amountCents: splitAmounts[i]!,
+    }));
+  } else {
+    const n = participants.length;
+    const base = Math.floor(amountCents / n);
+    const remainder = amountCents % n;
+    splitsAfter = participants.map((m, i) => ({
+      displayName: m.User!.displayName,
+      amountCents: base + (i < remainder ? 1 : 0),
+    }));
+  }
+
   const { error } = await supabase.rpc("update_expense", {
     _expense_id: expenseId,
     _group_id: groupId,
@@ -194,6 +217,8 @@ export async function PUT(
     _changes: changes,
     _split_type: effectiveSplitType,
     _split_amounts: splitAmounts ?? undefined,
+    _splits_before: splitsBefore,
+    _splits_after: splitsAfter,
   });
 
   if (error) {

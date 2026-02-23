@@ -222,6 +222,10 @@ export function ExpenseActions({
         isPending: true,
       });
     } else {
+      const splits = expense.splits.map((s) => ({
+        displayName: members.find((m) => m.userId === s.userId)?.displayName ?? "Unknown",
+        amountCents: s.amountCents,
+      }));
       onOptimisticActivity({
         id: `activity-pending-${Date.now()}`,
         action: "expense_deleted",
@@ -229,6 +233,8 @@ export function ExpenseActions({
           description: expense.description,
           amountCents: expense.amountCents,
           paidByDisplayName: expense.paidByDisplayName,
+          splitType: expense.splitType,
+          splits,
         },
         createdAt: new Date(),
         actor: { displayName: currentUserDisplayName },
