@@ -192,7 +192,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               title={m.User?.email ?? undefined}
             />
           ))}
-          <AddMemberForm groupId={group.id} existingMemberIds={groupMembers.map((m) => m.userId)} />
+          <AddMemberForm groupId={group.id} existingMemberIds={groupMembers.map((m) => m.userId)} inviteToken={group.inviteToken} />
           <CopyInviteLinkButton inviteToken={group.inviteToken} />
         </div>
       </div>

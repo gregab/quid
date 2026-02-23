@@ -53,19 +53,19 @@ describe("CopyInviteLinkButton — clipboard (no navigator.share)", () => {
   it("shows 'Copied!' feedback after clicking", async () => {
     vi.useFakeTimers();
     render(<CopyInviteLinkButton inviteToken="abc123" />);
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: /copy invite link/i });
 
     await act(async () => {
       fireEvent.click(button);
     });
 
-    expect(screen.getByRole("button").textContent).toBe("Copied!");
+    expect(screen.getByText("Copied!")).toBeDefined();
 
     // After 2 seconds, resets to original label
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(screen.getByRole("button").textContent).toBe("Copy invite link");
+    expect(screen.getByText("Copy invite link")).toBeDefined();
 
     vi.useRealTimers();
   });
@@ -84,7 +84,7 @@ describe("CopyInviteLinkButton — share sheet (navigator.share available)", () 
     render(<CopyInviteLinkButton inviteToken="abc123" />);
     // useEffect sets canShare after mount
     await act(async () => {});
-    expect(screen.getByRole("button", { name: /share invite/i })).toBeDefined();
+    expect(screen.getByText("Share invite")).toBeDefined();
   });
 
   it("calls navigator.share with the correct invite URL", async () => {
