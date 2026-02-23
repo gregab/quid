@@ -27,14 +27,22 @@ const BASE_PROPS = {
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
+  const participantIds = overrides.participantIds ?? ["user-a", "user-b"];
+  const amountCents = overrides.amountCents ?? 1000;
+  const defaultSplits = participantIds.map((id, i) => ({
+    userId: id,
+    amountCents: Math.floor(amountCents / participantIds.length) + (i < amountCents % participantIds.length ? 1 : 0),
+  }));
   return {
     id: "expense-1",
     description: "Dinner",
-    amountCents: 1000,
+    amountCents,
     date: "2024-01-15",
     paidById: "user-a",
     paidByDisplayName: "Alice",
-    participantIds: ["user-a", "user-b"],
+    participantIds,
+    splits: defaultSplits,
+    splitType: "equal",
     canEdit: true,
     canDelete: true,
     ...overrides,
@@ -173,5 +181,62 @@ describe("GroupInteractive — Balances with departed members", () => {
     });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
     expect(screen.getAllByText("Unknown").length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("GroupInteractive — Balances with custom (uneven) splits", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: {}, error: null }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("uses stored split amounts for balance computation (not equal re-derivation)", () => {
+    // $100 expense: Alice paid, Bob owes $60, Alice owes $40 (custom split)
+    const expense = makeExpense({
+      amountCents: 10000,
+      paidById: "user-a",
+      splitType: "custom",
+      participantIds: ["user-a", "user-b"],
+      splits: [
+        { userId: "user-a", amountCents: 4000 },
+        { userId: "user-b", amountCents: 6000 },
+      ],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    // Bob owes Alice $60, not $50
+    expect(screen.getAllByText("$60.00").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows settled up when custom splits cancel out", () => {
+    // Alice paid $100, Bob owes $60 (custom), Alice owes $40
+    // Bob pays $60 back to Alice (all $60 is Alice's share) → net zero
+    const exp1 = makeExpense({
+      id: "1",
+      amountCents: 10000,
+      paidById: "user-a",
+      splitType: "custom",
+      participantIds: ["user-a", "user-b"],
+      splits: [
+        { userId: "user-a", amountCents: 4000 },
+        { userId: "user-b", amountCents: 6000 },
+      ],
+    });
+    // Bob paid $60, only Alice participates → Alice owes Bob $60 (cancels exp1)
+    const exp2 = makeExpense({
+      id: "2",
+      amountCents: 6000,
+      paidById: "user-b",
+      splitType: "custom",
+      participantIds: ["user-a"],
+      splits: [{ userId: "user-a", amountCents: 6000 }],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[exp1, exp2]} />);
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 });

@@ -130,20 +130,28 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     color: memberColorMap.get(m.userId)!,
   }));
 
-  const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => ({
-    id: expense.id,
-    description: expense.description,
-    amountCents: expense.amountCents,
-    date: expense.date.split("T")[0]!,
-    paidById: expense.paidById,
-    paidByDisplayName: expense.User?.displayName ?? "Deleted User",
-    participantIds: (expense.ExpenseSplit ?? []).map((s) => s.userId),
-    canEdit: expense.isPayment ? false : expense.createdById === user.id,
-    canDelete: expense.createdById === user.id,
-    isPayment: expense.isPayment,
-    createdById: expense.createdById ?? undefined,
-    createdAt: expense.createdAt,
-  }));
+  const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => {
+    const expenseSplits = (expense.ExpenseSplit ?? []).map((s) => ({
+      userId: s.userId,
+      amountCents: s.amountCents,
+    }));
+    return {
+      id: expense.id,
+      description: expense.description,
+      amountCents: expense.amountCents,
+      date: expense.date.split("T")[0]!,
+      paidById: expense.paidById,
+      paidByDisplayName: expense.User?.displayName ?? "Deleted User",
+      participantIds: expenseSplits.map((s) => s.userId),
+      splits: expenseSplits,
+      splitType: (expense.splitType as "equal" | "custom") ?? "equal",
+      canEdit: expense.isPayment ? false : expense.createdById === user.id,
+      canDelete: expense.createdById === user.id,
+      isPayment: expense.isPayment,
+      createdById: expense.createdById ?? undefined,
+      createdAt: expense.createdAt,
+    };
+  });
 
   // Compute how much the current user owes on net (positive = owes money)
   const allExpenses = expenses ?? [];

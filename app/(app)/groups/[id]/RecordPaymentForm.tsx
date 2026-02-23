@@ -88,6 +88,8 @@ export function RecordPaymentForm({
       paidById: submittedFromId,
       paidByDisplayName: fromDisplayName,
       participantIds: [submittedToId],
+      splits: [{ userId: submittedToId, amountCents }],
+      splitType: "equal",
       canEdit: false,
       canDelete: true,
       isPayment: true,

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
+import { splitAmount } from "@/lib/balances/splitAmount";
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -14,6 +15,29 @@ interface AddExpenseFormProps {
   onOptimisticAdd: (expense: ExpenseRow) => void;
   onSettled: () => void;
   onOptimisticActivity: (log: ActivityLog) => void;
+}
+
+type SplitType = "equal" | "custom";
+
+/**
+ * Scales existing custom amounts proportionally when the total changes.
+ * Uses integer math with remainder distribution to avoid float drift.
+ */
+function scaleAmounts(
+  amounts: Map<string, string>,
+  participantIds: string[],
+  oldTotalCents: number,
+  newTotalCents: number
+): Map<string, string> {
+  if (oldTotalCents <= 0 || participantIds.length === 0) return amounts;
+  const ids = participantIds.filter((id) => amounts.has(id));
+  const oldCents = ids.map((id) => Math.round(parseFloat(amounts.get(id) ?? "0") * 100));
+  const scaled = oldCents.map((a) => Math.floor((a * newTotalCents) / oldTotalCents));
+  const remainder = newTotalCents - scaled.reduce((s, a) => s + a, 0);
+  const final = scaled.map((a, i) => a + (i < remainder ? 1 : 0));
+  const result = new Map(amounts);
+  ids.forEach((id, i) => result.set(id, (final[i]! / 100).toFixed(2)));
+  return result;
 }
 
 export function AddExpenseForm({
@@ -33,21 +57,79 @@ export function AddExpenseForm({
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]!);
   const [paidByUserId, setPaidByUserId] = useState(currentUserId);
   const [participantIds, setParticipantIds] = useState<Set<string>>(new Set(allMemberIds));
+  const [splitType, setSplitType] = useState<SplitType>("equal");
+  const [customAmounts, setCustomAmounts] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const parsedTotalCents = Math.round(parseFloat(amount) * 100);
+  const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0;
+
+  // When switching to custom, pre-fill equal amounts
+  function handleSplitTypeChange(type: SplitType) {
+    if (type === "custom" && splitType === "equal") {
+      const ids = [...participantIds];
+      if (ids.length > 0 && totalCentsValid) {
+        const equal = splitAmount(parsedTotalCents, ids.length);
+        const map = new Map<string, string>();
+        ids.forEach((id, i) => map.set(id, (equal[i]! / 100).toFixed(2)));
+        setCustomAmounts(map);
+      } else {
+        const map = new Map<string, string>();
+        [...participantIds].forEach((id) => map.set(id, "0.00"));
+        setCustomAmounts(map);
+      }
+    }
+    setSplitType(type);
+  }
 
   function toggleParticipant(userId: string) {
     setParticipantIds((prev) => {
       const next = new Set(prev);
       if (next.has(userId)) {
         next.delete(userId);
+        if (splitType === "custom") {
+          setCustomAmounts((m) => {
+            const n = new Map(m);
+            n.delete(userId);
+            return n;
+          });
+        }
       } else {
         next.add(userId);
+        if (splitType === "custom") {
+          setCustomAmounts((m) => new Map(m).set(userId, "0.00"));
+        }
       }
       return next;
     });
   }
+
+  // Scale custom amounts when total changes
+  useEffect(() => {
+    if (splitType !== "custom" || !totalCentsValid) return;
+    // Only scale if there's already data in customAmounts
+    if (customAmounts.size === 0) return;
+    const currentSum = [...customAmounts.values()].reduce(
+      (s, v) => s + Math.round(parseFloat(v || "0") * 100),
+      0
+    );
+    if (currentSum === parsedTotalCents) return; // already matches, no scaling needed
+    setCustomAmounts((prev) =>
+      scaleAmounts(prev, [...participantIds], currentSum, parsedTotalCents)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedTotalCents]);
+
+  const customSumCents =
+    splitType === "custom"
+      ? [...customAmounts.values()].reduce(
+          (s, v) => s + Math.round(parseFloat(v || "0") * 100),
+          0
+        )
+      : 0;
+  const customRemaining = totalCentsValid ? parsedTotalCents - customSumCents : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,13 +148,41 @@ export function AddExpenseForm({
     }
 
     const amountCents = Math.round(parsedAmount * 100);
+    const submittedParticipantIds = [...participantIds];
+
+    if (splitType === "custom") {
+      const sum = submittedParticipantIds.reduce(
+        (s, id) => s + Math.round(parseFloat(customAmounts.get(id) ?? "0") * 100),
+        0
+      );
+      if (sum !== amountCents) {
+        setError(
+          `Custom amounts must sum to $${(amountCents / 100).toFixed(2)}. Current sum: $${(sum / 100).toFixed(2)}.`
+        );
+        return;
+      }
+    }
+
     const submittedDescription = description;
     const submittedDate = date;
     const submittedPaidByUserId = paidByUserId;
-    const submittedParticipantIds = [...participantIds];
+    const submittedSplitType = splitType;
+    const submittedCustomAmounts = new Map(customAmounts);
 
     const paidByMember = members.find((m) => m.userId === submittedPaidByUserId);
     const paidByDisplayName = paidByMember?.displayName ?? currentUserDisplayName;
+
+    // Build splits for optimistic row
+    const optimisticSplits =
+      submittedSplitType === "custom"
+        ? submittedParticipantIds.map((id) => ({
+            userId: id,
+            amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
+          }))
+        : splitAmount(amountCents, submittedParticipantIds.length).map((amt, i) => ({
+            userId: submittedParticipantIds[i]!,
+            amountCents: amt,
+          }));
 
     // Close modal and clear form immediately (optimistic)
     setOpen(false);
@@ -88,6 +198,8 @@ export function AddExpenseForm({
       paidById: submittedPaidByUserId,
       paidByDisplayName,
       participantIds: submittedParticipantIds,
+      splits: optimisticSplits,
+      splitType: submittedSplitType,
       canEdit: true,
       canDelete: true,
       isPending: true,
@@ -106,16 +218,25 @@ export function AddExpenseForm({
     setLoading(true);
 
     const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
+    const body: Record<string, unknown> = {
+      description: submittedDescription,
+      amountCents,
+      date: submittedDate,
+      paidById: submittedPaidByUserId,
+      participantIds: submittedParticipantIds,
+      splitType: submittedSplitType,
+    };
+    if (submittedSplitType === "custom") {
+      body.customSplits = submittedParticipantIds.map((id) => ({
+        userId: id,
+        amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
+      }));
+    }
+
     await fetch(`${basePath}/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description: submittedDescription,
-        amountCents,
-        date: submittedDate,
-        paidById: submittedPaidByUserId,
-        participantIds: submittedParticipantIds,
-      }),
+      body: JSON.stringify(body),
     });
 
     setLoading(false);
@@ -130,6 +251,8 @@ export function AddExpenseForm({
     setDate(new Date().toISOString().split("T")[0]!);
     setPaidByUserId(currentUserId);
     setParticipantIds(new Set(allMemberIds));
+    setSplitType("equal");
+    setCustomAmounts(new Map());
     setError(null);
     setAmountError(false);
   }
@@ -138,6 +261,8 @@ export function AddExpenseForm({
     setOpen(false);
     resetForm();
   }
+
+  const orderedParticipants = members.filter((m) => participantIds.has(m.userId));
 
   return (
     <>
@@ -243,6 +368,81 @@ export function AddExpenseForm({
                     </label>
                   ))}
                 </div>
+
+                {/* Split type toggle */}
+                {participantIds.size > 0 && (
+                  <div className="mt-3">
+                    <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
+                      <button
+                        type="button"
+                        onClick={() => handleSplitTypeChange("equal")}
+                        className={`px-3 py-1.5 transition-colors ${
+                          splitType === "equal"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Equal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSplitTypeChange("custom")}
+                        className={`px-3 py-1.5 transition-colors border-l border-gray-200 dark:border-gray-700 ${
+                          splitType === "custom"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Custom
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom amount inputs */}
+                {splitType === "custom" && participantIds.size > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {orderedParticipants.map((m) => (
+                      <div key={m.userId} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                          {m.displayName}
+                          {m.userId === currentUserId && (
+                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          )}
+                        </span>
+                        <div className="w-24">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={customAmounts.get(m.userId) ?? "0.00"}
+                            onChange={(e) =>
+                              setCustomAmounts((prev) => new Map(prev).set(m.userId, e.target.value))
+                            }
+                            className="text-right text-sm py-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {/* Running total indicator */}
+                    {totalCentsValid && customRemaining !== null && (
+                      <p
+                        className={`text-xs font-medium text-right ${
+                          customRemaining === 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}
+                      >
+                        {customRemaining === 0
+                          ? "Amounts add up ✓"
+                          : customRemaining > 0
+                          ? `Remaining: $${(customRemaining / 100).toFixed(2)}`
+                          : `Over by: $${(Math.abs(customRemaining) / 100).toFixed(2)}`}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">

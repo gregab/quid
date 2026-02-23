@@ -9,7 +9,6 @@ import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import type { MemberColor } from "./MemberPill";
-import { splitAmount } from "@/lib/balances/splitAmount";
 
 export interface Member {
   userId: string;
@@ -26,6 +25,8 @@ export interface ExpenseRow {
   paidById: string;
   paidByDisplayName: string;
   participantIds: string[];
+  splits: Array<{ userId: string; amountCents: number }>;
+  splitType: "equal" | "custom";
   canEdit: boolean;
   canDelete: boolean;
   isPending?: boolean;
@@ -80,32 +81,23 @@ function getMemberPillProps(
  */
 function getPersonalContext(
   expense: ExpenseRow,
-  currentUserId: string,
-  members: Member[]
+  currentUserId: string
 ): { label: string; amountCents: number; positive: boolean } | null {
   if (expense.isPayment) return null;
 
-  const participantIds =
-    expense.participantIds.length > 0
-      ? expense.participantIds
-      : members.map((m) => m.userId);
-
-  const n = participantIds.length;
-  if (n === 0) return null;
-
-  const myIndex = participantIds.indexOf(currentUserId);
-  const amIParticipant = myIndex !== -1;
+  const mySplit = expense.splits.find((s) => s.userId === currentUserId);
+  const amIParticipant = mySplit !== undefined;
   const amIPayer = expense.paidById === currentUserId;
 
   if (amIPayer) {
-    const myShare = amIParticipant ? splitAmount(expense.amountCents, n)[myIndex]! : 0;
+    const myShare = mySplit?.amountCents ?? 0;
     const lentAmount = expense.amountCents - myShare;
     if (lentAmount <= 0) return null;
     return { label: "you lent", amountCents: lentAmount, positive: true };
   }
 
   if (amIParticipant) {
-    const myShare = splitAmount(expense.amountCents, n)[myIndex]!;
+    const myShare = mySplit!.amountCents;
     if (myShare <= 0) return null;
     return { label: "you owe", amountCents: myShare, positive: false };
   }
@@ -279,7 +271,7 @@ export function ExpensesList({
       ) : (
         <ul className="space-y-2">
           {expenses.map((expense) => {
-            const personalContext = getPersonalContext(expense, currentUserId, members);
+            const personalContext = getPersonalContext(expense, currentUserId);
             const payerName = expense.paidById === currentUserId
               ? "you"
               : getMemberPillProps(expense.paidById, members, allUserNames).name;

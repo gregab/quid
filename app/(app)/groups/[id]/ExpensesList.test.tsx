@@ -24,17 +24,26 @@ const BASE_PROPS = {
     "user-1": "Alice",
     "user-2": "Bob",
   },
+  onOptimisticActivity: vi.fn(),
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
+  const participantIds = overrides.participantIds ?? ["user-1"];
+  const amountCents = overrides.amountCents ?? 2500;
+  const defaultSplits = participantIds.map((id, i) => ({
+    userId: id,
+    amountCents: Math.floor(amountCents / participantIds.length) + (i < amountCents % participantIds.length ? 1 : 0),
+  }));
   return {
     id: "expense-1",
     description: "Dinner",
-    amountCents: 2500,
+    amountCents,
     date: "2024-01-15",
     paidById: "user-1",
     paidByDisplayName: "Alice",
-    participantIds: ["user-1"],
+    participantIds,
+    splits: defaultSplits,
+    splitType: "equal",
     canEdit: true,
     canDelete: true,
     ...overrides,
@@ -282,6 +291,8 @@ describe("ExpensesList — payment card rendering", () => {
       paidById: "user-1",
       paidByDisplayName: "Alice",
       participantIds: ["user-2"],
+      splits: [{ userId: "user-2", amountCents: 5000 }],
+      splitType: "equal",
       canEdit: false,
       canDelete: true,
       isPayment: true,
@@ -424,10 +435,18 @@ describe("ExpensesList — expense row display", () => {
     expect(list?.textContent).not.toContain("you owe");
   });
 
-  it("falls back to all members for personal stake calculation when participantIds is empty", () => {
-    // Empty participantIds: should treat all members (user-1, user-2) as participants
-    // current user (user-1) is payer, so they lent Bob's share
-    const expense = makeExpense({ paidById: "user-1", participantIds: [], amountCents: 2000 });
+  it("shows correct personal stake using stored splits (not recomputed from participantIds)", () => {
+    // Alice paid $2000 split with Bob ($1000 each via splits)
+    // Alice is payer, so she lent Bob's share
+    const expense = makeExpense({
+      paidById: "user-1",
+      participantIds: ["user-1", "user-2"],
+      amountCents: 2000,
+      splits: [
+        { userId: "user-1", amountCents: 1000 },
+        { userId: "user-2", amountCents: 1000 },
+      ],
+    });
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
     const list = document.querySelector("ul");
     // Alice lent Bob's half → "you lent $10.00"
@@ -452,7 +471,7 @@ describe("ExpensesList — expense row display", () => {
   });
 
   it("does not show a comma-separated participant line for payment rows", () => {
-    const payment = {
+    const payment: ExpenseRow = {
       id: "payment-1",
       description: "Payment",
       amountCents: 5000,
@@ -460,13 +479,59 @@ describe("ExpensesList — expense row display", () => {
       paidById: "user-1",
       paidByDisplayName: "Alice",
       participantIds: ["user-2"],
+      splits: [{ userId: "user-2", amountCents: 5000 }],
+      splitType: "equal",
       canEdit: false,
       canDelete: true,
-      isPayment: true as const,
+      isPayment: true,
       createdById: "user-1",
     };
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[payment]} />);
     // Payment shows direction text ("you paid Bob"), not a comma-separated list
     expect(screen.queryByText("Alice, Bob")).toBeNull();
+  });
+});
+
+// ----------------------------
+// Custom splits: personal stake display
+// ----------------------------
+
+describe("ExpensesList — custom splits personal stake display", () => {
+  it("shows the correct 'you owe' amount for a custom split (not equal)", () => {
+    // $100 expense: Alice paid, Bob owes $60, Alice owes $40 (uneven)
+    const expense = makeExpense({
+      paidById: "user-1",
+      participantIds: ["user-1", "user-2"],
+      amountCents: 10000,
+      splitType: "custom",
+      splits: [
+        { userId: "user-1", amountCents: 4000 },
+        { userId: "user-2", amountCents: 6000 },
+      ],
+    });
+    // Current user (user-1) is payer → "you lent" = total - myShare = $100 - $40 = $60
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("you lent");
+    expect(list?.textContent).toContain("$60.00");
+  });
+
+  it("shows 'you owe' the exact custom amount when someone else paid", () => {
+    // $100 expense: Bob paid, Alice owes $40 (custom), Bob owes $60
+    const expense = makeExpense({
+      paidById: "user-2",
+      participantIds: ["user-1", "user-2"],
+      amountCents: 10000,
+      splitType: "custom",
+      splits: [
+        { userId: "user-1", amountCents: 4000 },
+        { userId: "user-2", amountCents: 6000 },
+      ],
+    });
+    // Current user (user-1) is participant, Bob paid → "you owe $40.00"
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("you owe");
+    expect(list?.textContent).toContain("$40.00");
   });
 });

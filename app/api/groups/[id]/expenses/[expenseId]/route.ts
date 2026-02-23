@@ -8,6 +8,10 @@ const updateExpenseSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   paidById: z.string().uuid().optional(),
   participantIds: z.array(z.string().uuid()).min(1).optional(),
+  splitType: z.enum(["equal", "custom"]).optional(),
+  customSplits: z
+    .array(z.object({ userId: z.string().uuid(), amountCents: z.number().int().min(0) }))
+    .optional(),
 });
 
 export async function PUT(
@@ -73,7 +77,15 @@ export async function PUT(
     );
   }
 
-  const { description, amountCents, date, paidById: rawPaidById, participantIds: rawParticipantIds } = parsed.data;
+  const {
+    description,
+    amountCents,
+    date,
+    paidById: rawPaidById,
+    participantIds: rawParticipantIds,
+    splitType,
+    customSplits,
+  } = parsed.data;
 
   const memberIds = new Set(allMembers.map((m) => m.userId));
 
@@ -130,6 +142,41 @@ export async function PUT(
 
   const participantIds = participants.map((m) => m.userId);
 
+  // Validate custom splits
+  let splitAmounts: number[] | null = null;
+  const effectiveSplitType = splitType ?? "equal";
+
+  if (effectiveSplitType === "custom") {
+    if (!customSplits || customSplits.length === 0) {
+      return NextResponse.json({ data: null, error: "Custom split amounts are required when splitType is 'custom'" }, { status: 400 });
+    }
+    const participantSet = new Set(participantIds);
+    for (const s of customSplits) {
+      if (!participantSet.has(s.userId)) {
+        return NextResponse.json({ data: null, error: "Custom split includes a userId that is not a participant" }, { status: 400 });
+      }
+    }
+    const sum = customSplits.reduce((acc, s) => acc + s.amountCents, 0);
+    if (sum !== amountCents) {
+      return NextResponse.json(
+        { data: null, error: `Custom split amounts must sum to the total (expected ${amountCents}, got ${sum})` },
+        { status: 400 }
+      );
+    }
+    splitAmounts = participantIds.map((id) => {
+      const s = customSplits.find((cs) => cs.userId === id);
+      return s?.amountCents ?? 0;
+    });
+
+    // Record split type change in activity log changes
+    if (expense.splitType !== "custom") {
+      (changes as Record<string, unknown>).splitType = { from: expense.splitType, to: "custom" };
+    }
+  } else if (expense.splitType === "custom") {
+    // Switching back to equal
+    (changes as Record<string, unknown>).splitType = { from: "custom", to: "equal" };
+  }
+
   const { error } = await supabase.rpc("update_expense", {
     _expense_id: expenseId,
     _group_id: groupId,
@@ -140,6 +187,8 @@ export async function PUT(
     _participant_ids: participantIds,
     _paid_by_display_name: newPaidByMember.User!.displayName,
     _changes: changes,
+    _split_type: effectiveSplitType,
+    _split_amounts: splitAmounts ?? undefined,
   });
 
   if (error) {

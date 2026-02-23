@@ -24,6 +24,7 @@ interface ExpenseDetailModalProps {
 }
 
 type ModalMode = "view" | "edit" | "delete-confirm";
+type SplitType = "equal" | "custom";
 
 function formatCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -33,6 +34,27 @@ function formatDisplayDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year!, month! - 1, day!);
   return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+/**
+ * Scales existing custom amounts proportionally when the total changes.
+ * Uses integer math with remainder distribution to avoid float drift.
+ */
+function scaleAmounts(
+  amounts: Map<string, string>,
+  participantIds: string[],
+  oldTotalCents: number,
+  newTotalCents: number
+): Map<string, string> {
+  if (oldTotalCents <= 0 || participantIds.length === 0) return amounts;
+  const ids = participantIds.filter((id) => amounts.has(id));
+  const oldCents = ids.map((id) => Math.round(parseFloat(amounts.get(id) ?? "0") * 100));
+  const scaled = oldCents.map((a) => Math.floor((a * newTotalCents) / oldTotalCents));
+  const remainder = newTotalCents - scaled.reduce((s, a) => s + a, 0);
+  const final = scaled.map((a, i) => a + (i < remainder ? 1 : 0));
+  const result = new Map(amounts);
+  ids.forEach((id, i) => result.set(id, (final[i]! / 100).toFixed(2)));
+  return result;
 }
 
 export function ExpenseDetailModal({
@@ -58,30 +80,101 @@ export function ExpenseDetailModal({
   const [participantIds, setParticipantIds] = useState<Set<string>>(
     new Set(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
   );
+  const [editSplitType, setEditSplitType] = useState<SplitType>(expense.splitType);
+  const [editCustomAmounts, setEditCustomAmounts] = useState<Map<string, string>>(() => {
+    const map = new Map<string, string>();
+    for (const s of expense.splits) {
+      map.set(s.userId, (s.amountCents / 100).toFixed(2));
+    }
+    return map;
+  });
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
 
   const parsedAmountCents = Math.round(parseFloat(amount) * 100);
+  const totalCentsValid = !isNaN(parsedAmountCents) && parsedAmountCents > 0;
+
   const originalParticipantIds = new Set(
     expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId)
   );
+
+  // Custom split sum for edit mode
+  const editCustomSumCents =
+    editSplitType === "custom"
+      ? [...editCustomAmounts.values()].reduce(
+          (s, v) => s + Math.round(parseFloat(v || "0") * 100),
+          0
+        )
+      : 0;
+  const editCustomRemaining = totalCentsValid ? parsedAmountCents - editCustomSumCents : null;
+
   const hasChanges =
     description !== expense.description ||
     (!isNaN(parsedAmountCents) && parsedAmountCents !== expense.amountCents) ||
     date !== expense.date ||
     paidByUserId !== expense.paidById ||
     participantIds.size !== originalParticipantIds.size ||
-    [...participantIds].some((id) => !originalParticipantIds.has(id));
+    [...participantIds].some((id) => !originalParticipantIds.has(id)) ||
+    editSplitType !== expense.splitType ||
+    (editSplitType === "custom" &&
+      [...participantIds].some((id) => {
+        const stored = expense.splits.find((s) => s.userId === id)?.amountCents ?? 0;
+        const current = Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100);
+        return stored !== current;
+      }));
 
   function toggleParticipant(userId: string) {
     setParticipantIds((prev) => {
       const next = new Set(prev);
-      if (next.has(userId)) next.delete(userId);
-      else next.add(userId);
+      if (next.has(userId)) {
+        next.delete(userId);
+        if (editSplitType === "custom") {
+          setEditCustomAmounts((m) => {
+            const n = new Map(m);
+            n.delete(userId);
+            return n;
+          });
+        }
+      } else {
+        next.add(userId);
+        if (editSplitType === "custom") {
+          setEditCustomAmounts((m) => new Map(m).set(userId, "0.00"));
+        }
+      }
       return next;
     });
+  }
+
+  function handleEditSplitTypeChange(type: SplitType) {
+    if (type === "custom" && editSplitType === "equal") {
+      const ids = [...participantIds];
+      if (ids.length > 0 && totalCentsValid) {
+        const equal = splitAmount(parsedAmountCents, ids.length);
+        const map = new Map<string, string>();
+        ids.forEach((id, i) => map.set(id, (equal[i]! / 100).toFixed(2)));
+        setEditCustomAmounts(map);
+      } else {
+        const map = new Map<string, string>();
+        [...participantIds].forEach((id) => map.set(id, "0.00"));
+        setEditCustomAmounts(map);
+      }
+    }
+    setEditSplitType(type);
+  }
+
+  function handleAmountChange(newAmount: string) {
+    setAmount(newAmount);
+    // Scale custom amounts when total changes in custom mode
+    if (editSplitType === "custom") {
+      const newCents = Math.round(parseFloat(newAmount) * 100);
+      if (!isNaN(newCents) && newCents > 0 && editCustomAmounts.size > 0) {
+        setEditCustomAmounts((prev) =>
+          scaleAmounts(prev, [...participantIds], editCustomSumCents, newCents)
+        );
+      }
+    }
   }
 
   function handleCancelEdit() {
@@ -93,6 +186,12 @@ export function ExpenseDetailModal({
     setParticipantIds(
       new Set(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
     );
+    setEditSplitType(expense.splitType);
+    const map = new Map<string, string>();
+    for (const s of expense.splits) {
+      map.set(s.userId, (s.amountCents / 100).toFixed(2));
+    }
+    setEditCustomAmounts(map);
     setError(null);
   }
 
@@ -111,17 +210,47 @@ export function ExpenseDetailModal({
     }
 
     const amountCents = Math.round(parsedAmount * 100);
+    const submittedParticipantIds = [...participantIds];
+
+    if (editSplitType === "custom") {
+      const sum = submittedParticipantIds.reduce(
+        (s, id) => s + Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
+        0
+      );
+      if (sum !== amountCents) {
+        setError(
+          `Custom amounts must sum to $${(amountCents / 100).toFixed(2)}. Current sum: $${(sum / 100).toFixed(2)}.`
+        );
+        return;
+      }
+    }
+
     const paidByMember = members.find((m) => m.userId === paidByUserId);
+    const paidByDisplayName = paidByMember?.displayName ?? expense.paidByDisplayName;
+
+    // Build splits for optimistic update
+    const updatedSplits =
+      editSplitType === "custom"
+        ? submittedParticipantIds.map((id) => ({
+            userId: id,
+            amountCents: Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
+          }))
+        : splitAmount(amountCents, submittedParticipantIds.length).map((amt, i) => ({
+            userId: submittedParticipantIds[i]!,
+            amountCents: amt,
+          }));
+
     const updatedExpense: ExpenseRow = {
       ...expense,
       description,
       amountCents,
       date,
       paidById: paidByUserId,
-      paidByDisplayName: paidByMember?.displayName ?? expense.paidByDisplayName,
-      participantIds: [...participantIds],
+      paidByDisplayName,
+      participantIds: submittedParticipantIds,
+      splits: updatedSplits,
+      splitType: editSplitType,
     };
-    const paidByDisplayName = paidByMember?.displayName ?? expense.paidByDisplayName;
 
     // Compute changes for the optimistic activity log
     const changes: Record<string, unknown> = {};
@@ -143,6 +272,9 @@ export function ExpenseDetailModal({
         removed: removedIds.map((id) => members.find((m) => m.userId === id)?.displayName ?? id),
       };
     }
+    if (editSplitType !== expense.splitType) {
+      changes.splitType = { from: expense.splitType, to: editSplitType };
+    }
 
     // Apply optimistic update immediately (before API)
     onOptimisticUpdate(updatedExpense);
@@ -156,16 +288,26 @@ export function ExpenseDetailModal({
     });
 
     setEditLoading(true);
+
+    const body: Record<string, unknown> = {
+      description,
+      amountCents,
+      date,
+      paidById: paidByUserId,
+      participantIds: submittedParticipantIds,
+      splitType: editSplitType,
+    };
+    if (editSplitType === "custom") {
+      body.customSplits = submittedParticipantIds.map((id) => ({
+        userId: id,
+        amountCents: Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100),
+      }));
+    }
+
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description,
-        amountCents,
-        date,
-        paidById: paidByUserId,
-        participantIds: [...participantIds],
-      }),
+      body: JSON.stringify(body),
     });
     const json = (await res.json()) as { data?: unknown; error?: string };
     setEditLoading(false);
@@ -226,19 +368,22 @@ export function ExpenseDetailModal({
     onDeleteSettled();
   }
 
-  // View-mode display data
-  const participantDisplayIds =
-    expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId);
-  const splits =
-    participantDisplayIds.length > 0
-      ? splitAmount(expense.amountCents, participantDisplayIds.length)
-      : [];
+  // View-mode display data — use stored splits directly
+  const splitsForDisplay =
+    expense.splits.length > 0
+      ? expense.splits
+      : members.map((m, i) => ({
+          userId: m.userId,
+          amountCents: splitAmount(expense.amountCents, members.length)[i]!,
+        }));
   const payerName = allUserNames[expense.paidById] ?? expense.paidByDisplayName;
   const recipientId = expense.participantIds[0];
   const recipientName = recipientId ? (allUserNames[recipientId] ?? "Unknown") : "Unknown";
 
   const showCreatedBy = !!(expense.createdById && expense.createdById !== currentUserId);
   const createdByName = expense.createdById ? (allUserNames[expense.createdById] ?? "a former member") : null;
+
+  const orderedEditParticipants = members.filter((m) => participantIds.has(m.userId));
 
   return (
     <div
@@ -320,11 +465,12 @@ export function ExpenseDetailModal({
                 {/* Per-person split with proportion bars */}
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
-                    Split
+                    Split{expense.splitType === "custom" ? " · custom" : ""}
                   </p>
                   <div className="space-y-2.5">
-                    {splits.map((share, i) => {
-                      const id = participantDisplayIds[i]!;
+                    {splitsForDisplay.map((split) => {
+                      const id = split.userId;
+                      const share = split.amountCents;
                       const name = allUserNames[id] ?? "Unknown";
                       const isYou = id === currentUserId;
                       const isPayer = id === expense.paidById;
@@ -438,7 +584,7 @@ export function ExpenseDetailModal({
                   step="0.01"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                 />
               </div>
               <div>
@@ -486,6 +632,83 @@ export function ExpenseDetailModal({
                     </label>
                   ))}
                 </div>
+
+                {/* Split type toggle */}
+                {participantIds.size > 0 && (
+                  <div className="mt-3">
+                    <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
+                      <button
+                        type="button"
+                        onClick={() => handleEditSplitTypeChange("equal")}
+                        className={`px-3 py-1.5 transition-colors ${
+                          editSplitType === "equal"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Equal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleEditSplitTypeChange("custom")}
+                        className={`px-3 py-1.5 transition-colors border-l border-gray-200 dark:border-gray-700 ${
+                          editSplitType === "custom"
+                            ? "bg-indigo-600 text-white"
+                            : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                        }`}
+                      >
+                        Custom
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Custom amount inputs for edit mode */}
+                {editSplitType === "custom" && participantIds.size > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {orderedEditParticipants.map((m) => (
+                      <div key={m.userId} className="flex items-center gap-2">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                          {m.displayName}
+                          {m.userId === currentUserId && (
+                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          )}
+                        </span>
+                        <div className="w-24">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={editCustomAmounts.get(m.userId) ?? "0.00"}
+                            onChange={(e) =>
+                              setEditCustomAmounts((prev) =>
+                                new Map(prev).set(m.userId, e.target.value)
+                              )
+                            }
+                            className="text-right text-sm py-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {/* Running total indicator */}
+                    {totalCentsValid && editCustomRemaining !== null && (
+                      <p
+                        className={`text-xs font-medium text-right ${
+                          editCustomRemaining === 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}
+                      >
+                        {editCustomRemaining === 0
+                          ? "Amounts add up ✓"
+                          : editCustomRemaining > 0
+                          ? `Remaining: $${(editCustomRemaining / 100).toFixed(2)}`
+                          : `Over by: $${(Math.abs(editCustomRemaining) / 100).toFixed(2)}`}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">

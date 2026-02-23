@@ -125,6 +125,7 @@ export type Database = {
           id: string
           isPayment: boolean
           paidById: string
+          splitType: string
         }
         Insert: {
           amountCents: number
@@ -136,6 +137,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById: string
+          splitType?: string
         }
         Update: {
           amountCents?: number
@@ -147,6 +149,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById?: string
+          splitType?: string
         }
         Relationships: [
           {
@@ -305,18 +308,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_expense: {
-        Args: {
-          _amount_cents: number
-          _date: string
-          _description: string
-          _group_id: string
-          _paid_by_display_name: string
-          _paid_by_id: string
-          _participant_ids: string[]
-        }
-        Returns: string
-      }
+      create_expense:
+        | {
+            Args: {
+              _amount_cents: number
+              _date: string
+              _description: string
+              _group_id: string
+              _paid_by_display_name: string
+              _paid_by_id: string
+              _participant_ids: string[]
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _amount_cents: number
+              _date: string
+              _description: string
+              _group_id: string
+              _paid_by_display_name: string
+              _paid_by_id: string
+              _participant_ids: string[]
+              _split_amounts?: number[]
+              _split_type?: string
+            }
+            Returns: string
+          }
       create_group: { Args: { _name: string }; Returns: string }
       create_payment: {
         Args: {
@@ -345,20 +363,37 @@ export type Database = {
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }
-      update_expense: {
-        Args: {
-          _amount_cents: number
-          _changes: Json
-          _date: string
-          _description: string
-          _expense_id: string
-          _group_id: string
-          _paid_by_display_name: string
-          _paid_by_id: string
-          _participant_ids: string[]
-        }
-        Returns: undefined
-      }
+      update_expense:
+        | {
+            Args: {
+              _amount_cents: number
+              _changes: Json
+              _date: string
+              _description: string
+              _expense_id: string
+              _group_id: string
+              _paid_by_display_name: string
+              _paid_by_id: string
+              _participant_ids: string[]
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _amount_cents: number
+              _changes: Json
+              _date: string
+              _description: string
+              _expense_id: string
+              _group_id: string
+              _paid_by_display_name: string
+              _paid_by_id: string
+              _participant_ids: string[]
+              _split_amounts?: number[]
+              _split_type?: string
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       [_ in never]: never

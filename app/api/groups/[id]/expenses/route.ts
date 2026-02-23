@@ -8,6 +8,10 @@ const createExpenseSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
   paidById: z.string().uuid().optional(),
   participantIds: z.array(z.string().uuid()).min(1).optional(),
+  splitType: z.enum(["equal", "custom"]).optional(),
+  customSplits: z
+    .array(z.object({ userId: z.string().uuid(), amountCents: z.number().int().min(0) }))
+    .optional(),
 });
 
 export async function POST(
@@ -51,7 +55,15 @@ export async function POST(
     );
   }
 
-  const { description, amountCents, date, paidById: rawPaidById, participantIds: rawParticipantIds } = parsed.data;
+  const {
+    description,
+    amountCents,
+    date,
+    paidById: rawPaidById,
+    participantIds: rawParticipantIds,
+    splitType,
+    customSplits,
+  } = parsed.data;
 
   const memberIds = new Set(members.map((m) => m.userId));
 
@@ -75,6 +87,36 @@ export async function POST(
 
   const participantIds = participants.map((m) => m.userId);
 
+  // Validate custom splits
+  let splitAmounts: number[] | null = null;
+  const effectiveSplitType = splitType ?? "equal";
+
+  if (effectiveSplitType === "custom") {
+    if (!customSplits || customSplits.length === 0) {
+      return NextResponse.json({ data: null, error: "Custom split amounts are required when splitType is 'custom'" }, { status: 400 });
+    }
+    // Validate all userId in customSplits are participants
+    const participantSet = new Set(participantIds);
+    for (const s of customSplits) {
+      if (!participantSet.has(s.userId)) {
+        return NextResponse.json({ data: null, error: "Custom split includes a userId that is not a participant" }, { status: 400 });
+      }
+    }
+    // Validate sum equals total
+    const sum = customSplits.reduce((acc, s) => acc + s.amountCents, 0);
+    if (sum !== amountCents) {
+      return NextResponse.json(
+        { data: null, error: `Custom split amounts must sum to the total (expected ${amountCents}, got ${sum})` },
+        { status: 400 }
+      );
+    }
+    // Extract amounts in participant order
+    splitAmounts = participantIds.map((id) => {
+      const s = customSplits.find((cs) => cs.userId === id);
+      return s?.amountCents ?? 0;
+    });
+  }
+
   const { data: expenseId, error } = await supabase.rpc("create_expense", {
     _group_id: groupId,
     _description: description,
@@ -83,6 +125,8 @@ export async function POST(
     _paid_by_id: paidById,
     _participant_ids: participantIds,
     _paid_by_display_name: paidByMember.User!.displayName,
+    _split_type: effectiveSplitType,
+    _split_amounts: splitAmounts ?? undefined,
   });
 
   if (error) {

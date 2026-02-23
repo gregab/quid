@@ -18,14 +18,22 @@ const MEMBERS: Member[] = [
 ];
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
+  const participantIds = overrides.participantIds ?? ["user-1", "user-2"];
+  const amountCents = overrides.amountCents ?? 2500;
+  const defaultSplits = participantIds.map((id, i) => ({
+    userId: id,
+    amountCents: Math.floor(amountCents / participantIds.length) + (i < amountCents % participantIds.length ? 1 : 0),
+  }));
   return {
     id: "expense-1",
     description: "Dinner",
-    amountCents: 2500,
+    amountCents,
     date: "2024-01-15",
     paidById: "user-1",
     paidByDisplayName: "Alice",
-    participantIds: ["user-1", "user-2"],
+    participantIds,
+    splits: defaultSplits,
+    splitType: "equal",
     canEdit: true,
     canDelete: true,
     ...overrides,
