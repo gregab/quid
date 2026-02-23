@@ -30,6 +30,7 @@ export interface ExpenseRow {
   isPending?: boolean;
   isPayment?: boolean;
   createdById?: string;
+  createdAt?: string;
 }
 
 interface ExpensesListProps {
@@ -127,9 +128,11 @@ export function ExpensesList({
     setExpenses((prev) => {
       // Only re-add if it was actually removed
       if (prev.some((e) => e.id === expense.id)) return prev;
-      return [...prev, expense].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
+      return [...prev, expense].sort((a, b) => {
+        const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+      });
     });
     // Refresh to reconcile any pending activity logs
     router.refresh();
@@ -143,7 +146,11 @@ export function ExpensesList({
     setExpenses((prev) =>
       prev
         .map((e) => (e.id === updated.id ? updated : e))
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .sort((a, b) => {
+          const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateDiff !== 0) return dateDiff;
+          return new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+        })
     );
   }, []);
 

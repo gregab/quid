@@ -88,7 +88,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     .from("Expense")
     .select("*, User!paidById(*), ExpenseSplit(*, User(displayName))")
     .eq("groupId", id)
-    .order("date", { ascending: false });
+    .order("date", { ascending: false })
+    .order("createdAt", { ascending: false });
 
   // Fetch activity logs with actor
   const { data: activityLogs } = await supabase
@@ -141,6 +142,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     canDelete: expense.isPayment ? expense.createdById === user.id : isMember,
     isPayment: expense.isPayment,
     createdById: expense.createdById ?? undefined,
+    createdAt: expense.createdAt,
   }));
 
   // Compute how much the current user owes on net (positive = owes money)
