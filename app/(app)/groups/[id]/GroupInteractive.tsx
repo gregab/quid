@@ -9,7 +9,6 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { Card } from "@/components/ui/Card";
 import { formatDisplayName } from "@/lib/formatDisplayName";
-import { MemberPill } from "./MemberPill";
 
 interface GroupInteractiveProps {
   groupId: string;
@@ -101,20 +100,15 @@ export function GroupInteractive({
               const isCurrentUserReceiving = debt.toId === currentUserId;
               const verb = isCurrentUserOwing ? "owe" : "owes";
 
-              const getDebtPill = (userId: string, nameOverride: string) => {
-                const member = members.find((m) => m.userId === userId);
-                return { name: nameOverride, emoji: member?.emoji, color: member?.color };
-              };
-
-              const fromPill = getDebtPill(debt.fromId, isCurrentUserOwing ? "You" : debt.fromName);
-              const toPill = getDebtPill(debt.toId, isCurrentUserReceiving ? "You" : debt.toName);
+              const fromName = isCurrentUserOwing ? "You" : debt.fromName;
+              const toName = isCurrentUserReceiving ? "You" : debt.toName;
 
               return (
                 <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="flex items-center gap-1.5 flex-wrap text-sm text-gray-700 dark:text-gray-300">
-                    <MemberPill {...fromPill} />
+                    <span className="font-medium">{fromName}</span>
                     <span>{verb}</span>
-                    <MemberPill {...toPill} />
+                    <span className="font-medium">{toName}</span>
                   </div>
                   <span
                     className={`text-sm font-bold tabular-nums shrink-0 ${
