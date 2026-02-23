@@ -358,6 +358,7 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.settledUp).toBe(true);
     expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(true);
+    expect(onOptimisticAdd.mock.calls[0][0].settledUp).toBe(true);
   });
 
   it("sets settledUp: false when paying a partial amount", async () => {
@@ -367,6 +368,7 @@ describe("RecordPaymentForm — Submission (preset mode)", () => {
     const body = JSON.parse((fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body);
     expect(body.settledUp).toBe(false);
     expect(onOptimisticActivity.mock.calls[0][0].payload.settledUp).toBe(false);
+    expect(onOptimisticAdd.mock.calls[0][0].settledUp).toBe(false);
   });
 
   it("modal closes immediately after submit (before fetch resolves)", async () => {

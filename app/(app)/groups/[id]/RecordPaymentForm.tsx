@@ -141,6 +141,7 @@ export function RecordPaymentForm({
       canEdit: false,
       canDelete: true,
       isPayment: true,
+      settledUp,
       createdById: currentUserId,
       isPending: true,
     });
