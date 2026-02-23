@@ -271,7 +271,7 @@ describe("ExpensesList — payment card rendering", () => {
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />
     );
-    const amountEl = container.querySelector(".text-emerald-600");
+    const amountEl = container.querySelector(".text-emerald-600.font-bold");
     expect(amountEl, "amount should have emerald color class").not.toBeNull();
     expect(amountEl!.textContent).toContain("$50.00");
   });

@@ -224,13 +224,12 @@ export function ExpensesList({
                 {expense.isPayment ? (
                   <>
                     <div className="min-w-0">
-                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                        Payment
-                      </span>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mt-1">
-                        {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(expense.date)}</p>
+                      <p className="font-semibold text-sm italic text-emerald-600 truncate dark:text-emerald-400">Payment</p>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        <span className="text-xs text-gray-400">
+                          {getMemberPillProps(expense.paidById, members, allUserNames).name} → {getMemberPillProps(expense.participantIds[0]!, members, allUserNames).name} · {formatDate(expense.date)}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
