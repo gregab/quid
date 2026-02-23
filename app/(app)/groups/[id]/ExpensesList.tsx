@@ -139,7 +139,8 @@ export function ExpensesList({
     <section>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Expenses</h2>
-        <div className="flex items-center gap-2">
+        {/* Desktop: buttons in header */}
+        <div className="hidden sm:flex items-center gap-2">
           <RecordPaymentForm
             groupId={groupId}
             currentUserId={currentUserId}
@@ -247,6 +248,28 @@ export function ExpensesList({
           ))}
         </ul>
       )}
+
+      {/* Mobile: buttons below the list */}
+      <div className="flex sm:hidden gap-2 mt-3">
+        <RecordPaymentForm
+          groupId={groupId}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          members={members}
+          onOptimisticAdd={handleOptimisticAdd}
+          onSettled={handleAddSettled}
+          onOptimisticActivity={onOptimisticActivity}
+        />
+        <AddExpenseForm
+          groupId={groupId}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          members={members}
+          onOptimisticAdd={handleOptimisticAdd}
+          onSettled={handleAddSettled}
+          onOptimisticActivity={onOptimisticActivity}
+        />
+      </div>
     </section>
   );
 }
