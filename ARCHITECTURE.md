@@ -237,11 +237,13 @@ Creates an expense with equal split among participants (via `create_expense` RPC
 ### `PUT /api/groups/[id]/expenses/[expenseId]`
 Edits an expense and recalculates all splits atomically (via `update_expense` RPC). Change detection runs in TS, then passes `changes` JSONB to the RPC.
 - Body: same shape as POST
-- Any group member can edit any expense
+- Only the expense creator can edit (NULL `createdById` = legacy, any member allowed)
+- Returns 403 if the caller is not the creator
 
 ### `DELETE /api/groups/[id]/expenses/[expenseId]`
 Deletes an expense (via `delete_expense` RPC). Cascade delete handles splits.
-- Any group member can delete any expense
+- Only the expense creator can delete (NULL `createdById` = legacy, any member allowed)
+- Returns 403 if the caller is not the creator
 
 ### `GET /api/groups/[id]/balances`
 Computes simplified debts from all expenses and splits in the group. Uses the greedy algorithm in `lib/balances/simplify.ts`.
@@ -419,7 +421,7 @@ App lives at `gregbigelow.com/aviary`, not domain root. Vercel's basePath handle
 Future mobile client should reuse the same API. `/api/groups/[id]/expenses` works for any client.
 
 ### Edit/delete permissions
-Any group member can edit or delete any expense. Chosen for simplicity. Revisit if users report problems.
+Only the creator of an expense (the user who clicked "Add expense") can edit or delete it. Payments likewise enforce creator-only deletion. Expenses created before `createdById` was populated (NULL `createdById`) are treated as legacy and remain editable/deletable by any group member. Enforcement happens at three layers: UI hides buttons (`canEdit`/`canDelete` flags in `page.tsx`), API routes return 403, and RPC functions raise an exception.
 
 ### Settle up (not yet implemented)
 Plan: Record settlements as special expenses (description = "Settlement", single split to creditor). Uses existing infrastructure, no schema migration needed.

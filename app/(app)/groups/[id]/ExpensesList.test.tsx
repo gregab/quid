@@ -361,6 +361,22 @@ describe("ExpensesList — participant display on regular expenses", () => {
     expect(list?.textContent).not.toContain("Bob");
   });
 
+  it("shows edit and delete buttons for the expense creator", () => {
+    // canEdit/canDelete = true when createdById matches currentUserId (set in page.tsx)
+    const expense = makeExpense({ canEdit: true, canDelete: true });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.queryByRole("button", { name: /edit expense/i }), "creator should see edit button").not.toBeNull();
+    expect(screen.queryByRole("button", { name: /delete expense/i }), "creator should see delete button").not.toBeNull();
+  });
+
+  it("hides edit and delete buttons for a non-creator", () => {
+    // canEdit/canDelete = false when createdById is set and doesn't match currentUserId
+    const expense = makeExpense({ canEdit: false, canDelete: false });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.queryByRole("button", { name: /edit expense/i }), "non-creator should not see edit button").toBeNull();
+    expect(screen.queryByRole("button", { name: /delete expense/i }), "non-creator should not see delete button").toBeNull();
+  });
+
   it("does not show a comma-separated participant line for payment rows", () => {
     const payment = {
       id: "payment-1",

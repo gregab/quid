@@ -58,6 +58,11 @@ export async function PUT(
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
   }
 
+  // Only the creator can edit. NULL createdById = legacy expense, allow any group member.
+  if (expense.createdById != null && expense.createdById !== user.id) {
+    return NextResponse.json({ data: null, error: "Only the creator can edit this expense" }, { status: 403 });
+  }
+
   const body: unknown = await request.json();
   const parsed = updateExpenseSchema.safeParse(body);
 
@@ -187,6 +192,12 @@ export async function DELETE(
 
   if (!membership) {
     return NextResponse.json({ data: null, error: "Not a member of this group" }, { status: 403 });
+  }
+
+  // Only the creator can delete. NULL createdById = legacy expense, allow any group member.
+  // Payments are enforced inside the RPC (always requires creator).
+  if (!expense.isPayment && expense.createdById != null && expense.createdById !== user.id) {
+    return NextResponse.json({ data: null, error: "Only the creator can delete this expense" }, { status: 403 });
   }
 
   const { error } = await supabase.rpc("delete_expense", {
