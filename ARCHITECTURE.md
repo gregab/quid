@@ -42,7 +42,12 @@ app/
       ActivityFeed.tsx                   # Renders activity log entries with relative timestamps
       useActivityLogs.ts                 # Hook: manages activity log state with optimistic additions
                                          #   and server reconciliation
+    settings/
+      page.tsx                           # Settings page: fetches user info + group balances (server)
+      SettingsClient.tsx                 # Account deletion with confirmation modal + balance warnings (client)
 
+  api/account/
+    route.ts                             # DELETE: delete account (RPC + admin auth user deletion)
   api/groups/
     route.ts                             # GET: list user's groups; POST: create group (via RPC)
     [id]/
@@ -61,6 +66,7 @@ components/
 lib/
   supabase/client.ts                     # Browser Supabase client (createBrowserClient<Database>)
   supabase/server.ts                     # Server Supabase client (cookie-aware, for RSC + route handlers)
+  supabase/admin.ts                      # Server-only admin client (service role key, bypasses RLS)
   supabase/database.types.ts             # Auto-generated types from Supabase schema (run npm run db:types)
   balances/simplify.ts                   # Debt simplification: pure function, zero framework deps,
                                          #   greedy algorithm matching creditors ↔ debtors
@@ -195,6 +201,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `update_expense(...)` | Updates expense + replaces splits + activity log | `PUT /api/groups/[id]/expenses/[expenseId]` |
 | `delete_expense(...)` | Activity log + deletes expense (cascade handles splits) | `DELETE /api/groups/[id]/expenses/[expenseId]` |
 | `leave_group(_group_id)` | Verifies membership, blocks if |balance| > $2, deletes member row, logs `member_left`, deletes group if last member | `DELETE /api/groups/[id]/members` |
+| `delete_account()` | Removes user from all groups (no balance check), logs departures, auto-deletes empty groups, deletes User row. Auth user deletion handled by API route via admin client. Orphaned expenses/activity logs retain their `paidById`/`actorId` references. | `DELETE /api/account` |
 | `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
 
@@ -239,6 +246,10 @@ Deletes an expense (via `delete_expense` RPC). Cascade delete handles splits.
 ### `GET /api/groups/[id]/balances`
 Computes simplified debts from all expenses and splits in the group. Uses the greedy algorithm in `lib/balances/simplify.ts`.
 - Returns: `{ data: [{ fromId, fromName, toId, toName, amountCents }] }`
+
+### `DELETE /api/account`
+Permanently deletes the user's account. Calls `delete_account` RPC to leave all groups and delete the User row, then deletes the Supabase auth user via the admin client (service role key).
+- Returns: `{ data: { deleted: true }, error: null }`
 
 ### `POST /api/invite/[token]/join`
 Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member).
@@ -415,6 +426,9 @@ Plan: Record settlements as special expenses (description = "Settlement", single
 
 ### Group deletion (not yet implemented)
 Plan: Hard delete. Cascade deletes handle all cleanup. No soft delete until audit trail is needed.
+
+### Account deletion
+Users can delete their account from the settings page. The `delete_account` RPC removes the user from all groups (skipping the $2 balance check that `leave_group` enforces), logs departures, auto-deletes empty groups, and deletes the User row. The API route then deletes the Supabase auth user via the admin client. Orphaned expenses and activity logs are intentional — they retain `paidById`/`actorId` references so other group members' financial history is preserved.
 
 ### Member self-removal (leave group)
 Implemented via `leave_group` RPC. Members can leave if their absolute balance is ≤ $2 (200 cents). When the last member leaves, the group is cascade-deleted. Activity log records `member_left` with the leaver's display name.

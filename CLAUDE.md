@@ -51,6 +51,7 @@ npm run cy:run                          # Cypress headless (CI)
 | **Activity feed** | `ActivityFeed.tsx`, `useActivityLogs.ts` (in `app/(app)/groups/[id]/`) |
 | **Members** (add/list/leave) | `AddMemberForm.tsx`, `LeaveGroupButton.tsx` (in `app/(app)/groups/[id]/`), `app/api/groups/[id]/members/route.ts` |
 | **Invite links** (copy link, join page) | `CopyInviteLinkButton.tsx` (in `app/(app)/groups/[id]/`), `app/(app)/invite/[token]/page.tsx`, `InviteJoinForm.tsx`, `app/api/invite/[token]/join/route.ts` |
+| **Settings / account deletion** | `app/(app)/settings/page.tsx`, `SettingsClient.tsx`, `app/api/account/route.ts`, `lib/supabase/admin.ts` |
 | **Balance/debt calculation** | `lib/balances/simplify.ts` (pure function, zero deps, 14 tests) |
 | **API routes** | `app/api/groups/` — see ARCHITECTURE.md for full route reference |
 | **Database schema / RLS / RPC** | `supabase/migrations/`, then `npx supabase db push` + `npm run db:types` |

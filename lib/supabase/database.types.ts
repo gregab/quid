@@ -305,6 +305,7 @@ export type Database = {
         Returns: string
       }
       create_group: { Args: { _name: string }; Returns: string }
+      delete_account: { Args: never; Returns: undefined }
       delete_expense: {
         Args: {
           _amount_cents: number
