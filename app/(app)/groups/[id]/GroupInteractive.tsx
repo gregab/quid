@@ -99,7 +99,7 @@ export function GroupInteractive({
         ) : (
           <p className="text-gray-400 dark:text-gray-500 leading-relaxed">
             {userIsSettledUp && (
-              <span className="inline-flex items-center align-middle gap-1.5 text-emerald-600 dark:text-emerald-400 mr-1">
+              <span className="inline-flex items-center align-middle gap-1.5 text-emerald-600 dark:text-emerald-400 mr-1 whitespace-nowrap">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
@@ -117,24 +117,26 @@ export function GroupInteractive({
 
               return (
                 <span key={i}>
-                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
-                    {fromName}
-                  </span>
-                  {" "}{verb}{" "}
-                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
-                    {toName}
-                  </span>
-                  {" "}
-                  <span
-                    className={`font-semibold tabular-nums ${
-                      isCurrentUserOwing
-                        ? "text-red-600 dark:text-red-400"
-                        : isCurrentUserReceiving
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    }`}
-                  >
-                    {formatCents(debt.amountCents)}
+                  <span className="whitespace-nowrap">
+                    <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                      {fromName}
+                    </span>
+                    {" "}{verb}{" "}
+                    <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                      {toName}
+                    </span>
+                    {" "}
+                    <span
+                      className={`font-semibold tabular-nums ${
+                        isCurrentUserOwing
+                          ? "text-red-600 dark:text-red-400"
+                          : isCurrentUserReceiving
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
+                      {formatCents(debt.amountCents)}
+                    </span>
                   </span>
                   {i < resolvedDebts.length - 1 && (
                     <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>

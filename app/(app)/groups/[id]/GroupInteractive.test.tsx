@@ -567,6 +567,34 @@ describe("GroupInteractive — balance UI improvements", () => {
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
     expect(screen.queryByText("Balances")).toBeNull();
   });
+
+  it("wraps each debt phrase as an atomic unit with whitespace-nowrap", () => {
+    const aliceOwesBob = makeExpense({
+      id: "e1",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    const carolOwesBob = makeExpense({
+      id: "e2",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-c", "user-b"],
+    });
+    const { container } = render(
+      <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[aliceOwesBob, carolOwesBob]} />
+    );
+    // Each debt phrase is wrapped in a whitespace-nowrap span
+    const nowrapSpans = Array.from(container.querySelectorAll("[class*='whitespace-nowrap']"));
+    // At least one per debt (2 debts)
+    expect(nowrapSpans.length).toBeGreaterThanOrEqual(2);
+    // Each nowrap span contains a full debt phrase (name + verb + name + amount)
+    const debtTexts = nowrapSpans.map((el) => el.textContent?.trim());
+    expect(debtTexts.some((t) => t?.includes("You owe") && t?.includes("$5.00"))).toBe(true);
+    expect(debtTexts.some((t) => t?.includes("Carol owes") && t?.includes("$5.00"))).toBe(true);
+  });
 });
 
 // ─── Settle Up: userOwesDebts integration ────────────────────────────────────
