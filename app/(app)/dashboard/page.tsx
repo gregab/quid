@@ -153,7 +153,7 @@ export default async function DashboardPage() {
                 className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-amber-500"
               >
                 <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
-                  {emojiMap.get(group.id)}
+                  {group.emoji ?? emojiMap.get(group.id)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</p>

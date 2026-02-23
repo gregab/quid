@@ -218,22 +218,28 @@ export type Database = {
       }
       Group: {
         Row: {
+          bannerUrl: string | null
           createdAt: string
           createdById: string
+          emoji: string | null
           id: string
           inviteToken: string
           name: string
         }
         Insert: {
+          bannerUrl?: string | null
           createdAt?: string
           createdById: string
+          emoji?: string | null
           id?: string
           inviteToken?: string
           name: string
         }
         Update: {
+          bannerUrl?: string | null
           createdAt?: string
           createdById?: string
+          emoji?: string | null
           id?: string
           inviteToken?: string
           name?: string

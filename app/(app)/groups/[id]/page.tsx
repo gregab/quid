@@ -8,6 +8,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserDebtCents } from "@/lib/balances/getUserDebt";
+import { GroupSettingsButton } from "./GroupSettingsButton";
 
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
@@ -82,6 +83,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const memberColorMap = assignMemberValues(groupMembers.map((m) => m.userId), id, MEMBER_COLORS);
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
+
+  // Compute the hash-based fallback emoji (same algorithm as dashboard)
+  const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
+  const defaultGroupEmoji = GROUP_EMOJIS[id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GROUP_EMOJIS.length]!;
 
   // Fetch expenses with paidBy user and splits (including split participants' display names)
   const { data: expenses } = await supabase
@@ -177,7 +182,51 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </svg>
           Back to groups
         </Link>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{group.name}</h1>
+
+        {/* Banner hero (only when a banner is set) */}
+        {group.bannerUrl && (
+          <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={group.bannerUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+              <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow">
+                {group.emoji ?? defaultGroupEmoji} {group.name}
+              </h1>
+            </div>
+          </div>
+        )}
+
+        {/* Title row (no banner) */}
+        {!group.bannerUrl && (
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              {group.emoji ?? defaultGroupEmoji} {group.name}
+            </h1>
+            <GroupSettingsButton
+              groupId={group.id}
+              currentEmoji={group.emoji ?? null}
+              currentBannerUrl={group.bannerUrl ?? null}
+              defaultEmoji={defaultGroupEmoji}
+            />
+          </div>
+        )}
+
+        {/* Settings button when banner is shown (sits below banner) */}
+        {group.bannerUrl && (
+          <div className="flex items-center justify-end -mt-1 mb-1">
+            <GroupSettingsButton
+              groupId={group.id}
+              currentEmoji={group.emoji ?? null}
+              currentBannerUrl={group.bannerUrl ?? null}
+              defaultEmoji={defaultGroupEmoji}
+            />
+          </div>
+        )}
 
         {/* Member chips */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
