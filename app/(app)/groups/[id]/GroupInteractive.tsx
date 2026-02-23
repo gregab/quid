@@ -6,6 +6,7 @@ import { ActivityFeed, type ActivityLog } from "./ActivityFeed";
 import { ExpensesList } from "./ExpensesList";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { simplifyDebts } from "@/lib/balances/simplify";
+import { buildRawDebts } from "@/lib/balances/buildRawDebts";
 import { Card } from "@/components/ui/Card";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 
@@ -50,16 +51,7 @@ export function GroupInteractive({
   }, []);
 
   const resolvedDebts = useMemo(() => {
-    const rawDebts: Array<{ from: string; to: string; amount: number }> = [];
-
-    for (const expense of balancesExpenses) {
-      for (const split of expense.splits) {
-        if (split.userId === expense.paidById) continue;
-        rawDebts.push({ from: split.userId, to: expense.paidById, amount: split.amountCents });
-      }
-    }
-
-    const simplified = simplifyDebts(rawDebts);
+    const simplified = simplifyDebts(buildRawDebts(balancesExpenses));
     // Build name map from all known users (includes departed members), then
     // override with current members so optimistic updates always resolve.
     const nameMap = new Map<string, string>(Object.entries(allUserNames));
