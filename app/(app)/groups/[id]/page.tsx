@@ -138,10 +138,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     paidById: expense.paidById,
     paidByDisplayName: expense.User?.displayName ?? "Deleted User",
     participantIds: (expense.ExpenseSplit ?? []).map((s) => s.userId),
-    canEdit: expense.isPayment ? false : (expense.createdById == null || expense.createdById === user.id),
-    canDelete: expense.isPayment
-      ? expense.createdById === user.id
-      : (expense.createdById == null || expense.createdById === user.id),
+    canEdit: expense.isPayment ? false : expense.createdById === user.id,
+    canDelete: expense.createdById === user.id,
     isPayment: expense.isPayment,
     createdById: expense.createdById ?? undefined,
     createdAt: expense.createdAt,
