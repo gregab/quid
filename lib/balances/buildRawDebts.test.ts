@@ -562,7 +562,7 @@ describe("buildRawDebts — mixed real-world scenarios", () => {
     // Hotel: bob owes alice 10000, carol owes alice 10000
     // Dinner: alice owes bob 5000, carol owes bob 1000
     // Gas: alice owes carol 1500, bob owes carol 1500
-    // Payment: alice owes bob 5000 (from payment, bob paid alice 50)
+    // Payment: alice owes bob 5000 (from payment: bob sent alice 5000 cents outside the app)
     //
     // Net alice: +20000(hotel) - 5000(dinner) - 1500(gas) - 5000(payment) = +8500
     // Net bob: +6000(dinner) - 10000(hotel) - 1500(gas) + 5000(payment recv) = -500
