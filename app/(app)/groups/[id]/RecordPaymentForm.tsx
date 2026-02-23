@@ -34,6 +34,7 @@ export function RecordPaymentForm({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]!);
   const [error, setError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // When "from" changes, reset "to" if it's now the same as "from"
@@ -54,6 +55,7 @@ export function RecordPaymentForm({
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError("Please enter a valid amount greater than zero.");
+      setAmountError(true);
       return;
     }
 
@@ -127,6 +129,7 @@ export function RecordPaymentForm({
     setFromUserId(currentUserId);
     setToUserId(members.find((m) => m.userId !== currentUserId)?.userId ?? members[0]?.userId ?? "");
     setError(null);
+    setAmountError(false);
   }
 
   function handleClose() {
@@ -205,7 +208,8 @@ export function RecordPaymentForm({
                   step="0.01"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  hasError={amountError}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setError(null); }}
                   autoFocus
                 />
               </div>

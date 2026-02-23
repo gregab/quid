@@ -34,6 +34,7 @@ export function AddExpenseForm({
   const [paidByUserId, setPaidByUserId] = useState(currentUserId);
   const [participantIds, setParticipantIds] = useState<Set<string>>(new Set(allMemberIds));
   const [error, setError] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function toggleParticipant(userId: string) {
@@ -55,6 +56,7 @@ export function AddExpenseForm({
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError("Please enter a valid amount greater than zero.");
+      setAmountError(true);
       return;
     }
 
@@ -129,6 +131,7 @@ export function AddExpenseForm({
     setPaidByUserId(currentUserId);
     setParticipantIds(new Set(allMemberIds));
     setError(null);
+    setAmountError(false);
   }
 
   function handleClose() {
@@ -186,7 +189,8 @@ export function AddExpenseForm({
                   step="0.01"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  hasError={amountError}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setError(null); }}
                 />
               </div>
               <div>
