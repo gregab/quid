@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { ActivityFeed, type ActivityLog } from "./ActivityFeed";
 
 afterEach(cleanup);
@@ -99,6 +99,39 @@ describe("ActivityFeed — member_left", () => {
     );
     const row = container.querySelector(".opacity-60");
     expect(row, "pending member_left log should have opacity-60 class").not.toBeNull();
+  });
+
+  it("does not add cursor-pointer to member_left rows", () => {
+    const { container } = render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "member_left",
+            payload: { displayName: "Alice" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    const row = container.querySelector(".cursor-pointer");
+    expect(row, "member_left row should not be clickable").toBeNull();
+  });
+
+  it("clicking a member_left row does not open a modal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "member_left",
+            payload: { displayName: "Alice" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("left the group").closest("div")!);
+    // No modal open = no Close button anywhere in the tree
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
   });
 });
 
@@ -467,5 +500,147 @@ describe("ActivityFeed — payment_recorded and payment_deleted", () => {
     );
     const row = container.querySelector(".opacity-60");
     expect(row, "pending payment_recorded log should have opacity-60 class").not.toBeNull();
+  });
+});
+
+describe("ActivityFeed — click to open modal", () => {
+  it("clicking an expense_added row opens the detail modal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: { description: "Dinner", amountCents: 2500, paidByDisplayName: "Alice" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    // Modal header
+    expect(screen.getByText("Expense added")).toBeDefined();
+    // Modal content — description label + name
+    expect(screen.getAllByText("Dinner").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("$25.00")).toBeDefined();
+  });
+
+  it("clicking an expense_deleted row opens the detail modal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_deleted",
+            payload: { description: "Lunch", amountCents: 1200, paidByDisplayName: "Bob" },
+            actor: { displayName: "Bob" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Lunch").closest("div")!);
+    expect(screen.getByText("Expense deleted")).toBeDefined();
+    expect(screen.getByText("$12.00")).toBeDefined();
+  });
+
+  it("clicking an expense_edited row opens the modal with changes", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              paidByDisplayName: "Alice",
+              changes: { amount: { from: 2500, to: 3000 } },
+            },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.getByText("Expense edited")).toBeDefined();
+    expect(screen.getByText("Changes")).toBeDefined();
+    expect(screen.getByText(/Amount:/)).toBeDefined();
+  });
+
+  it("clicking a payment_recorded row opens the detail modal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_recorded",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    // Click anywhere on the row
+    fireEvent.click(screen.getByText(/recorded a payment/).closest("div")!);
+    expect(screen.getByText("Payment recorded")).toBeDefined();
+    expect(screen.getByText("$50.00")).toBeDefined();
+    expect(screen.getByText("From")).toBeDefined();
+    expect(screen.getByText("To")).toBeDefined();
+  });
+
+  it("clicking a pending row does not open the modal", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: { description: "Dinner", amountCents: 2500, paidByDisplayName: "Alice" },
+            isPending: true,
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.queryByText("Expense added")).toBeNull();
+  });
+
+  it("closing the modal via the Close button removes it", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_added",
+            payload: { description: "Dinner", amountCents: 2500, paidByDisplayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.getByText("Expense added")).toBeDefined();
+    // Click the footer Close button (last among buttons named "Close")
+    const closeButtons = screen.getAllByRole("button", { name: "Close" });
+    fireEvent.click(closeButtons[closeButtons.length - 1]!);
+    expect(screen.queryByText("Expense added")).toBeNull();
+  });
+
+  it("expense_edited modal shows fallback amount when no rich changes", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "expense_edited",
+            payload: {
+              description: "Dinner",
+              amountCents: 3000,
+              previousAmountCents: 2500,
+              paidByDisplayName: "Alice",
+            },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    // Open modal
+    fireEvent.click(screen.getByText("Dinner").closest("div")!);
+    expect(screen.getByText("Expense edited")).toBeDefined();
+    // Should show the old → new amount
+    const modalAmounts = screen.getAllByText(/\$25\.00 → \$30\.00/);
+    expect(modalAmounts.length).toBeGreaterThanOrEqual(1);
   });
 });

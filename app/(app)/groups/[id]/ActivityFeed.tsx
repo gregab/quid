@@ -1,4 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 
 export type ActivityLog = {
@@ -159,106 +163,352 @@ function buildEditInfo(payload: Payload): EditInfo {
   };
 }
 
-export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
+const ACTION_TITLES: Record<string, string> = {
+  expense_added: "Expense added",
+  expense_edited: "Expense edited",
+  expense_deleted: "Expense deleted",
+  payment_recorded: "Payment recorded",
+  payment_deleted: "Payment deleted",
+};
+
+function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => void }) {
+  const payload = log.payload as Payload;
+  const title = ACTION_TITLES[log.action] ?? log.action;
+
+  const isExpenseAction =
+    log.action === "expense_added" || log.action === "expense_deleted";
+  const isPaymentAction =
+    log.action === "payment_recorded" || log.action === "payment_deleted";
+
+  const hasChanges =
+    log.action === "expense_edited" &&
+    payload.changes &&
+    Object.keys(payload.changes).length > 0;
+
   return (
-    <section>
-      <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Activity</h2>
-      {logs.length === 0 ? (
-        <p className="text-sm text-gray-400">No activity yet.</p>
-      ) : (
-        <Card className="divide-y divide-gray-100 dark:divide-gray-700">
-          {logs.map((log) => {
-            const payload = log.payload as Payload;
+    <div
+      className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
+              Activity
+            </p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mt-1 -mr-1 rounded-lg transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-            if (log.action === "expense_edited") {
-              const { verbAndPrep, showExpenseName, detail } = buildEditInfo(payload);
-              return (
-                <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
-                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
-                    {" "}{verbAndPrep}
-                    {showExpenseName && payload.description && (
-                      <>{" "}<span className="font-medium">{payload.description}</span></>
-                    )}
-                    {detail && (
-                      <span className="text-gray-500 dark:text-gray-400"> ({detail})</span>
-                    )}
-                  </p>
-                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
-                    {formatRelativeTime(log.createdAt)}
-                  </span>
-                </div>
-              );
-            }
-
-            if (log.action === "payment_recorded" || log.action === "payment_deleted") {
-              const verb = log.action === "payment_recorded" ? "recorded a payment" : "deleted a payment";
-              return (
-                <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
-                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
-                    {" "}{verb}
-                    {payload.fromDisplayName && payload.toDisplayName && (
-                      <>
-                        {": "}
-                        <span className="font-medium">{formatDisplayName(payload.fromDisplayName)}</span>
-                        {" → "}
-                        <span className="font-medium">{formatDisplayName(payload.toDisplayName)}</span>
-                      </>
-                    )}
-                    {typeof payload.amountCents === "number" && (
-                      <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
-                    )}
-                  </p>
-                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
-                    {formatRelativeTime(log.createdAt)}
-                  </span>
-                </div>
-              );
-            }
-
-            if (log.action === "member_left") {
-              return (
-                <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
-                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
-                    {" "}left the group
-                  </p>
-                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
-                    {formatRelativeTime(log.createdAt)}
-                  </span>
-                </div>
-              );
-            }
-
-            const verb =
-              log.action === "expense_added" ? "added" :
-              log.action === "expense_deleted" ? "deleted" :
-              log.action;
-            const hasAmount = typeof payload.amountCents === "number";
-
-            return (
-              <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
-                <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
-                  <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
-                  {" "}{verb}{" "}
-                  {payload.description && (
-                    <span className="font-medium">{payload.description}</span>
-                  )}
-                  {hasAmount && (
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {" "}({formatCents(payload.amountCents!)})
-                    </span>
-                  )}
+        {/* expense_added / expense_deleted */}
+        {isExpenseAction && (
+          <div className="space-y-3 mb-5">
+            {payload.description && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Expense
                 </p>
-                <span className="text-xs text-gray-400 shrink-0 mt-0.5">
-                  {formatRelativeTime(log.createdAt)}
-                </span>
+                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  {payload.description}
+                </p>
               </div>
-            );
-          })}
-        </Card>
+            )}
+            {typeof payload.amountCents === "number" && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Amount
+                </p>
+                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  {formatCents(payload.amountCents)}
+                </p>
+              </div>
+            )}
+            {payload.paidByDisplayName && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Paid by
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatDisplayName(payload.paidByDisplayName)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* expense_edited */}
+        {log.action === "expense_edited" && (
+          <div className="space-y-3 mb-5">
+            {/* Current expense name (always shown for context) */}
+            {payload.description && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Expense
+                </p>
+                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  {payload.description}
+                </p>
+              </div>
+            )}
+
+            {/* If there's a rich changes object, show the diff */}
+            {hasChanges && payload.changes && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                  Changes
+                </p>
+                <div className="space-y-1.5">
+                  {payload.changes.description && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Renamed:</span>{" "}
+                      {payload.changes.description.from} → {payload.changes.description.to}
+                    </p>
+                  )}
+                  {payload.changes.amount && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Amount:</span>{" "}
+                      {formatCents(payload.changes.amount.from)} → {formatCents(payload.changes.amount.to)}
+                    </p>
+                  )}
+                  {payload.changes.date && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Date:</span>{" "}
+                      {formatExpenseDate(payload.changes.date.from)} → {formatExpenseDate(payload.changes.date.to)}
+                    </p>
+                  )}
+                  {payload.changes.paidBy && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Payer:</span>{" "}
+                      {formatDisplayName(payload.changes.paidBy.from)} → {formatDisplayName(payload.changes.paidBy.to)}
+                    </p>
+                  )}
+                  {(payload.changes.participants?.added ?? []).length > 0 && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Added:</span>{" "}
+                      {formatNameList(
+                        (payload.changes.participants!.added ?? []).map(formatDisplayName)
+                      )}
+                    </p>
+                  )}
+                  {(payload.changes.participants?.removed ?? []).length > 0 && (
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="font-medium">Removed:</span>{" "}
+                      {formatNameList(
+                        (payload.changes.participants!.removed ?? []).map(formatDisplayName)
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Fallback: no rich changes — show current state */}
+            {!hasChanges && (
+              <>
+                {typeof payload.amountCents === "number" && (
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                      Amount
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {typeof payload.previousAmountCents === "number" &&
+                      payload.previousAmountCents !== payload.amountCents
+                        ? `${formatCents(payload.previousAmountCents)} → ${formatCents(payload.amountCents)}`
+                        : formatCents(payload.amountCents)}
+                    </p>
+                  </div>
+                )}
+                {payload.paidByDisplayName && (
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                      Paid by
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {formatDisplayName(payload.paidByDisplayName)}
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* payment_recorded / payment_deleted */}
+        {isPaymentAction && (
+          <div className="space-y-3 mb-5">
+            {typeof payload.amountCents === "number" && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  Amount
+                </p>
+                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                  {formatCents(payload.amountCents)}
+                </p>
+              </div>
+            )}
+            {payload.fromDisplayName && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  From
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatDisplayName(payload.fromDisplayName)}
+                </p>
+              </div>
+            )}
+            {payload.toDisplayName && (
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                  To
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  {formatDisplayName(payload.toDisplayName)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            By {formatDisplayName(log.actor.displayName)} · {formatRelativeTime(log.createdAt)}
+          </p>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function isClickable(log: ActivityLog): boolean {
+  return !log.isPending && log.action !== "member_left";
+}
+
+export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
+  const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
+
+  return (
+    <>
+      {selectedLog && (
+        <ActivityLogModal log={selectedLog} onClose={() => setSelectedLog(null)} />
       )}
-    </section>
+      <section>
+        <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Activity</h2>
+        {logs.length === 0 ? (
+          <p className="text-sm text-gray-400">No activity yet.</p>
+        ) : (
+          <Card className="divide-y divide-gray-100 dark:divide-gray-700">
+            {logs.map((log) => {
+              const payload = log.payload as Payload;
+              const clickable = isClickable(log);
+              const rowClass = `flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}${clickable ? " cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" : ""}`;
+              const handleClick = clickable ? () => setSelectedLog(log) : undefined;
+
+              if (log.action === "expense_edited") {
+                const { verbAndPrep, showExpenseName, detail } = buildEditInfo(payload);
+                return (
+                  <div key={log.id} className={rowClass} onClick={handleClick}>
+                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                      <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
+                      {" "}{verbAndPrep}
+                      {showExpenseName && payload.description && (
+                        <>{" "}<span className="font-medium">{payload.description}</span></>
+                      )}
+                      {detail && (
+                        <span className="text-gray-500 dark:text-gray-400"> ({detail})</span>
+                      )}
+                    </p>
+                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                      {formatRelativeTime(log.createdAt)}
+                    </span>
+                  </div>
+                );
+              }
+
+              if (log.action === "payment_recorded" || log.action === "payment_deleted") {
+                const verb = log.action === "payment_recorded" ? "recorded a payment" : "deleted a payment";
+                return (
+                  <div key={log.id} className={rowClass} onClick={handleClick}>
+                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                      <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
+                      {" "}{verb}
+                      {payload.fromDisplayName && payload.toDisplayName && (
+                        <>
+                          {": "}
+                          <span className="font-medium">{formatDisplayName(payload.fromDisplayName)}</span>
+                          {" → "}
+                          <span className="font-medium">{formatDisplayName(payload.toDisplayName)}</span>
+                        </>
+                      )}
+                      {typeof payload.amountCents === "number" && (
+                        <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
+                      )}
+                    </p>
+                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                      {formatRelativeTime(log.createdAt)}
+                    </span>
+                  </div>
+                );
+              }
+
+              if (log.action === "member_left") {
+                return (
+                  <div key={log.id} className={rowClass}>
+                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                      <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
+                      {" "}left the group
+                    </p>
+                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                      {formatRelativeTime(log.createdAt)}
+                    </span>
+                  </div>
+                );
+              }
+
+              const verb =
+                log.action === "expense_added" ? "added" :
+                log.action === "expense_deleted" ? "deleted" :
+                log.action;
+              const hasAmount = typeof payload.amountCents === "number";
+
+              return (
+                <div key={log.id} className={rowClass} onClick={handleClick}>
+                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
+                    {" "}{verb}{" "}
+                    {payload.description && (
+                      <span className="font-medium">{payload.description}</span>
+                    )}
+                    {hasAmount && (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {" "}({formatCents(payload.amountCents!)})
+                      </span>
+                    )}
+                  </p>
+                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    {formatRelativeTime(log.createdAt)}
+                  </span>
+                </div>
+              );
+            })}
+          </Card>
+        )}
+      </section>
+    </>
   );
 }
