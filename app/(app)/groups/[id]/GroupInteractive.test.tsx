@@ -384,3 +384,148 @@ describe("GroupInteractive — deleted account balance integrity", () => {
     expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 });
+
+// ─── New balance UI: sort, highlight, user-settled-up state ──────────────────
+
+describe("GroupInteractive — balance UI improvements", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: {}, error: null }),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const THREE_MEMBER_PROPS = {
+    ...BASE_PROPS,
+    members: [
+      { userId: "user-a", displayName: "Alice" },
+      { userId: "user-b", displayName: "Bob" },
+      { userId: "user-c", displayName: "Carol" },
+    ],
+    allUserNames: { "user-a": "Alice", "user-b": "Bob", "user-c": "Carol" },
+  };
+
+  it("shows \"You're all settled up!\" when current user has no debts but others do", () => {
+    // Bob paid $10 for Carol only — Alice (current user) is uninvolved
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-c"],
+      splits: [{ userId: "user-c", amountCents: 1000 }],
+    });
+    render(<GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getByText(/you're all settled up/i)).toBeTruthy();
+    // The other debt (Carol owes Bob) is still shown
+    expect(screen.getAllByText("Carol").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not show \"You're all settled up!\" when current user has an outstanding debt", () => {
+    // Bob paid $10 split with Alice — Alice owes Bob
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[expense]} />);
+    expect(screen.queryByText(/you're all settled up/i)).toBeNull();
+  });
+
+  it("does not show \"You're all settled up!\" when there are no debts at all", () => {
+    render(<GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[]} />);
+    expect(screen.queryByText(/you're all settled up/i)).toBeNull();
+    // The "everyone" message appears instead
+    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+  });
+
+  it("current user's debt row appears before rows not involving them", () => {
+    // Two debts: Alice owes Bob $5 (involves user), Carol owes Bob $5 (does not)
+    const aliceOwesBob = makeExpense({
+      id: "e1",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    const carolOwesBob = makeExpense({
+      id: "e2",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-c", "user-b"],
+    });
+    // Pass Carol's expense first — sorting should still put Alice (You) first
+    const { container } = render(
+      <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[carolOwesBob, aliceOwesBob]} />
+    );
+    const nameEls = Array.from(
+      container.querySelectorAll("[class*='font-semibold']")
+    ).map((el) => el.textContent);
+    const youIndex = nameEls.findIndex((t) => t === "You");
+    const carolIndex = nameEls.findIndex((t) => t === "Carol");
+    expect(youIndex).toBeGreaterThanOrEqual(0);
+    expect(carolIndex).toBeGreaterThanOrEqual(0);
+    expect(youIndex).toBeLessThan(carolIndex);
+  });
+
+  it("applies highlight background class to the current user's debt row", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    const section = screen.getByText("Balances").closest("section")!;
+    const highlightedRows = Array.from(section.querySelectorAll("[class*='bg-gray-50']"));
+    expect(highlightedRows.length).toBeGreaterThan(0);
+  });
+
+  it("does not apply highlight background to rows not involving the current user", () => {
+    // Bob paid for Carol — Alice uninvolved
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-c"],
+      splits: [{ userId: "user-c", amountCents: 1000 }],
+    });
+    render(
+      <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[expense]} />
+    );
+    // Scope to the Balances <section> to avoid matching bg-gray-50 from child components
+    const section = screen.getByText("Balances").closest("section")!;
+    const highlightedRows = Array.from(section.querySelectorAll("[class*='bg-gray-50']"));
+    expect(highlightedRows.length).toBe(0);
+  });
+
+  it("colors amount red when current user owes money", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    const section = screen.getByText("Balances").closest("section")!;
+    expect(section.querySelector("[class*='text-red-']")).not.toBeNull();
+  });
+
+  it("colors amount green when current user is owed money", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    const section = screen.getByText("Balances").closest("section")!;
+    expect(section.querySelector("[class*='text-emerald-']")).not.toBeNull();
+  });
+});
