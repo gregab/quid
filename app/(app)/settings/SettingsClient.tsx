@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
@@ -103,7 +104,12 @@ export function SettingsClient({
                 <ul className="mt-2 space-y-1">
                   {groupBalances.map((gb) => (
                     <li key={gb.groupId} className="text-sm text-amber-700 dark:text-amber-400">
-                      <span className="font-medium">{gb.groupName}</span>:{" "}
+                      <Link
+                        href={`/groups/${gb.groupId}`}
+                        className="font-medium underline hover:opacity-70 transition-opacity"
+                      >
+                        {gb.groupName}
+                      </Link>:{" "}
                       {gb.balanceCents > 0
                         ? `you are owed ${formatBalance(gb.balanceCents)}`
                         : `you owe ${formatBalance(gb.balanceCents)}`}
