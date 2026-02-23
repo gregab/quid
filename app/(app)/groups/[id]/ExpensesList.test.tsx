@@ -16,7 +16,10 @@ const BASE_PROPS = {
   groupCreatedById: "creator-1",
   currentUserId: "user-1",
   currentUserDisplayName: "Alice",
-  members: [{ userId: "user-1", displayName: "Alice" }],
+  members: [
+    { userId: "user-1", displayName: "Alice" },
+    { userId: "user-2", displayName: "Bob" },
+  ],
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
@@ -221,5 +224,88 @@ describe("ExpensesList — auto-reorder when expense date is edited", () => {
     const items = container.querySelectorAll("li");
     expect(items[0]!.textContent).toContain("Newer");
     expect(items[1]!.textContent).toContain("Older");
+  });
+});
+
+// ----------------------------
+// Payment card rendering
+// ----------------------------
+
+describe("ExpensesList — payment card rendering", () => {
+  function makePayment(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
+    return {
+      id: "payment-1",
+      description: "Payment",
+      amountCents: 5000,
+      date: "2024-03-01",
+      paidById: "user-1",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-2"],
+      canEdit: false,
+      canDelete: true,
+      isPayment: true,
+      createdById: "user-1",
+      ...overrides,
+    };
+  }
+
+  it("renders the Payment badge for payment rows", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
+    expect(screen.getByText("Payment")).toBeDefined();
+  });
+
+  it("renders 'Alice → Bob' format for payment rows", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
+    // "Alice → Bob" — split across spans but queryable via text
+    expect(screen.getByText("Alice")).toBeDefined();
+    expect(screen.getByText("Bob")).toBeDefined();
+    // Arrow character should appear somewhere in the list item
+    const list = document.querySelector("ul");
+    expect(list?.textContent).toContain("→");
+  });
+
+  it("renders amount in emerald for payments", () => {
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />
+    );
+    const amountEl = container.querySelector(".text-emerald-600");
+    expect(amountEl, "amount should have emerald color class").not.toBeNull();
+    expect(amountEl!.textContent).toContain("$50.00");
+  });
+
+  it("does NOT render edit button for payment rows", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
+    const editBtn = screen.queryByRole("button", { name: /edit expense/i });
+    expect(editBtn, "payments should not have an edit button").toBeNull();
+  });
+
+  it("renders delete button for payments the current user created", () => {
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[makePayment({ canDelete: true })]}
+      />
+    );
+    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i });
+    expect(deleteBtn, "creator should see delete button").not.toBeNull();
+  });
+
+  it("does not render delete button for payments the current user did not create", () => {
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[makePayment({ canDelete: false, createdById: "user-2" })]}
+      />
+    );
+    const deleteBtn = screen.queryByRole("button", { name: /delete expense/i });
+    expect(deleteBtn, "non-creator should not see delete button").toBeNull();
+  });
+
+  it("renders regular expense description for non-payment rows", () => {
+    const regularExpense = makeExpense({ description: "Dinner" });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[regularExpense]} />);
+    expect(screen.getByText("Dinner")).toBeDefined();
+    // Should NOT render Payment badge
+    expect(screen.queryByText("Payment")).toBeNull();
   });
 });

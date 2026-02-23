@@ -45,7 +45,12 @@ export function ExpenseActions({
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
-  if (!expense.canEdit && !expense.canDelete) return null;
+  // For payments: never show edit, only show delete (if canDelete)
+  if (expense.isPayment) {
+    if (!expense.canDelete) return null;
+  } else if (!expense.canEdit && !expense.canDelete) {
+    return null;
+  }
 
   const basePath = new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000/aviary").pathname;
 
@@ -173,18 +178,34 @@ export function ExpenseActions({
     setDeleteConfirm(false);
     // Optimistically remove expense and add activity log
     onOptimisticDelete(expense.id);
-    onOptimisticActivity({
-      id: `activity-pending-${Date.now()}`,
-      action: "expense_deleted",
-      payload: {
-        description: expense.description,
-        amountCents: expense.amountCents,
-        paidByDisplayName: expense.paidByDisplayName,
-      },
-      createdAt: new Date(),
-      actor: { displayName: currentUserDisplayName },
-      isPending: true,
-    });
+    if (expense.isPayment) {
+      const recipientName = members.find((m) => m.userId === expense.participantIds[0])?.displayName ?? "Unknown";
+      onOptimisticActivity({
+        id: `activity-pending-${Date.now()}`,
+        action: "payment_deleted",
+        payload: {
+          amountCents: expense.amountCents,
+          fromDisplayName: expense.paidByDisplayName,
+          toDisplayName: recipientName,
+        },
+        createdAt: new Date(),
+        actor: { displayName: currentUserDisplayName },
+        isPending: true,
+      });
+    } else {
+      onOptimisticActivity({
+        id: `activity-pending-${Date.now()}`,
+        action: "expense_deleted",
+        payload: {
+          description: expense.description,
+          amountCents: expense.amountCents,
+          paidByDisplayName: expense.paidByDisplayName,
+        },
+        createdAt: new Date(),
+        actor: { displayName: currentUserDisplayName },
+        isPending: true,
+      });
+    }
 
     const res = await fetch(`${basePath}/api/groups/${groupId}/expenses/${expense.id}`, {
       method: "DELETE",
@@ -215,7 +236,7 @@ export function ExpenseActions({
   return (
     <>
       <div className="flex items-center gap-0 shrink-0 -mr-1">
-        {expense.canEdit && (
+        {!expense.isPayment && expense.canEdit && (
           <button
             onClick={() => setEditOpen(true)}
             disabled={isPending || editLoading}
@@ -369,9 +390,13 @@ export function ExpenseActions({
           onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(false); }}
         >
           <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">Delete expense?</h2>
+            <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">
+              {expense.isPayment ? "Delete payment?" : "Delete expense?"}
+            </h2>
             <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
-              &ldquo;{expense.description}&rdquo; will be permanently deleted.
+              {expense.isPayment
+                ? "This payment will be permanently deleted and balances will be recalculated."
+                : `"${expense.description}" will be permanently deleted.`}
             </p>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="ghost" onClick={() => setDeleteConfirm(false)}>

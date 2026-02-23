@@ -400,3 +400,59 @@ describe("ActivityFeed — deleted account fallback", () => {
     expect(screen.getByText("left the group")).toBeDefined();
   });
 });
+
+describe("ActivityFeed — payment_recorded and payment_deleted", () => {
+  it("renders 'recorded a payment' with from/to names and amount", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_recorded",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob" },
+            actor: { displayName: "Alice" },
+          }),
+        ]}
+      />
+    );
+    // "Alice" appears twice: once as actor name, once as fromDisplayName
+    expect(screen.getAllByText("Alice")).toHaveLength(2);
+    expect(screen.getByText(/recorded a payment/)).toBeDefined();
+    expect(screen.getByText("Bob")).toBeDefined();
+    expect(screen.getByText(/\$50\.00/)).toBeDefined();
+  });
+
+  it("renders 'deleted a payment' with from/to names and amount", () => {
+    render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            action: "payment_deleted",
+            payload: { amountCents: 5000, fromDisplayName: "Alice", toDisplayName: "Bob" },
+            actor: { displayName: "Greg" },
+          }),
+        ]}
+      />
+    );
+    expect(screen.getByText("Greg")).toBeDefined();
+    expect(screen.getByText(/deleted a payment/)).toBeDefined();
+    expect(screen.getByText(/\$50\.00/)).toBeDefined();
+  });
+
+  it("applies opacity class to pending payment_recorded log", () => {
+    const { container } = render(
+      <ActivityFeed
+        logs={[
+          makeLog({
+            id: "pending-pay",
+            action: "payment_recorded",
+            payload: { amountCents: 3000, fromDisplayName: "Alice", toDisplayName: "Bob" },
+            actor: { displayName: "Alice" },
+            isPending: true,
+          }),
+        ]}
+      />
+    );
+    const row = container.querySelector(".opacity-60");
+    expect(row, "pending payment_recorded log should have opacity-60 class").not.toBeNull();
+  });
+});

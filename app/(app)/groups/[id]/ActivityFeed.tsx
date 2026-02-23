@@ -23,6 +23,8 @@ type Payload = {
   previousAmountCents?: number;
   paidByDisplayName?: string;
   changes?: Changes;
+  fromDisplayName?: string;
+  toDisplayName?: string;
 };
 
 function formatCents(cents: number): string {
@@ -169,6 +171,32 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                     )}
                     {detail && (
                       <span className="text-gray-500"> ({detail})</span>
+                    )}
+                  </p>
+                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    {formatRelativeTime(log.createdAt)}
+                  </span>
+                </div>
+              );
+            }
+
+            if (log.action === "payment_recorded" || log.action === "payment_deleted") {
+              const verb = log.action === "payment_recorded" ? "recorded a payment" : "deleted a payment";
+              return (
+                <div key={log.id} className={`flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}`}>
+                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <span className="font-semibold">{log.actor.displayName}</span>
+                    {" "}{verb}
+                    {payload.fromDisplayName && payload.toDisplayName && (
+                      <>
+                        {": "}
+                        <span className="font-medium">{payload.fromDisplayName}</span>
+                        {" → "}
+                        <span className="font-medium">{payload.toDisplayName}</span>
+                      </>
+                    )}
+                    {typeof payload.amountCents === "number" && (
+                      <span className="text-gray-500"> ({formatCents(payload.amountCents)})</span>
                     )}
                   </p>
                   <span className="text-xs text-gray-400 shrink-0 mt-0.5">

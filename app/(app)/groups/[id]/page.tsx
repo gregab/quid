@@ -112,8 +112,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     paidById: expense.paidById,
     paidByDisplayName: expense.User?.displayName ?? "Deleted User",
     participantIds: (expense.ExpenseSplit ?? []).map((s) => s.userId),
-    canEdit: isMember,
-    canDelete: isMember,
+    canEdit: expense.isPayment ? false : isMember,
+    canDelete: expense.isPayment ? expense.createdById === user.id : isMember,
+    isPayment: expense.isPayment,
+    createdById: expense.createdById ?? undefined,
   }));
 
   // Compute how much the current user owes on net (positive = owes money)

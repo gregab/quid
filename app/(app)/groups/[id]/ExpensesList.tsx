@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
+import { RecordPaymentForm } from "./RecordPaymentForm";
 import { ExpenseActions } from "./ExpenseActions";
 import type { ActivityLog } from "./ActivityFeed";
 
@@ -23,6 +24,8 @@ export interface ExpenseRow {
   canEdit: boolean;
   canDelete: boolean;
   isPending?: boolean;
+  isPayment?: boolean;
+  createdById?: string;
 }
 
 interface ExpensesListProps {
@@ -134,15 +137,26 @@ export function ExpensesList({
     <section>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Expenses</h2>
-        <AddExpenseForm
-          groupId={groupId}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          members={members}
-          onOptimisticAdd={handleOptimisticAdd}
-          onSettled={handleAddSettled}
-          onOptimisticActivity={onOptimisticActivity}
-        />
+        <div className="flex items-center gap-2">
+          <RecordPaymentForm
+            groupId={groupId}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            members={members}
+            onOptimisticAdd={handleOptimisticAdd}
+            onSettled={handleAddSettled}
+            onOptimisticActivity={onOptimisticActivity}
+          />
+          <AddExpenseForm
+            groupId={groupId}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            members={members}
+            onOptimisticAdd={handleOptimisticAdd}
+            onSettled={handleAddSettled}
+            onOptimisticActivity={onOptimisticActivity}
+          />
+        </div>
       </div>
 
       {expenses.length === 0 ? (
@@ -159,30 +173,68 @@ export function ExpensesList({
                   expense.isPending ? "opacity-60" : ""
                 }`}
               >
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Paid by {expense.paidByDisplayName} · {formatDate(expense.date)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
-                    {formatCents(expense.amountCents)}
-                  </span>
-                  <ExpenseActions
-                    groupId={groupId}
-                    expense={expense}
-                    members={members}
-                    isPending={expense.isPending}
-                    currentUserDisplayName={currentUserDisplayName}
-                    onOptimisticDelete={handleOptimisticDelete}
-                    onDeleteFailed={handleDeleteFailed}
-                    onDeleteSettled={handleDeleteSettled}
-                    onOptimisticUpdate={handleOptimisticUpdate}
-                    onUpdateSettled={handleUpdateSettled}
-                    onOptimisticActivity={onOptimisticActivity}
-                  />
-                </div>
+                {expense.isPayment ? (
+                  <>
+                    <div className="min-w-0 flex items-center gap-2">
+                      <span className="shrink-0 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
+                        Payment
+                      </span>
+                      <p className="text-sm text-gray-700 truncate dark:text-gray-300">
+                        <span className="font-semibold">{expense.paidByDisplayName}</span>
+                        {" → "}
+                        <span className="font-semibold">
+                          {members.find((m) => m.userId === expense.participantIds[0])?.displayName ?? "Unknown"}
+                        </span>
+                        <span className="text-gray-400 ml-1.5">· {formatDate(expense.date)}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
+                        {formatCents(expense.amountCents)}
+                      </span>
+                      <ExpenseActions
+                        groupId={groupId}
+                        expense={expense}
+                        members={members}
+                        isPending={expense.isPending}
+                        currentUserDisplayName={currentUserDisplayName}
+                        onOptimisticDelete={handleOptimisticDelete}
+                        onDeleteFailed={handleDeleteFailed}
+                        onDeleteSettled={handleDeleteSettled}
+                        onOptimisticUpdate={handleOptimisticUpdate}
+                        onUpdateSettled={handleUpdateSettled}
+                        onOptimisticActivity={onOptimisticActivity}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Paid by {expense.paidByDisplayName} · {formatDate(expense.date)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
+                        {formatCents(expense.amountCents)}
+                      </span>
+                      <ExpenseActions
+                        groupId={groupId}
+                        expense={expense}
+                        members={members}
+                        isPending={expense.isPending}
+                        currentUserDisplayName={currentUserDisplayName}
+                        onOptimisticDelete={handleOptimisticDelete}
+                        onDeleteFailed={handleDeleteFailed}
+                        onDeleteSettled={handleDeleteSettled}
+                        onOptimisticUpdate={handleOptimisticUpdate}
+                        onUpdateSettled={handleUpdateSettled}
+                        onOptimisticActivity={onOptimisticActivity}
+                      />
+                    </div>
+                  </>
+                )}
               </Card>
             </li>
           ))}

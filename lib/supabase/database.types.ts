@@ -118,31 +118,44 @@ export type Database = {
         Row: {
           amountCents: number
           createdAt: string
+          createdById: string | null
           date: string
           description: string
           groupId: string
           id: string
+          isPayment: boolean
           paidById: string
         }
         Insert: {
           amountCents: number
           createdAt?: string
+          createdById?: string | null
           date: string
           description: string
           groupId: string
           id?: string
+          isPayment?: boolean
           paidById: string
         }
         Update: {
           amountCents?: number
           createdAt?: string
+          createdById?: string | null
           date?: string
           description?: string
           groupId?: string
           id?: string
+          isPayment?: boolean
           paidById?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "Expense_createdById_fkey"
+            columns: ["createdById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "Expense_groupId_fkey"
             columns: ["groupId"]
@@ -305,6 +318,18 @@ export type Database = {
         Returns: string
       }
       create_group: { Args: { _name: string }; Returns: string }
+      create_payment: {
+        Args: {
+          _amount_cents: number
+          _date: string
+          _from_display_name: string
+          _group_id: string
+          _paid_by_id: string
+          _recipient_id: string
+          _to_display_name: string
+        }
+        Returns: string
+      }
       delete_account: { Args: never; Returns: undefined }
       delete_expense: {
         Args: {
