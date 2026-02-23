@@ -287,13 +287,28 @@ export function ExpensesList({
               ? getPaymentDirection(expense, currentUserId, members, allUserNames)
               : null;
             const dateParts = formatDateBlock(expense.date);
+
+            // Left accent bar color
+            const accentColor = expense.isPayment
+              ? "border-l-indigo-400"
+              : personalContext?.positive
+                ? "border-l-emerald-500"
+                : personalContext
+                  ? "border-l-rose-400"
+                  : "border-l-gray-200 dark:border-l-gray-700";
+
+            // Payment row background tint
+            const paymentBg = expense.isPayment
+              ? "bg-indigo-50/40 dark:bg-indigo-950/20"
+              : "";
+
             return (
               <li
                 key={expense.id}
                 className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
               >
                 <Card
-                  className={`px-3 sm:px-4 py-3 ${expense.isPending ? "opacity-60" : ""}`}
+                  className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""}`}
                 >
                   <div className="flex items-center gap-3">
                     {/* Date block */}
@@ -312,25 +327,31 @@ export function ExpensesList({
                     {/* Info: title + subtitle */}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate">
-                        {expense.isPayment ? "Payment" : expense.description}
+                        {expense.isPayment ? (
+                          <>{paymentDirection}</>
+                        ) : expense.description}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
-                        {expense.isPayment ? paymentDirection : payerLine}
+                        {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
                       </p>
                     </div>
 
                     {/* Right: personal stake (expenses) or amount (payments) + actions */}
                     <div className="flex items-center gap-2 shrink-0">
                       {expense.isPayment ? (
-                        <span className="text-sm font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
+                        <span className="text-base font-bold text-indigo-700 dark:text-indigo-400 whitespace-nowrap">
                           {formatCents(expense.amountCents)}
                         </span>
                       ) : personalContext ? (
                         <div className="text-right">
-                          <p className="text-[10px] leading-none text-gray-400 dark:text-gray-500">
+                          <p className={`text-xs leading-none ${
+                            personalContext.positive
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                          }`}>
                             {personalContext.label}
                           </p>
-                          <p className={`text-sm font-bold leading-tight mt-px whitespace-nowrap ${
+                          <p className={`text-base font-bold leading-tight mt-px whitespace-nowrap ${
                             personalContext.positive
                               ? "text-emerald-600 dark:text-emerald-400"
                               : "text-rose-500 dark:text-rose-400"

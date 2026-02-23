@@ -255,7 +255,7 @@ describe("ExpensesList — payment card rendering", () => {
 
   it("renders the Payment badge for payment rows", () => {
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />);
-    expect(screen.getByText("Payment")).toBeDefined();
+    expect(screen.getByText(/^Payment ·/)).toBeDefined();
   });
 
   it("renders payment direction from the current user's perspective", () => {
