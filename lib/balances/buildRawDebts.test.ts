@@ -1084,3 +1084,713 @@ describe("buildRawDebts — payer excluded from participants", () => {
     expect(simplified[0]).toMatchObject({ from: "A", to: "B", amount: 2000 });
   });
 });
+
+// ─── E2E-style sequential scenarios ─────────────────────────────────────────
+//
+// These tests simulate a group's lifecycle: expenses added over time, edits,
+// deletions, payments, and balance checks at each step — mirroring how
+// GroupInteractive.tsx recomputes balances from the current expense list.
+
+/** Compute simplified debts from a mutable expense list (like the app does). */
+function balances(expenses: ExpenseForDebt[]) {
+  return simplifyDebts(buildRawDebts(expenses));
+}
+
+/** Helper: find the net balance of a person in simplified debts. */
+function net(simplified: ReturnType<typeof simplifyDebts>, id: string): number {
+  return simplified.reduce((acc, d) => {
+    if (d.to === id) return acc + d.amount;
+    if (d.from === id) return acc - d.amount;
+    return acc;
+  }, 0);
+}
+
+/** Build a custom-split expense. */
+function makeCustomExpense(opts: {
+  paidById: string;
+  splits: Array<{ userId: string; amountCents: number }>;
+}): ExpenseForDebt {
+  return { paidById: opts.paidById, splits: opts.splits };
+}
+
+describe("E2E scenarios — group lifecycle", () => {
+  it("scenario 1: roommates splitting monthly bills", () => {
+    // Three roommates: alice, bob, carol
+    const expenses: ExpenseForDebt[] = [];
+
+    // Month 1: alice pays rent $1500, equal 3 ways
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 150000, participantIds: ["alice", "bob", "carol"] })
+    );
+    let s = balances(expenses);
+    expect(net(s, "alice")).toBe(100000); // owed $1000
+    expect(net(s, "bob")).toBe(-50000); // owes $500
+    expect(net(s, "carol")).toBe(-50000);
+
+    // Bob pays utilities $120, equal 3 ways
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 12000, participantIds: ["alice", "bob", "carol"] })
+    );
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(96000); // 100000 - 4000
+    expect(net(s, "bob")).toBe(-42000); // -50000 + 8000
+    expect(net(s, "carol")).toBe(-54000); // -50000 - 4000
+
+    // Carol pays internet $60, equal 3 ways
+    expenses.push(
+      makeEqualExpense({ paidById: "carol", amountCents: 6000, participantIds: ["alice", "bob", "carol"] })
+    );
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(94000); // 96000 - 2000
+    expect(net(s, "bob")).toBe(-44000); // -42000 - 2000
+    expect(net(s, "carol")).toBe(-50000); // -54000 + 4000
+
+    // Bob pays alice $440 (his share of everything)
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 44000 }));
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(0); // settled
+    expect(net(s, "alice")).toBe(50000); // carol still owes
+    expect(net(s, "carol")).toBe(-50000);
+
+    // Carol pays alice $500
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 50000 }));
+    s = balances(expenses);
+    expect(s).toHaveLength(0); // fully settled
+  });
+
+  it("scenario 2: expense edited mid-lifecycle", () => {
+    // alice and bob. alice pays $100, split 2 ways → bob owes alice $50
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "alice", amountCents: 10000, participantIds: ["alice", "bob"] }),
+    ];
+    let s = balances(expenses);
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ from: "bob", to: "alice", amount: 5000 });
+
+    // alice adds another expense: $60 split 2 ways → bob now owes $50 + $30 = $80
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 6000, participantIds: ["alice", "bob"] })
+    );
+    s = balances(expenses);
+    expect(s[0]).toMatchObject({ from: "bob", to: "alice", amount: 8000 });
+
+    // Oops, the first expense was wrong. Edit: $100 → $40 (replace in-place)
+    expenses[0] = makeEqualExpense({ paidById: "alice", amountCents: 4000, participantIds: ["alice", "bob"] });
+    s = balances(expenses);
+    // bob now owes $20 + $30 = $50
+    expect(s[0]).toMatchObject({ from: "bob", to: "alice", amount: 5000 });
+
+    // Edit the second expense: change payer from alice to bob
+    expenses[1] = makeEqualExpense({ paidById: "bob", amountCents: 6000, participantIds: ["alice", "bob"] });
+    s = balances(expenses);
+    // Now: bob owes alice $20 (first exp), alice owes bob $30 (second exp) → net alice owes bob $10
+    expect(s[0]).toMatchObject({ from: "alice", to: "bob", amount: 1000 });
+  });
+
+  it("scenario 3: expense deleted mid-lifecycle", () => {
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "alice", amountCents: 9000, participantIds: ["alice", "bob", "carol"] }),
+      makeEqualExpense({ paidById: "bob", amountCents: 6000, participantIds: ["alice", "bob", "carol"] }),
+      makeEqualExpense({ paidById: "carol", amountCents: 3000, participantIds: ["alice", "bob", "carol"] }),
+    ];
+    let s = balances(expenses);
+    // Net: alice +3000, bob 0, carol -3000
+    expect(net(s, "alice")).toBe(3000);
+    expect(net(s, "bob")).toBe(0);
+    expect(net(s, "carol")).toBe(-3000);
+
+    // Delete bob's expense
+    expenses.splice(1, 1);
+    s = balances(expenses);
+    // Now just alice's $90 and carol's $30
+    // alice: +6000 (from dinner) - 1000 (gas) = +5000
+    // bob: -3000 (dinner) - 1000 (gas) = -4000
+    // carol: +2000 (gas) - 3000 (dinner) = -1000
+    expect(net(s, "alice")).toBe(5000);
+    expect(net(s, "bob")).toBe(-4000);
+    expect(net(s, "carol")).toBe(-1000);
+
+    // Delete all expenses
+    expenses.length = 0;
+    s = balances(expenses);
+    expect(s).toHaveLength(0);
+  });
+
+  it("scenario 4: edit splits from equal to custom", () => {
+    // $120 dinner, 3 ways equal: alice pays, bob and carol each owe $40
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "alice", amountCents: 12000, participantIds: ["alice", "bob", "carol"] }),
+    ];
+    let s = balances(expenses);
+    expect(net(s, "bob")).toBe(-4000);
+    expect(net(s, "carol")).toBe(-4000);
+
+    // Edit to custom: bob had steak ($70), alice had salad ($20), carol had pasta ($30)
+    expenses[0] = makeCustomExpense({
+      paidById: "alice",
+      splits: [
+        { userId: "alice", amountCents: 2000 },
+        { userId: "bob", amountCents: 7000 },
+        { userId: "carol", amountCents: 3000 },
+      ],
+    });
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(10000); // paid $120, owes self $20 → owed $100
+    expect(net(s, "bob")).toBe(-7000);
+    expect(net(s, "carol")).toBe(-3000);
+  });
+
+  it("scenario 5: payment then more expenses — running tab", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // alice pays $100 dinner, 2 ways → bob owes $50
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 10000, participantIds: ["alice", "bob"] })
+    );
+    expect(balances(expenses)[0]).toMatchObject({ from: "bob", to: "alice", amount: 5000 });
+
+    // bob pays alice $50 → settled
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 5000 }));
+    expect(balances(expenses)).toHaveLength(0);
+
+    // alice pays $80 lunch, 2 ways → bob owes $40
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 8000, participantIds: ["alice", "bob"] })
+    );
+    expect(balances(expenses)[0]).toMatchObject({ from: "bob", to: "alice", amount: 4000 });
+
+    // bob pays $120 concert tickets, 2 ways → alice owes $60
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 12000, participantIds: ["alice", "bob"] })
+    );
+    let s = balances(expenses);
+    // Net: alice is owed 5000+4000=9000, owes bob 6000; bob is owed 6000, owes alice 9000 → alice +3000-6000 = wait
+    // Let me recalc: alice paid $100 (bob owes 5000), payment (alice owes bob 5000),
+    // alice paid $80 (bob owes 4000), bob paid $120 (alice owes 6000)
+    // Net alice: +5000 - 5000 + 4000 - 6000 = -2000 → alice owes bob $20
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ from: "alice", to: "bob", amount: 2000 });
+
+    // alice pays bob $20 → settled
+    expenses.push(makePayment({ senderId: "alice", recipientId: "bob", amountCents: 2000 }));
+    expect(balances(expenses)).toHaveLength(0);
+  });
+
+  it("scenario 6: 4-person trip with mixed operations", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // Day 1: alice pays $200 hotel, 4 ways
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 20000, participantIds: ["alice", "bob", "carol", "dave"] })
+    );
+
+    // Day 1: bob pays $80 dinner, 4 ways
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 8000, participantIds: ["alice", "bob", "carol", "dave"] })
+    );
+
+    // Day 2: carol pays $40 breakfast, only alice and carol (bob and dave slept in)
+    expenses.push(
+      makeEqualExpense({ paidById: "carol", amountCents: 4000, participantIds: ["alice", "carol"] })
+    );
+
+    // Day 2: dave pays $120 activity, custom split (dave=20, alice=40, bob=40, carol=20)
+    expenses.push(
+      makeCustomExpense({
+        paidById: "dave",
+        splits: [
+          { userId: "dave", amountCents: 2000 },
+          { userId: "alice", amountCents: 4000 },
+          { userId: "bob", amountCents: 4000 },
+          { userId: "carol", amountCents: 2000 },
+        ],
+      })
+    );
+
+    let s = balances(expenses);
+    // Hotel: bob,carol,dave each owe alice 5000
+    // Dinner: alice,carol,dave each owe bob 2000
+    // Breakfast: alice owes carol 2000
+    // Activity: alice owes dave 4000, bob owes dave 4000, carol owes dave 2000
+    //
+    // Net alice: +15000(hotel) - 2000(dinner) - 2000(breakfast) - 4000(activity) = +7000
+    // Net bob: +6000(dinner) - 5000(hotel) - 4000(activity) = -3000
+    // Net carol: +2000(breakfast) - 5000(hotel) - 2000(dinner) - 2000(activity) = -7000
+    // Net dave: +10000(activity) - 5000(hotel) - 2000(dinner) = +3000
+    // Check: 7000 - 3000 - 7000 + 3000 = 0 ✓
+    expect(net(s, "alice")).toBe(7000);
+    expect(net(s, "bob")).toBe(-3000);
+    expect(net(s, "carol")).toBe(-7000);
+    expect(net(s, "dave")).toBe(3000);
+
+    // Oops, hotel was actually $180 not $200. Edit it.
+    expenses[0] = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 18000,
+      participantIds: ["alice", "bob", "carol", "dave"],
+    });
+    s = balances(expenses);
+    // Hotel change: each person's share drops from 5000 to 4500
+    // Net alice: +13500 - 2000 - 2000 - 4000 = +5500
+    // Net bob: +6000 - 4500 - 4000 = -2500
+    // Net carol: +2000 - 4500 - 2000 - 2000 = -6500
+    // Net dave: +10000 - 4500 - 2000 = +3500
+    expect(net(s, "alice")).toBe(5500);
+    expect(net(s, "bob")).toBe(-2500);
+    expect(net(s, "carol")).toBe(-6500);
+    expect(net(s, "dave")).toBe(3500);
+
+    // bob pays dave $25 (his debt to dave)
+    expenses.push(makePayment({ senderId: "bob", recipientId: "dave", amountCents: 2500 }));
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(0); // bob settled
+
+    // carol pays alice $55
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 5500 }));
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(0); // alice settled
+
+    // Delete the breakfast (carol realized she already covered it separately)
+    expenses.splice(2, 1); // remove breakfast
+    s = balances(expenses);
+    // Removing breakfast means alice no longer owes carol $20
+    // and carol no longer gets +2000 from breakfast.
+    // Recalc after removing breakfast:
+    // Hotel($180): bob,carol,dave each owe alice 4500
+    // Dinner($80): alice,carol,dave each owe bob 2000
+    // Activity($120 custom): alice owes dave 4000, bob owes dave 4000, carol owes dave 2000
+    // Payment: bob→dave 2500
+    // Payment: carol→alice 5500
+    //
+    // Net alice: +13500 - 2000 - 4000 - 5500(payment recv is credit, but carol→alice means alice gets 5500) wait
+    // payments: bob→dave means dave gets 2500(credit), bob pays 2500(debit)
+    //           carol→alice means alice gets 5500(credit), carol pays 5500(debit)
+    // Actually the payment makePayment creates a debt from recipient to sender
+    // So bob→dave payment: debt from dave to bob 2500 — net: bob +2500, dave -2500
+    // carol→alice payment: debt from alice to carol 5500 — net: alice -5500, carol +5500
+    //
+    // Net alice: +13500(hotel) - 2000(dinner) - 4000(activity) - 5500(carol's payment) = +2000
+    // Net bob: +6000(dinner) - 4500(hotel) - 4000(activity) + 2500(dave's payment) = 0
+    // Net carol: -4500(hotel) - 2000(dinner) - 2000(activity) + 5500(payment to alice) = -3000
+    // Net dave: +10000(activity) - 4500(hotel) - 2000(dinner) - 2500(payment to bob) = +1000
+    // Check: 2000 + 0 - 3000 + 1000 = 0 ✓
+    expect(net(s, "alice")).toBe(2000);
+    expect(net(s, "bob")).toBe(0);
+    expect(net(s, "carol")).toBe(-3000);
+    expect(net(s, "dave")).toBe(1000);
+  });
+
+  it("scenario 7: rapid-fire edits — amount, payer, participants, split type", () => {
+    // Start with one expense
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "alice", amountCents: 9000, participantIds: ["alice", "bob", "carol"] }),
+    ];
+    let s = balances(expenses);
+    expect(net(s, "bob")).toBe(-3000);
+    expect(net(s, "carol")).toBe(-3000);
+
+    // Edit 1: change amount from $90 to $60
+    expenses[0] = makeEqualExpense({ paidById: "alice", amountCents: 6000, participantIds: ["alice", "bob", "carol"] });
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(-2000);
+    expect(net(s, "carol")).toBe(-2000);
+
+    // Edit 2: change payer to bob
+    expenses[0] = makeEqualExpense({ paidById: "bob", amountCents: 6000, participantIds: ["alice", "bob", "carol"] });
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(-2000);
+    expect(net(s, "bob")).toBe(4000);
+    expect(net(s, "carol")).toBe(-2000);
+
+    // Edit 3: remove carol from participants
+    expenses[0] = makeEqualExpense({ paidById: "bob", amountCents: 6000, participantIds: ["alice", "bob"] });
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(-3000);
+    expect(net(s, "bob")).toBe(3000);
+    expect(net(s, "carol")).toBe(0); // carol no longer involved
+
+    // Edit 4: switch to custom split
+    expenses[0] = makeCustomExpense({
+      paidById: "bob",
+      splits: [
+        { userId: "alice", amountCents: 5000 },
+        { userId: "bob", amountCents: 1000 },
+      ],
+    });
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(-5000);
+    expect(net(s, "bob")).toBe(5000);
+
+    // Edit 5: add dave as participant
+    expenses[0] = makeCustomExpense({
+      paidById: "bob",
+      splits: [
+        { userId: "alice", amountCents: 2000 },
+        { userId: "bob", amountCents: 1000 },
+        { userId: "dave", amountCents: 3000 },
+      ],
+    });
+    s = balances(expenses);
+    expect(net(s, "alice")).toBe(-2000);
+    expect(net(s, "bob")).toBe(5000);
+    expect(net(s, "dave")).toBe(-3000);
+  });
+
+  it("scenario 8: large group settling up over time", () => {
+    const people = ["a", "b", "c", "d", "e"];
+    const expenses: ExpenseForDebt[] = [];
+
+    // a pays $100, all 5 ways
+    expenses.push(makeEqualExpense({ paidById: "a", amountCents: 10000, participantIds: people }));
+    // b pays $50, all 5 ways
+    expenses.push(makeEqualExpense({ paidById: "b", amountCents: 5000, participantIds: people }));
+    // c pays $75, only c, d, e
+    expenses.push(makeEqualExpense({ paidById: "c", amountCents: 7500, participantIds: ["c", "d", "e"] }));
+
+    let s = balances(expenses);
+    // a: +8000(hotel) - 1000(b's exp) = +7000
+    // b: +4000(b's exp) - 2000(a's exp) = +2000
+    // c: +5000(c's exp) - 2000(a's exp) - 1000(b's exp) = +2000
+    // d: -2000(a) - 1000(b) - 2500(c) = -5500
+    // e: -2000(a) - 1000(b) - 2500(c) = -5500
+    // Check: 7000 + 2000 + 2000 - 5500 - 5500 = 0 ✓
+    expect(net(s, "a")).toBe(7000);
+    expect(net(s, "b")).toBe(2000);
+    expect(net(s, "c")).toBe(2000);
+    expect(net(s, "d")).toBe(-5500);
+    expect(net(s, "e")).toBe(-5500);
+
+    // d settles with a: pays $55
+    expenses.push(makePayment({ senderId: "d", recipientId: "a", amountCents: 5500 }));
+    s = balances(expenses);
+    expect(net(s, "d")).toBe(0);
+    expect(net(s, "a")).toBe(1500); // 7000 - 5500
+
+    // e pays b $20 and c $20 (partial settlement)
+    expenses.push(makePayment({ senderId: "e", recipientId: "b", amountCents: 2000 }));
+    expenses.push(makePayment({ senderId: "e", recipientId: "c", amountCents: 2000 }));
+    s = balances(expenses);
+    expect(net(s, "b")).toBe(0); // b settled
+    expect(net(s, "c")).toBe(0); // c settled
+    expect(net(s, "e")).toBe(-1500); // still owes 1500
+
+    // e pays a the remaining $15
+    expenses.push(makePayment({ senderId: "e", recipientId: "a", amountCents: 1500 }));
+    s = balances(expenses);
+    expect(s).toHaveLength(0); // fully settled
+  });
+
+  it("scenario 9: payment overshoot creates reverse debt", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // alice pays $50 dinner, split with bob
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 5000, participantIds: ["alice", "bob"] })
+    );
+    expect(net(balances(expenses), "bob")).toBe(-2500);
+
+    // bob overpays: sends alice $40 (owes only $25)
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 4000 }));
+    let s = balances(expenses);
+    // Net: bob owes 2500, paid 4000 → alice now owes bob 1500
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ from: "alice", to: "bob", amount: 1500 });
+
+    // New expense: bob pays $30, split with alice → alice owes $15 more
+    expenses.push(
+      makeEqualExpense({ paidById: "bob", amountCents: 3000, participantIds: ["alice", "bob"] })
+    );
+    s = balances(expenses);
+    // alice owes bob: 1500 + 1500 = 3000
+    expect(s[0]).toMatchObject({ from: "alice", to: "bob", amount: 3000 });
+
+    // alice pays back $30 → settled
+    expenses.push(makePayment({ senderId: "alice", recipientId: "bob", amountCents: 3000 }));
+    expect(balances(expenses)).toHaveLength(0);
+  });
+
+  it("scenario 10: complex 6-person group — 2-week vacation simulation", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // Day 1: alice pays $600 Airbnb, 6 ways
+    expenses.push(
+      makeEqualExpense({
+        paidById: "alice",
+        amountCents: 60000,
+        participantIds: ["alice", "bob", "carol", "dave", "eve", "frank"],
+      })
+    );
+
+    // Day 2: bob pays $90 groceries, 6 ways
+    expenses.push(
+      makeEqualExpense({
+        paidById: "bob",
+        amountCents: 9000,
+        participantIds: ["alice", "bob", "carol", "dave", "eve", "frank"],
+      })
+    );
+
+    // Day 3: carol pays $150 dinner, custom split (she had the expensive wine)
+    expenses.push(
+      makeCustomExpense({
+        paidById: "carol",
+        splits: [
+          { userId: "alice", amountCents: 2000 },
+          { userId: "bob", amountCents: 2500 },
+          { userId: "carol", amountCents: 5000 },
+          { userId: "dave", amountCents: 2000 },
+          { userId: "eve", amountCents: 1500 },
+          { userId: "frank", amountCents: 2000 },
+        ],
+      })
+    );
+
+    // Day 4: dave pays $80 activity, only dave, eve, frank participated
+    expenses.push(
+      makeEqualExpense({
+        paidById: "dave",
+        amountCents: 8000,
+        participantIds: ["dave", "eve", "frank"],
+      })
+    );
+
+    // Day 5: eve pays $45 coffee run for everyone
+    expenses.push(
+      makeEqualExpense({
+        paidById: "eve",
+        amountCents: 4500,
+        participantIds: ["alice", "bob", "carol", "dave", "eve", "frank"],
+      })
+    );
+
+    // Day 6: frank pays $200 for a day trip, custom (he and alice did expensive option)
+    expenses.push(
+      makeCustomExpense({
+        paidById: "frank",
+        splits: [
+          { userId: "alice", amountCents: 5000 },
+          { userId: "bob", amountCents: 3000 },
+          { userId: "carol", amountCents: 3000 },
+          { userId: "dave", amountCents: 3000 },
+          { userId: "eve", amountCents: 3000 },
+          { userId: "frank", amountCents: 3000 },
+        ],
+      })
+    );
+
+    let s = balances(expenses);
+    // Verify net balances sum to zero (money conservation)
+    const allPeople = ["alice", "bob", "carol", "dave", "eve", "frank"];
+    const totalNet = allPeople.reduce((sum, p) => sum + net(s, p), 0);
+    expect(totalNet).toBe(0);
+
+    // Verify transaction count is minimized
+    expect(s.length).toBeLessThanOrEqual(5); // at most n-1
+
+    // Now people start settling up with payments
+    // Get each person's net balance
+    const nets = new Map(allPeople.map((p) => [p, net(s, p)]));
+
+    // People with negative balances pay people with positive balances
+    // Simulate incremental partial payments
+    const debtors = allPeople.filter((p) => (nets.get(p) ?? 0) < 0);
+    const creditors = allPeople.filter((p) => (nets.get(p) ?? 0) > 0);
+
+    // Each debtor pays their full amount to the first creditor who needs it
+    for (const debtor of debtors) {
+      const owes = -(nets.get(debtor) ?? 0);
+      if (owes > 0) {
+        // Find a creditor who is still owed money
+        for (const creditor of creditors) {
+          const owed = nets.get(creditor) ?? 0;
+          if (owed > 0) {
+            const payment = Math.min(owes, owed);
+            expenses.push(makePayment({ senderId: debtor, recipientId: creditor, amountCents: payment }));
+            nets.set(debtor, (nets.get(debtor) ?? 0) + payment);
+            nets.set(creditor, (nets.get(creditor) ?? 0) - payment);
+            if (nets.get(debtor) === 0) break;
+          }
+        }
+      }
+    }
+
+    // After all payments, group should be fully settled
+    s = balances(expenses);
+    expect(s).toHaveLength(0);
+  });
+
+  it("scenario 11: delete payment then re-add — balances restored", () => {
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "alice", amountCents: 10000, participantIds: ["alice", "bob"] }),
+    ];
+    // bob owes alice $50
+    expect(balances(expenses)[0]).toMatchObject({ from: "bob", to: "alice", amount: 5000 });
+
+    // bob pays $50
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 5000 }));
+    expect(balances(expenses)).toHaveLength(0);
+
+    // Oops, delete the payment (undo)
+    expenses.pop();
+    expect(balances(expenses)[0]).toMatchObject({ from: "bob", to: "alice", amount: 5000 });
+
+    // Re-add the payment
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 5000 }));
+    expect(balances(expenses)).toHaveLength(0);
+  });
+
+  it("scenario 12: cross-payments in 3-person group", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // alice pays $90 dinner (3 ways) → bob owes $30, carol owes $30
+    expenses.push(
+      makeEqualExpense({ paidById: "alice", amountCents: 9000, participantIds: ["alice", "bob", "carol"] })
+    );
+
+    // bob pays carol directly $20 (not related to a shared expense — just a personal loan)
+    expenses.push(makePayment({ senderId: "bob", recipientId: "carol", amountCents: 2000 }));
+    let s = balances(expenses);
+    // Net: alice +6000, bob -3000-2000 = -5000 (wait, payment means carol owes bob)
+    // Payment bob→carol: creates debt carol→bob for 2000
+    // Net alice: +6000
+    // Net bob: -3000 + 2000 = -1000
+    // Net carol: -3000 - 2000 = -5000
+    // Check: 6000 - 1000 - 5000 = 0 ✓
+    expect(net(s, "alice")).toBe(6000);
+    expect(net(s, "bob")).toBe(-1000);
+    expect(net(s, "carol")).toBe(-5000);
+
+    // carol pays alice $60 and bob $10 to settle everything
+    // Wait, carol owes net 5000 total. Need to settle via simplified debts.
+    // alice is owed 6000, bob is owed (-1000 means bob owes 1000)
+    // Hmm let me re-check: bob's net is -1000 meaning bob owes $10 net
+    // Simplified: bob owes alice $10, carol owes alice $50
+    // Actually the simplifier will minimize: carol→alice 5000, bob→alice 1000
+    expect(s.length).toBeLessThanOrEqual(2);
+
+    // carol pays alice $50
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 5000 }));
+    s = balances(expenses);
+    expect(net(s, "carol")).toBe(0);
+    // bob still owes alice $10
+    expect(net(s, "bob")).toBe(-1000);
+    expect(net(s, "alice")).toBe(1000);
+
+    // bob pays alice $10
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 1000 }));
+    expect(balances(expenses)).toHaveLength(0);
+  });
+
+  it("scenario 13: one person pays for everything, others pay them back incrementally", () => {
+    const expenses: ExpenseForDebt[] = [];
+    const people = ["alice", "bob", "carol", "dave"];
+
+    // alice pays 5 different expenses for the group
+    expenses.push(makeEqualExpense({ paidById: "alice", amountCents: 8000, participantIds: people }));
+    expenses.push(makeEqualExpense({ paidById: "alice", amountCents: 12000, participantIds: people }));
+    expenses.push(makeEqualExpense({ paidById: "alice", amountCents: 4000, participantIds: people }));
+    expenses.push(makeEqualExpense({ paidById: "alice", amountCents: 16000, participantIds: people }));
+    expenses.push(makeEqualExpense({ paidById: "alice", amountCents: 20000, participantIds: people }));
+
+    let s = balances(expenses);
+    // Total: 60000. Each person's share: 15000. Others each owe alice 15000.
+    expect(net(s, "alice")).toBe(45000);
+    expect(net(s, "bob")).toBe(-15000);
+    expect(net(s, "carol")).toBe(-15000);
+    expect(net(s, "dave")).toBe(-15000);
+
+    // bob pays $50 (partial)
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 5000 }));
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(-10000);
+
+    // carol pays $100 (partial)
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 10000 }));
+    s = balances(expenses);
+    expect(net(s, "carol")).toBe(-5000);
+
+    // dave pays full $150
+    expenses.push(makePayment({ senderId: "dave", recipientId: "alice", amountCents: 15000 }));
+    s = balances(expenses);
+    expect(net(s, "dave")).toBe(0);
+
+    // bob pays remaining $100
+    expenses.push(makePayment({ senderId: "bob", recipientId: "alice", amountCents: 10000 }));
+    s = balances(expenses);
+    expect(net(s, "bob")).toBe(0);
+
+    // carol pays remaining $50
+    expenses.push(makePayment({ senderId: "carol", recipientId: "alice", amountCents: 5000 }));
+    expect(balances(expenses)).toHaveLength(0);
+  });
+
+  it("scenario 14: penny-level precision across many small transactions", () => {
+    const expenses: ExpenseForDebt[] = [];
+
+    // 20 coffee purchases, $4.50 each, alternating payer, split 3 ways
+    for (let i = 0; i < 20; i++) {
+      const payer = ["alice", "bob", "carol"][i % 3]!;
+      expenses.push(
+        makeEqualExpense({
+          paidById: payer,
+          amountCents: 450,
+          participantIds: ["alice", "bob", "carol"],
+        })
+      );
+    }
+
+    const s = balances(expenses);
+
+    // Verify all amounts are integers (no floating point drift)
+    for (const d of s) {
+      expect(Number.isInteger(d.amount)).toBe(true);
+      expect(d.amount).toBeGreaterThan(0);
+    }
+
+    // Verify net balances sum to zero
+    const totalNet = ["alice", "bob", "carol"].reduce((sum, p) => sum + net(s, p), 0);
+    expect(totalNet).toBe(0);
+
+    // alice paid 7 times (i=0,3,6,9,12,15,18), bob 7 times (i=1,4,7,10,13,16,19), carol 6 times (i=2,5,8,11,14,17)
+    // Each expense: 450 cents / 3 = 150 each
+    // alice paid: 7 * 450 = 3150, owes: 20 * 150 = 3000, net: +150
+    // bob paid: 7 * 450 = 3150, owes: 20 * 150 = 3000, net: +150
+    // carol paid: 6 * 450 = 2700, owes: 20 * 150 = 3000, net: -300
+    expect(net(s, "alice")).toBe(150);
+    expect(net(s, "bob")).toBe(150);
+    expect(net(s, "carol")).toBe(-300);
+  });
+
+  it("scenario 15: delete everything one by one — always consistent", () => {
+    const expenses: ExpenseForDebt[] = [
+      makeEqualExpense({ paidById: "a", amountCents: 9000, participantIds: ["a", "b", "c"] }),
+      makeEqualExpense({ paidById: "b", amountCents: 6000, participantIds: ["a", "b", "c"] }),
+      makePayment({ senderId: "c", recipientId: "a", amountCents: 2000 }),
+      makeCustomExpense({
+        paidById: "c",
+        splits: [
+          { userId: "a", amountCents: 1000 },
+          { userId: "b", amountCents: 2000 },
+          { userId: "c", amountCents: 500 },
+        ],
+      }),
+    ];
+
+    // Check at each step that net balances sum to zero
+    while (expenses.length > 0) {
+      const s = balances(expenses);
+      const totalNet = ["a", "b", "c"].reduce((sum, p) => sum + net(s, p), 0);
+      expect(totalNet).toBe(0);
+
+      // All amounts must be positive integers
+      for (const d of s) {
+        expect(d.amount).toBeGreaterThan(0);
+        expect(Number.isInteger(d.amount)).toBe(true);
+      }
+
+      expenses.pop();
+    }
+
+    expect(balances(expenses)).toHaveLength(0);
+  });
+});
