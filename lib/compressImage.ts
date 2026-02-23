@@ -1,7 +1,15 @@
 /** Max output dimensions for banner images. */
 const MAX_WIDTH = 1200;
 const MAX_HEIGHT = 400;
-const JPEG_QUALITY = 0.8;
+
+/** Storage bucket hard limit. We guarantee output stays under this. */
+export const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
+
+/**
+ * Quality ladder: try each in order until the blob fits.
+ * Exported for testing.
+ */
+export const QUALITY_LADDER = [0.85, 0.7, 0.55, 0.4, 0.25];
 
 /**
  * Calculate output dimensions preserving aspect ratio, capped at MAX_WIDTH × MAX_HEIGHT.
@@ -20,9 +28,23 @@ export function calculateDimensions(
   };
 }
 
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) reject(new Error("Canvas toBlob failed"));
+        else resolve(blob);
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
 /**
  * Compress an image File to a JPEG Blob using the canvas API.
- * Resizes to at most 1200×400, JPEG quality 0.8.
+ * Resizes to at most 1200×400, then steps down JPEG quality until
+ * the result is under MAX_FILE_BYTES (2 MB). Works for any input size.
  * Browser-only (requires canvas + FileReader).
  */
 export function compressImage(file: File): Promise<Blob> {
@@ -32,7 +54,7 @@ export function compressImage(file: File): Promise<Blob> {
     reader.onload = (e) => {
       const img = new Image();
       img.onerror = () => reject(new Error("Failed to load image"));
-      img.onload = () => {
+      img.onload = async () => {
         const { width, height } = calculateDimensions(img.naturalWidth, img.naturalHeight);
         const canvas = document.createElement("canvas");
         canvas.width = width;
@@ -43,17 +65,16 @@ export function compressImage(file: File): Promise<Blob> {
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              reject(new Error("Canvas toBlob failed"));
-              return;
-            }
+
+        // Walk down the quality ladder until the blob fits under the limit.
+        // For a 1200×400 canvas this almost always resolves at the first step.
+        for (const quality of QUALITY_LADDER) {
+          const blob = await canvasToBlob(canvas, quality);
+          if (blob.size <= MAX_FILE_BYTES || quality === QUALITY_LADDER.at(-1)) {
             resolve(blob);
-          },
-          "image/jpeg",
-          JPEG_QUALITY
-        );
+            return;
+          }
+        }
       };
       img.src = e.target!.result as string;
     };

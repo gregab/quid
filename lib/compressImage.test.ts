@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculateDimensions } from "./compressImage";
+import { calculateDimensions, MAX_FILE_BYTES, QUALITY_LADDER } from "./compressImage";
 
 describe("calculateDimensions", () => {
   it("returns original size when image fits within bounds", () => {
@@ -37,5 +37,23 @@ describe("calculateDimensions", () => {
     const { width, height } = calculateDimensions(2400, 200);
     expect(width).toBe(1200);
     expect(height).toBe(100);
+  });
+});
+
+describe("quality ladder", () => {
+  it("starts above 0.8 and steps down monotonically", () => {
+    for (let i = 1; i < QUALITY_LADDER.length; i++) {
+      expect(QUALITY_LADDER[i]).toBeLessThan(QUALITY_LADDER[i - 1]!);
+    }
+  });
+
+  it("bottoms out above 0 so output is always valid JPEG", () => {
+    expect(QUALITY_LADDER.at(-1)).toBeGreaterThan(0);
+  });
+});
+
+describe("MAX_FILE_BYTES", () => {
+  it("matches the 2 MB storage bucket limit", () => {
+    expect(MAX_FILE_BYTES).toBe(2 * 1024 * 1024);
   });
 });
