@@ -279,19 +279,21 @@ export function ExpensesList({
                         <span className="text-sm font-bold text-emerald-600 whitespace-nowrap dark:text-emerald-400">
                           {formatCents(expense.amountCents)}
                         </span>
-                        <ExpenseActions
-                          groupId={groupId}
-                          expense={expense}
-                          members={members}
-                          isPending={expense.isPending}
-                          currentUserDisplayName={currentUserDisplayName}
-                          onOptimisticDelete={handleOptimisticDelete}
-                          onDeleteFailed={handleDeleteFailed}
-                          onDeleteSettled={handleDeleteSettled}
-                          onOptimisticUpdate={handleOptimisticUpdate}
-                          onUpdateSettled={handleUpdateSettled}
-                          onOptimisticActivity={onOptimisticActivity}
-                        />
+                        <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
+                          <ExpenseActions
+                            groupId={groupId}
+                            expense={expense}
+                            members={members}
+                            isPending={expense.isPending}
+                            currentUserDisplayName={currentUserDisplayName}
+                            onOptimisticDelete={handleOptimisticDelete}
+                            onDeleteFailed={handleDeleteFailed}
+                            onDeleteSettled={handleDeleteSettled}
+                            onOptimisticUpdate={handleOptimisticUpdate}
+                            onUpdateSettled={handleUpdateSettled}
+                            onOptimisticActivity={onOptimisticActivity}
+                          />
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -326,19 +328,21 @@ export function ExpensesList({
                             </span>
                           )}
                         </div>
-                        <ExpenseActions
-                          groupId={groupId}
-                          expense={expense}
-                          members={members}
-                          isPending={expense.isPending}
-                          currentUserDisplayName={currentUserDisplayName}
-                          onOptimisticDelete={handleOptimisticDelete}
-                          onDeleteFailed={handleDeleteFailed}
-                          onDeleteSettled={handleDeleteSettled}
-                          onOptimisticUpdate={handleOptimisticUpdate}
-                          onUpdateSettled={handleUpdateSettled}
-                          onOptimisticActivity={onOptimisticActivity}
-                        />
+                        <div className="flex justify-end w-[68px] sm:w-[48px] shrink-0">
+                          <ExpenseActions
+                            groupId={groupId}
+                            expense={expense}
+                            members={members}
+                            isPending={expense.isPending}
+                            currentUserDisplayName={currentUserDisplayName}
+                            onOptimisticDelete={handleOptimisticDelete}
+                            onDeleteFailed={handleDeleteFailed}
+                            onDeleteSettled={handleDeleteSettled}
+                            onOptimisticUpdate={handleOptimisticUpdate}
+                            onUpdateSettled={handleUpdateSettled}
+                            onOptimisticActivity={onOptimisticActivity}
+                          />
+                        </div>
                       </div>
                     </>
                   )}
