@@ -163,6 +163,28 @@ export function ExpensesList({
         </div>
       </div>
 
+      {/* Mobile: buttons below heading, above list */}
+      <div className="flex sm:hidden gap-2 mb-3">
+        <RecordPaymentForm
+          groupId={groupId}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          members={members}
+          onOptimisticAdd={handleOptimisticAdd}
+          onSettled={handleAddSettled}
+          onOptimisticActivity={onOptimisticActivity}
+        />
+        <AddExpenseForm
+          groupId={groupId}
+          currentUserId={currentUserId}
+          currentUserDisplayName={currentUserDisplayName}
+          members={members}
+          onOptimisticAdd={handleOptimisticAdd}
+          onSettled={handleAddSettled}
+          onOptimisticActivity={onOptimisticActivity}
+        />
+      </div>
+
       {expenses.length === 0 ? (
         <p className="text-gray-400 text-sm">No expenses yet. Add one to get started.</p>
       ) : (
@@ -250,27 +272,7 @@ export function ExpensesList({
         </ul>
       )}
 
-      {/* Mobile: buttons below the list */}
-      <div className="flex sm:hidden gap-2 mt-3">
-        <RecordPaymentForm
-          groupId={groupId}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          members={members}
-          onOptimisticAdd={handleOptimisticAdd}
-          onSettled={handleAddSettled}
-          onOptimisticActivity={onOptimisticActivity}
-        />
-        <AddExpenseForm
-          groupId={groupId}
-          currentUserId={currentUserId}
-          currentUserDisplayName={currentUserDisplayName}
-          members={members}
-          onOptimisticAdd={handleOptimisticAdd}
-          onSettled={handleAddSettled}
-          onOptimisticActivity={onOptimisticActivity}
-        />
-      </div>
+
     </section>
   );
 }
