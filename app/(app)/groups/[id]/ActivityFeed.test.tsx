@@ -401,6 +401,19 @@ describe("ActivityFeed — deleted account fallback", () => {
   });
 });
 
+describe("ActivityFeed — relative timestamp formatting", () => {
+  it("shows correct relative time for a Supabase timestamp string without Z suffix", () => {
+    // Supabase returns TIMESTAMP WITHOUT TIME ZONE as strings with no timezone
+    // suffix (e.g. "2024-01-15T10:30:00"). Without a Z, JS parses as local time,
+    // making UTC timestamps appear future for users west of UTC → "just now" bug.
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    // Simulate Supabase: ISO string with no Z (strip the trailing Z)
+    const supabaseStyle = twoHoursAgo.toISOString().replace("Z", "");
+    render(<ActivityFeed logs={[makeLog({ createdAt: supabaseStyle })]} />);
+    expect(screen.getByText("2h ago")).toBeDefined();
+  });
+});
+
 describe("ActivityFeed — payment_recorded and payment_deleted", () => {
   it("renders 'recorded a payment' with from/to names and amount", () => {
     render(

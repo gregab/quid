@@ -33,7 +33,17 @@ function formatCents(cents: number): string {
 }
 
 function formatRelativeTime(date: Date | string): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  // Supabase returns TIMESTAMP WITHOUT TIME ZONE strings with no timezone suffix.
+  // Without a 'Z', JS parses them as local time → timestamps appear to be hours
+  // in the future for users west of UTC, giving negative diffMs → "just now" for
+  // everything. Append 'Z' when there's no timezone indicator to force UTC parsing.
+  let d: Date;
+  if (typeof date === "string") {
+    const normalized = /[Z+]/.test(date.slice(-6)) ? date : date + "Z";
+    d = new Date(normalized);
+  } else {
+    d = date;
+  }
   const now = Date.now();
   const diffMs = now - d.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
