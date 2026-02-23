@@ -319,7 +319,7 @@ describe("buildRawDebts — payment expenses", () => {
   });
 
   it("payment overcorrects — now payer owes recipient", () => {
-    // Alice paid $100 split 2 ways, Bob owes $50
+    // Alice paid $100 split 2 ways, Bob owes Alice $50
     const expense = makeEqualExpense({
       paidById: "alice",
       amountCents: 10000,
@@ -336,9 +336,49 @@ describe("buildRawDebts — payment expenses", () => {
     const rawDebts = buildRawDebts([expense, payment]);
     const simplified = simplifyDebts(rawDebts);
 
-    // Net: bob was owed 5000 back but paid 7000 → alice now owes bob 2000
+    // Bob owed Alice $50 but paid $70 → Alice now owes Bob $20
     expect(simplified).toHaveLength(1);
     expect(simplified[0]).toMatchObject({ from: "alice", to: "bob", amount: 2000 });
+  });
+
+  it("payment double the debt — reverses direction for full overpayment amount", () => {
+    // Bob owes Alice $50 from a dinner
+    const expense = makeEqualExpense({
+      paidById: "alice",
+      amountCents: 10000,
+      participantIds: ["alice", "bob"],
+    });
+
+    // Bob pays Alice $100 (double what he owed — maybe covering a future expense,
+    // or just a cash payment that happens to exceed the debt)
+    const payment = makePayment({
+      senderId: "bob",
+      recipientId: "alice",
+      amountCents: 10000,
+    });
+
+    const rawDebts = buildRawDebts([expense, payment]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Bob owed Alice $50 but paid $100 → Alice now owes Bob $50
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "alice", to: "bob", amount: 5000 });
+  });
+
+  it("payment with no prior debt — creates a fresh debt in the opposite direction", () => {
+    // No expenses yet. Bob pays Alice $100 outside the app (e.g. a loan, gift, etc.)
+    const payment = makePayment({
+      senderId: "bob",
+      recipientId: "alice",
+      amountCents: 10000,
+    });
+
+    const rawDebts = buildRawDebts([payment]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Alice received $100 from Bob with no offsetting expense → Alice owes Bob $100
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "alice", to: "bob", amount: 10000 });
   });
 
   it("multiple payments between the same pair", () => {
