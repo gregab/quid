@@ -69,8 +69,8 @@ describe("ExpenseDetailModal — view mode", () => {
 
   it("shows amount, date, paid-by, and per-person split breakdown", () => {
     render(<ExpenseDetailModal {...BASE_PROPS} expense={makeExpense()} />);
-    // Amount appears twice: once in the prominent header, once in the "Paid by" card
-    expect(screen.getAllByText("$25.00").length).toBeGreaterThanOrEqual(2);
+    // Amount appears once in the "Paid by" card (no longer duplicated in a standalone header)
+    expect(screen.getAllByText("$25.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/January 15, 2024/)).toBeDefined();
     // paidById = user-1 = currentUserId, so shows "(you)" in both Paid by card and split row
     expect(screen.getAllByText(/alice.*\(you\)/i).length).toBeGreaterThanOrEqual(1);

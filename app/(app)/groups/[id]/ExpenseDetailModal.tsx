@@ -431,33 +431,24 @@ export function ExpenseDetailModal({
               </button>
             </div>
 
-            {/* Amount + date — prominent key facts */}
-            <div className="flex items-baseline gap-1.5 mb-5">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCents(expense.amountCents)}
-              </span>
-              <span className="text-sm text-gray-400 dark:text-gray-500">
-                · {formatDisplayDate(expense.date)}
-              </span>
-            </div>
-
             {expense.isPayment ? (
-              /* Payment: simple From / To */
-              <dl className="space-y-2.5 text-sm mb-5 border-t border-gray-100 dark:border-gray-700 pt-4">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">From</dt>
-                  <dd className="text-gray-900 dark:text-gray-100">
-                    {payerName}{expense.paidById === currentUserId ? " (you)" : ""}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">To</dt>
-                  <dd className="text-gray-900 dark:text-gray-100">
-                    {recipientName}{recipientId === currentUserId ? " (you)" : ""}
-                  </dd>
-                </div>
-              </dl>
+              /* Payment: amount + date, names already in title */
+              <div className="flex items-baseline gap-1.5 mb-5">
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatCents(expense.amountCents)}
+                </span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">
+                  · {formatDisplayDate(expense.date)}
+                </span>
+              </div>
             ) : (
+              /* Expense: just the date — amount lives in "Paid by" */
+              <p className="text-sm text-gray-400 dark:text-gray-500 -mt-1 mb-4">
+                {formatDisplayDate(expense.date)}
+              </p>
+            )}
+
+            {!expense.isPayment && (
               /* Expense: visual breakdown */
               <div className="mb-5 space-y-4">
                 {/* Paid by */}
