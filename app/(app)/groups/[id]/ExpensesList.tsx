@@ -276,6 +276,19 @@ export function ExpensesList({
         <ul className="space-y-2">
           {expenses.map((expense) => {
             const personalContext = getPersonalContext(expense, currentUserId, members);
+            const payerName = expense.paidById === currentUserId
+              ? "you"
+              : getMemberPillProps(expense.paidById, members, allUserNames).name;
+            const payerLine = `${payerName} paid ${formatCents(expense.amountCents)}`;
+            // "you lent $X" when you paid; "[Name] lent you $X" when they paid
+            const stakeLabel = personalContext
+              ? personalContext.positive
+                ? "you lent"
+                : `${getMemberPillProps(expense.paidById, members, allUserNames).name} lent you`
+              : null;
+            const paymentDirection = expense.isPayment
+              ? getPaymentDirection(expense, currentUserId, members, allUserNames)
+              : null;
             return (
               <li
                 key={expense.id}
@@ -288,14 +301,19 @@ export function ExpensesList({
                 >
                   {expense.isPayment ? (
                     <>
+                      {/* Left: title + mobile subtitle */}
                       <div className="min-w-0">
                         <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">Payment</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(expense.date)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          <span className="sm:hidden">{paymentDirection} · </span>
+                          {formatDate(expense.date)}
+                        </p>
                       </div>
+                      {/* Right: direction (desktop) + amount + actions */}
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {getPaymentDirection(expense, currentUserId, members, allUserNames)}
+                          <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {paymentDirection}
                           </span>
                           <span className="text-sm font-bold text-indigo-700 whitespace-nowrap dark:text-indigo-400">
                             {formatCents(expense.amountCents)}
@@ -320,24 +338,29 @@ export function ExpensesList({
                     </>
                   ) : (
                     <>
+                      {/* Left: description + mobile subtitle (payer + date) */}
                       <div className="min-w-0">
                         <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(expense.date)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          <span className="sm:hidden">{payerLine} · </span>
+                          {formatDate(expense.date)}
+                        </p>
                       </div>
+                      {/* Right: payer (desktop) + personal stake + actions */}
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                            {expense.paidById === currentUserId ? "you" : getMemberPillProps(expense.paidById, members, allUserNames).name} paid {formatCents(expense.amountCents)}
+                          <span className="hidden sm:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                            {payerLine}
                           </span>
-                          {personalContext && (
+                          {stakeLabel && (
                             <span
                               className={`text-sm font-semibold whitespace-nowrap ${
-                                personalContext.positive
+                                personalContext!.positive
                                   ? "text-emerald-600 dark:text-emerald-400"
                                   : "text-rose-500 dark:text-rose-400"
                               }`}
                             >
-                              {personalContext.label} {formatCents(personalContext.amountCents)}
+                              {stakeLabel} {formatCents(personalContext!.amountCents)}
                             </span>
                           )}
                         </div>
