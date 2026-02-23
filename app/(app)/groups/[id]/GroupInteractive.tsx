@@ -74,6 +74,14 @@ export function GroupInteractive({
     });
   }, [balancesExpenses, allUserNames, members, currentUserId]);
 
+  const userOwesDebts = useMemo(
+    () =>
+      resolvedDebts
+        .filter((d) => d.fromId === currentUserId)
+        .map((d) => ({ toId: d.toId, toName: d.toName, amountCents: d.amountCents })),
+    [resolvedDebts, currentUserId]
+  );
+
   const userIsSettledUp =
     resolvedDebts.length > 0 &&
     !resolvedDebts.some((d) => d.fromId === currentUserId || d.toId === currentUserId);
@@ -165,6 +173,7 @@ export function GroupInteractive({
         initialExpenses={initialExpenses}
         members={members}
         allUserNames={allUserNames}
+        userOwesDebts={userOwesDebts}
         onOptimisticActivity={addOptimisticLog}
         onExpensesChange={handleExpensesChange}
       />

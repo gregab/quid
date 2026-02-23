@@ -24,6 +24,7 @@ const BASE_PROPS = {
     "user-1": "Alice",
     "user-2": "Bob",
   },
+  userOwesDebts: [],
   onOptimisticActivity: vi.fn(),
 };
 

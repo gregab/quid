@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
-import { RecordPaymentForm } from "./RecordPaymentForm";
+import { RecordPaymentForm, type UserOwesDebt } from "./RecordPaymentForm";
 import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
@@ -45,6 +45,7 @@ interface ExpensesListProps {
   initialExpenses: ExpenseRow[];
   members: Member[];
   allUserNames: Record<string, string>;
+  userOwesDebts: UserOwesDebt[];
   onOptimisticActivity: (log: ActivityLog) => void;
   onExpensesChange?: (expenses: ExpenseRow[]) => void;
 }
@@ -133,6 +134,7 @@ export function ExpensesList({
   initialExpenses,
   members,
   allUserNames,
+  userOwesDebts,
   onOptimisticActivity,
   onExpensesChange,
 }: ExpensesListProps) {
@@ -228,6 +230,7 @@ export function ExpensesList({
             currentUserId={currentUserId}
             currentUserDisplayName={currentUserDisplayName}
             members={members}
+            userOwesDebts={userOwesDebts}
             onOptimisticAdd={handleOptimisticAdd}
             onSettled={handleAddSettled}
             onOptimisticActivity={onOptimisticActivity}
@@ -251,6 +254,7 @@ export function ExpensesList({
           currentUserId={currentUserId}
           currentUserDisplayName={currentUserDisplayName}
           members={members}
+          userOwesDebts={userOwesDebts}
           onOptimisticAdd={handleOptimisticAdd}
           onSettled={handleAddSettled}
           onOptimisticActivity={onOptimisticActivity}
