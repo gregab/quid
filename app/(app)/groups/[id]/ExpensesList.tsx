@@ -363,7 +363,7 @@ export function ExpensesList({
                       {/* Right: personal stake (expenses) or amount (payments) + chevron */}
                       <div className="flex items-center gap-1.5 shrink-0">
                         {expense.isPayment ? (
-                          <span className={`text-base font-bold whitespace-nowrap ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-indigo-700 dark:text-indigo-400"}`}>
+                          <span className="text-base font-bold whitespace-nowrap text-indigo-700 dark:text-indigo-400">
                             {formatCents(expense.amountCents)}
                           </span>
                         ) : personalContext ? (
