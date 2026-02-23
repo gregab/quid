@@ -7,7 +7,6 @@ import { ExpensesList } from "./ExpensesList";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { simplifyDebts } from "@/lib/balances/simplify";
 import { buildRawDebts } from "@/lib/balances/buildRawDebts";
-import { Card } from "@/components/ui/Card";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 
@@ -88,82 +87,64 @@ export function GroupInteractive({
 
   return (
     <>
-      {/* Balances */}
-      <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Balances</h2>
+      {/* Balances — compact text beneath member pills */}
+      <div className="text-sm -mt-3 sm:-mt-5">
         {resolvedDebts.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             Everyone&apos;s settled up!
-          </div>
+          </p>
         ) : (
-          <>
+          <p className="text-gray-400 dark:text-gray-500 leading-relaxed">
             {userIsSettledUp && (
-              <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 mb-3">
-                <span className="text-base leading-none">🎉</span>
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 mr-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
                 You&apos;re all settled up!
-              </div>
+                <span className="text-gray-300 dark:text-gray-600 mx-0.5">·</span>
+              </span>
             )}
-            <Card className="divide-y divide-gray-100 dark:divide-gray-700 overflow-hidden">
-              {resolvedDebts.map((debt, i) => {
-                const isCurrentUserOwing = debt.fromId === currentUserId;
-                const isCurrentUserReceiving = debt.toId === currentUserId;
-                const involvesUser = isCurrentUserOwing || isCurrentUserReceiving;
-                const verb = isCurrentUserOwing ? "owe" : "owes";
+            {resolvedDebts.map((debt, i) => {
+              const isCurrentUserOwing = debt.fromId === currentUserId;
+              const isCurrentUserReceiving = debt.toId === currentUserId;
+              const involvesUser = isCurrentUserOwing || isCurrentUserReceiving;
+              const verb = isCurrentUserOwing ? "owe" : "owes";
+              const fromName = isCurrentUserOwing ? "You" : debt.fromName;
+              const toName = isCurrentUserReceiving ? "you" : debt.toName;
 
-                const fromName = isCurrentUserOwing ? "You" : debt.fromName;
-                const toName = isCurrentUserReceiving ? "You" : debt.toName;
-
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-center justify-between gap-3 px-4 py-3 ${
-                      involvesUser ? "bg-gray-50 dark:bg-white/[0.03]" : ""
+              return (
+                <span key={i}>
+                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                    {fromName}
+                  </span>
+                  {" "}{verb}{" "}
+                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                    {toName}
+                  </span>
+                  {" "}
+                  <span
+                    className={`font-semibold tabular-nums ${
+                      isCurrentUserOwing
+                        ? "text-red-600 dark:text-red-400"
+                        : isCurrentUserReceiving
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-gray-500 dark:text-gray-400"
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 flex-wrap text-sm text-gray-700 dark:text-gray-300">
-                      <span
-                        className={`font-semibold ${
-                          isCurrentUserOwing
-                            ? "text-gray-900 dark:text-white"
-                            : isCurrentUserReceiving
-                            ? "text-gray-700 dark:text-gray-300"
-                            : "text-gray-700 dark:text-gray-300"
-                        }`}
-                      >
-                        {fromName}
-                      </span>
-                      <span className="text-gray-400 dark:text-gray-500">{verb}</span>
-                      <span
-                        className={`font-semibold ${
-                          isCurrentUserReceiving
-                            ? "text-gray-900 dark:text-white"
-                            : "text-gray-700 dark:text-gray-300"
-                        }`}
-                      >
-                        {toName}
-                      </span>
-                    </div>
-                    <span
-                      className={`text-sm font-bold tabular-nums shrink-0 ${
-                        isCurrentUserOwing
-                          ? "text-red-600 dark:text-red-400"
-                          : isCurrentUserReceiving
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-gray-600 dark:text-gray-400"
-                      }`}
-                    >
-                      {formatCents(debt.amountCents)}
-                    </span>
-                  </div>
-                );
-              })}
-            </Card>
-          </>
+                    {formatCents(debt.amountCents)}
+                  </span>
+                  {i < resolvedDebts.length - 1 && (
+                    <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
+                  )}
+                </span>
+              );
+            })}
+          </p>
         )}
-      </section>
+      </div>
 
       <ExpensesList
         groupId={groupId}

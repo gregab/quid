@@ -10,9 +10,17 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-For any change: understand the code first, make changes, write tests, run tests, commit, push. **Tests pass before shipping. Every completed task ends with a commit and push** (`git push origin main` → Vercel auto-deploys).
+For any change: understand the code first, make changes, write tests, run tests, commit. **Tests pass before shipping. Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy by running `deploy` in their terminal.
 
 **Starting a task:** Read **ARCHITECTURE.md** first — it covers data models, API routes, auth flow, and key design decisions. Use the "Where to Change Things" table below to find the right files. **Be strategic with token usage** — targeted reads, not broad exploration.
+
+**If something goes sideways, STOP and re-plan.** Don't keep pushing through a broken approach — step back, reassess, and course-correct.
+
+**Bug reports:** Just fix it. Investigate the root cause, write the fix, add tests, verify — zero hand-holding required. Don't ask clarifying questions when the bug is reproducible.
+
+**Before marking anything done:** Run tests and verify correctness. `npm run build` must pass. Diff your changes and ask: "Would this hold up in code review?"
+
+> **Tests are non-negotiable.** Every bug fix, feature addition, and significant change must ship with tests. A task is not done until the tests are written and passing. No exceptions.
 
 ## Commands
 ```bash
@@ -83,7 +91,9 @@ npm run cy:run                          # Cypress headless
 
 ## Testing
 
-**Write tests for every bug fix and every new feature.**
+> **Hard rule: tests ship with the code.** Writing tests is part of the task — not a follow-up, not optional, not skippable. If you added or changed behavior and didn't write a test, the task is incomplete.
+
+**Write tests for every bug fix and every new feature:**
 
 - New UI behavior → co-located `*.test.tsx`
 - New pure function → co-located `*.test.ts`
