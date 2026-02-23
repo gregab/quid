@@ -33,6 +33,7 @@ export interface ExpenseRow {
   isPayment?: boolean;
   createdById?: string;
   createdAt?: string;
+  updatedAt?: string | null;
 }
 
 interface ExpensesListProps {

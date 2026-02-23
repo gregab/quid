@@ -85,16 +85,36 @@ describe("ExpensesList — detail modal shows correct actions for creator vs non
       <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
     );
     openDetailModal(container);
-    expect(screen.getByText(/added by/i).textContent).toContain("Bob");
+    const addedByEl = screen.getByText(/added by/i);
+    expect(addedByEl.textContent).toContain("Bob");
   });
 
-  it("does not show 'Added by' when the current user is the creator", () => {
+  it("shows 'Added by you' when the current user is the creator", () => {
     const expense = makeExpense({ canEdit: true, canDelete: true, createdById: "user-1" });
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
     );
     openDetailModal(container);
-    expect(screen.queryByText(/added by/i)).toBeNull();
+    const addedByEl = screen.getByText(/added by/i);
+    expect(addedByEl.textContent).toContain("you");
+  });
+
+  it("shows 'Last edited' when updatedAt is present", () => {
+    const expense = makeExpense({ createdById: "user-1", updatedAt: "2024-02-01T10:30:00.000Z" });
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
+    );
+    openDetailModal(container);
+    expect(screen.getByText(/last edited/i)).toBeTruthy();
+  });
+
+  it("does not show 'Last edited' when updatedAt is absent", () => {
+    const expense = makeExpense({ createdById: "user-1", updatedAt: undefined });
+    const { container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />
+    );
+    openDetailModal(container);
+    expect(screen.queryByText(/last edited/i)).toBeNull();
   });
 });
 

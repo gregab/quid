@@ -85,10 +85,11 @@ describe("ExpenseDetailModal — view mode", () => {
     expect(addedBy.textContent).toContain("Bob");
   });
 
-  it("does not show 'Added by' when the current user is the creator", () => {
+  it("shows 'Added by you' when the current user is the creator", () => {
     const expense = makeExpense({ canEdit: true, canDelete: true, createdById: "user-1" });
     render(<ExpenseDetailModal {...BASE_PROPS} expense={expense} />);
-    expect(screen.queryByText(/added by/i)).toBeNull();
+    const addedBy = screen.getByText(/added by/i);
+    expect(addedBy.textContent).toContain("you");
   });
 });
 

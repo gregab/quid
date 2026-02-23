@@ -150,6 +150,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       isPayment: expense.isPayment,
       createdById: expense.createdById ?? undefined,
       createdAt: expense.createdAt,
+      updatedAt: expense.updatedAt,
     };
   });
 

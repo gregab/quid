@@ -36,6 +36,15 @@ function formatDisplayDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+function formatDateTime(isoStr: string): string {
+  const date = new Date(isoStr);
+  return (
+    date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " at " +
+    date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+  );
+}
+
 /**
  * Scales existing custom amounts proportionally when the total changes.
  * Uses integer math with remainder distribution to avoid float drift.
@@ -250,6 +259,7 @@ export function ExpenseDetailModal({
       participantIds: submittedParticipantIds,
       splits: updatedSplits,
       splitType: editSplitType,
+      updatedAt: new Date().toISOString(),
     };
 
     // Compute changes for the optimistic activity log
@@ -380,8 +390,11 @@ export function ExpenseDetailModal({
   const recipientId = expense.participantIds[0];
   const recipientName = recipientId ? (allUserNames[recipientId] ?? "Unknown") : "Unknown";
 
-  const showCreatedBy = !!(expense.createdById && expense.createdById !== currentUserId);
-  const createdByName = expense.createdById ? (allUserNames[expense.createdById] ?? "a former member") : null;
+  const createdByName = expense.createdById
+    ? expense.createdById === currentUserId
+      ? "you"
+      : (allUserNames[expense.createdById] ?? "a former member")
+    : null;
 
   const orderedEditParticipants = members.filter((m) => participantIds.has(m.userId));
 
@@ -495,11 +508,7 @@ export function ExpenseDetailModal({
                           </div>
                           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div
-                              className={`h-full rounded-full ${
-                                isPayer
-                                  ? "bg-amber-300 dark:bg-amber-600"
-                                  : "bg-gray-300 dark:bg-gray-500"
-                              }`}
+                              className="h-full rounded-full bg-indigo-400 dark:bg-indigo-500"
                               style={{ width: `${widthPct}%` }}
                             />
                           </div>
@@ -511,10 +520,23 @@ export function ExpenseDetailModal({
               </div>
             )}
 
-            {showCreatedBy && createdByName && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-                {expense.isPayment ? "Recorded by" : "Added by"} {createdByName}
-              </p>
+            {(createdByName || expense.createdAt || expense.updatedAt) && (
+              <div className="space-y-0.5 mb-4">
+                {(createdByName || expense.createdAt) && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    {expense.isPayment ? "Recorded by" : "Added by"}{" "}
+                    <span className="font-medium">{createdByName ?? "unknown"}</span>
+                    {expense.createdAt && (
+                      <> · {formatDateTime(expense.createdAt)}</>
+                    )}
+                  </p>
+                )}
+                {expense.updatedAt && (
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                    Last edited · {formatDateTime(expense.updatedAt)}
+                  </p>
+                )}
+              </div>
             )}
 
             <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">

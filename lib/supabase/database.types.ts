@@ -126,6 +126,7 @@ export type Database = {
           isPayment: boolean
           paidById: string
           splitType: string
+          updatedAt: string | null
         }
         Insert: {
           amountCents: number
@@ -138,6 +139,7 @@ export type Database = {
           isPayment?: boolean
           paidById: string
           splitType?: string
+          updatedAt?: string | null
         }
         Update: {
           amountCents?: number
@@ -150,6 +152,7 @@ export type Database = {
           isPayment?: boolean
           paidById?: string
           splitType?: string
+          updatedAt?: string | null
         }
         Relationships: [
           {
