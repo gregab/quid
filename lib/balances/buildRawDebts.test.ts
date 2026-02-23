@@ -844,3 +844,203 @@ describe("buildRawDebts + simplifyDebts — full pipeline", () => {
     expect(simplified.length).toBeLessThanOrEqual(people.length - 1);
   });
 });
+
+// ─── Payer NOT a participant (bug repro + adjacent cases) ───────────────────
+
+describe("buildRawDebts — payer excluded from participants", () => {
+  it("BUG REPRO: A owes B, then A pays expense where only B participates — debt should reduce", () => {
+    // Setup: B paid $100, split between A and B → A owes B $50
+    const expense1 = makeEqualExpense({
+      paidById: "B",
+      amountCents: 10000,
+      participantIds: ["A", "B"],
+    });
+
+    // Action: A pays $30 expense, only participant is B (A is NOT a participant)
+    // This means B owes A $30 for this expense
+    const expense2: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 3000 }],
+    };
+
+    const rawDebts = buildRawDebts([expense1, expense2]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Expected: A owes B $50 - $30 = $20
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "A", to: "B", amount: 2000 });
+  });
+
+  it("A owes B, A pays expense where only B participates for FULL amount — settles to zero", () => {
+    const expense1 = makeEqualExpense({
+      paidById: "B",
+      amountCents: 10000,
+      participantIds: ["A", "B"],
+    }); // A owes B $50
+
+    // A pays $50 expense, only B participates → B owes A $50
+    const expense2: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 5000 }],
+    };
+
+    const rawDebts = buildRawDebts([expense1, expense2]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Net: A owes B $50 - $50 = $0
+    expect(simplified).toHaveLength(0);
+  });
+
+  it("A owes B, A pays expense where only B participates for MORE than debt — reverses direction", () => {
+    const expense1 = makeEqualExpense({
+      paidById: "B",
+      amountCents: 10000,
+      participantIds: ["A", "B"],
+    }); // A owes B $50
+
+    // A pays $80 expense, only B participates → B owes A $80
+    const expense2: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 8000 }],
+    };
+
+    const rawDebts = buildRawDebts([expense1, expense2]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Net: A owes B $50 - $80 = -$30 → B owes A $30
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "B", to: "A", amount: 3000 });
+  });
+
+  it("payer not a participant, multiple participants — all owe payer", () => {
+    // A pays $90, split among B, C, D (A not included)
+    const expense: ExpenseForDebt = {
+      paidById: "A",
+      splits: [
+        { userId: "B", amountCents: 3000 },
+        { userId: "C", amountCents: 3000 },
+        { userId: "D", amountCents: 3000 },
+      ],
+    };
+
+    const debts = buildRawDebts([expense]);
+    expect(debts).toHaveLength(3);
+    expect(debts.every((d) => d.to === "A")).toBe(true);
+    expect(debts.reduce((sum, d) => sum + d.amount, 0)).toBe(9000);
+  });
+
+  it("payer not a participant with equal split helper — single participant gets full amount", () => {
+    // A pays $30, participant list is [B] only
+    // Using splitAmount(3000, 1) which should give [3000]
+    const expense = makeEqualExpense({
+      paidById: "A",
+      amountCents: 3000,
+      participantIds: ["B"],
+    });
+
+    const debts = buildRawDebts([expense]);
+    expect(debts).toHaveLength(1);
+    expect(debts[0]).toEqual({ from: "B", to: "A", amount: 3000 });
+  });
+
+  it("3-person group: A pays for B and C (not self) — B and C owe A full amount", () => {
+    // A pays $60, split equally between B and C (A excluded)
+    const expense = makeEqualExpense({
+      paidById: "A",
+      amountCents: 6000,
+      participantIds: ["B", "C"],
+    });
+
+    const debts = buildRawDebts([expense]);
+    expect(debts).toHaveLength(2);
+    expect(debts[0]).toEqual({ from: "B", to: "A", amount: 3000 });
+    expect(debts[1]).toEqual({ from: "C", to: "A", amount: 3000 });
+
+    const simplified = simplifyDebts(debts);
+    const aNet = getNet(simplified, "A");
+    expect(aNet).toBe(6000); // A is owed $60 total
+  });
+
+  it("complex: payer excluded + normal expenses + payments all interact correctly", () => {
+    // B pays $100, split A and B → A owes B $50
+    const exp1 = makeEqualExpense({
+      paidById: "B",
+      amountCents: 10000,
+      participantIds: ["A", "B"],
+    });
+
+    // A pays $20 for B only (A not participant) → B owes A $20
+    const exp2: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 2000 }],
+    };
+
+    // A makes a $10 payment to B → A owes B $10 (payment reduces A's debt)
+    const payment = makePayment({
+      senderId: "A",
+      recipientId: "B",
+      amountCents: 1000,
+    });
+
+    const rawDebts = buildRawDebts([exp1, exp2, payment]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Net A: owes B $50 (exp1) - owed $20 from B (exp2) - paid B $10 (payment) = owes B $20
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "A", to: "B", amount: 2000 });
+  });
+
+  it("payer excluded, custom splits — amounts used as-is", () => {
+    // A pays $100, custom split: B=$70, C=$30 (A not included)
+    const expense: ExpenseForDebt = {
+      paidById: "A",
+      splits: [
+        { userId: "B", amountCents: 7000 },
+        { userId: "C", amountCents: 3000 },
+      ],
+    };
+
+    const debts = buildRawDebts([expense]);
+    expect(debts).toHaveLength(2);
+    expect(debts[0]).toEqual({ from: "B", to: "A", amount: 7000 });
+    expect(debts[1]).toEqual({ from: "C", to: "A", amount: 3000 });
+  });
+
+  it("two expenses where same person pays for the other exclusively — debts accumulate", () => {
+    // A pays $30 for B, then A pays $20 for B
+    const exp1: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 3000 }],
+    };
+    const exp2: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 2000 }],
+    };
+
+    const rawDebts = buildRawDebts([exp1, exp2]);
+    const simplified = simplifyDebts(rawDebts);
+
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "B", to: "A", amount: 5000 });
+  });
+
+  it("both people pay for each other exclusively — nets correctly", () => {
+    // A pays $30 for B only → B owes A $30
+    const exp1: ExpenseForDebt = {
+      paidById: "A",
+      splits: [{ userId: "B", amountCents: 3000 }],
+    };
+    // B pays $50 for A only → A owes B $50
+    const exp2: ExpenseForDebt = {
+      paidById: "B",
+      splits: [{ userId: "A", amountCents: 5000 }],
+    };
+
+    const rawDebts = buildRawDebts([exp1, exp2]);
+    const simplified = simplifyDebts(rawDebts);
+
+    // Net: A owes B $50 - $30 = $20
+    expect(simplified).toHaveLength(1);
+    expect(simplified[0]).toMatchObject({ from: "A", to: "B", amount: 2000 });
+  });
+});

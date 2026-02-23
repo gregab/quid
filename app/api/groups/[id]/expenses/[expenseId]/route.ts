@@ -289,7 +289,7 @@ export async function DELETE(
     _amount_cents: expense.amountCents,
     _paid_by_display_name: expense.User!.displayName,
     _date: expense.date.split("T")[0],
-    _participant_display_names: expense.isPayment ? null : participantDisplayNames,
+    _participant_display_names: expense.isPayment ? undefined : participantDisplayNames,
   });
 
   if (error) {

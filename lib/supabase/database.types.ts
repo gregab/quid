@@ -39,39 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _prisma_migrations: {
-        Row: {
-          applied_steps_count: number
-          checksum: string
-          finished_at: string | null
-          id: string
-          logs: string | null
-          migration_name: string
-          rolled_back_at: string | null
-          started_at: string
-        }
-        Insert: {
-          applied_steps_count?: number
-          checksum: string
-          finished_at?: string | null
-          id: string
-          logs?: string | null
-          migration_name: string
-          rolled_back_at?: string | null
-          started_at?: string
-        }
-        Update: {
-          applied_steps_count?: number
-          checksum?: string
-          finished_at?: string | null
-          id?: string
-          logs?: string | null
-          migration_name?: string
-          rolled_back_at?: string | null
-          started_at?: string
-        }
-        Relationships: []
-      }
       ActivityLog: {
         Row: {
           action: string
@@ -311,48 +278,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      create_expense:
-        | {
-            Args: {
-              _amount_cents: number
-              _date: string
-              _description: string
-              _group_id: string
-              _paid_by_display_name: string
-              _paid_by_id: string
-              _participant_ids: string[]
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _amount_cents: number
-              _date: string
-              _description: string
-              _group_id: string
-              _paid_by_display_name: string
-              _paid_by_id: string
-              _participant_ids: string[]
-              _split_amounts?: number[]
-              _split_type?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _amount_cents: number
-              _date: string
-              _description: string
-              _group_id: string
-              _paid_by_display_name: string
-              _paid_by_id: string
-              _participant_display_names?: string[]
-              _participant_ids: string[]
-              _split_amounts?: number[]
-              _split_type?: string
-            }
-            Returns: string
-          }
+      create_expense: {
+        Args: {
+          _amount_cents: number
+          _date: string
+          _description: string
+          _group_id: string
+          _paid_by_display_name: string
+          _paid_by_id: string
+          _participant_display_names?: string[]
+          _participant_ids: string[]
+          _split_amounts?: number[]
+          _split_type?: string
+        }
+        Returns: string
+      }
       create_group: { Args: { _name: string }; Returns: string }
       create_payment: {
         Args: {
@@ -367,64 +307,40 @@ export type Database = {
         Returns: string
       }
       delete_account: { Args: never; Returns: undefined }
-      delete_expense:
-        | {
-            Args: {
-              _amount_cents: number
-              _description: string
-              _expense_id: string
-              _group_id: string
-              _paid_by_display_name: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _amount_cents: number
-              _date?: string
-              _description: string
-              _expense_id: string
-              _group_id: string
-              _paid_by_display_name: string
-              _participant_display_names?: string[]
-            }
-            Returns: undefined
-          }
+      delete_expense: {
+        Args: {
+          _amount_cents: number
+          _date?: string
+          _description: string
+          _expense_id: string
+          _group_id: string
+          _paid_by_display_name: string
+          _participant_display_names?: string[]
+        }
+        Returns: undefined
+      }
       get_group_by_invite_token: { Args: { _token: string }; Returns: Json }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }
-      update_expense:
-        | {
-            Args: {
-              _amount_cents: number
-              _changes: Json
-              _date: string
-              _description: string
-              _expense_id: string
-              _group_id: string
-              _paid_by_display_name: string
-              _paid_by_id: string
-              _participant_ids: string[]
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              _amount_cents: number
-              _changes: Json
-              _date: string
-              _description: string
-              _expense_id: string
-              _group_id: string
-              _paid_by_display_name: string
-              _paid_by_id: string
-              _participant_ids: string[]
-              _split_amounts?: number[]
-              _split_type?: string
-            }
-            Returns: undefined
-          }
+      update_expense: {
+        Args: {
+          _amount_cents: number
+          _changes: Json
+          _date: string
+          _description: string
+          _expense_id: string
+          _group_id: string
+          _paid_by_display_name: string
+          _paid_by_id: string
+          _participant_ids: string[]
+          _split_amounts?: number[]
+          _split_type?: string
+          _splits_after?: Json
+          _splits_before?: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

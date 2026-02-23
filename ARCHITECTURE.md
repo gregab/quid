@@ -2,6 +2,18 @@
 
 Deep reference for how the app works. For workflow and commands, see CLAUDE.md.
 
+## Core Concepts
+
+Aviary is an expense-splitting app for groups of people. Three concepts drive the data model:
+
+1. **Expenses**: One person pays an amount, and that amount is divided among 1 or more participants. The payer may or may not be a participant — e.g. Alice can pay for Bob and Carol's lunch without owing herself anything. Splits can be equal (automatic) or custom (per-person amounts that must sum to the total).
+
+2. **Payments**: Records of money sent from one person to another outside the app (Venmo, cash, etc.). Stored as a special expense (`isPayment=true`) where `paidById` = sender and a single `ExpenseSplit` covers the recipient for the full amount. This means payments flow through the same balance computation pipeline as expenses with zero special-casing.
+
+3. **Balances**: A simplified summary of who owes whom within a group, computed on-demand from all expenses and payments. The pipeline is: `buildRawDebts(expenses)` converts each expense's splits into raw debt pairs (each non-payer participant owes the payer their split amount), then `simplifyDebts(rawDebts)` minimizes the number of transactions using a greedy creditor/debtor matching algorithm. No balance data is stored — it's always derived from the source of truth (expense + split records).
+
+Both expenses and payments can be edited and deleted, which immediately affects the computed balances.
+
 ## Project Structure
 
 No `src/` directory — all code at repo root.
@@ -110,23 +122,27 @@ Expense
   groupId       String    → Group (cascade delete)
   paidById      String    → User
   description   String
-  amountCents   Int
+  amountCents   Int       CHECK > 0
   date          DateTime
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime? // auto-set by trigger on UPDATE; NULL = never edited
   isPayment     Boolean   @default(false)   // true for payments recorded via Record Payment
-  createdById   String?   → User            // set for payments; creator-only delete enforced in RPC
+  createdById   String?   → User            // set on creation; creator-only edit/delete enforced in RPC
+  splitType     String    @default('equal') CHECK IN ('equal', 'custom')
 
 ExpenseSplit
   id            String    @id @default(uuid)
   expenseId     String    → Expense (cascade delete)
   userId        String    → User
-  amountCents   Int
+  amountCents   Int       CHECK >= 0
+  @@unique([expenseId, userId])
 
 ActivityLog
   id            String    @id @default(uuid)
   groupId       String    → Group (cascade delete)
   actorId       String    → User
-  action        String    // "expense_added" | "expense_edited" | "expense_deleted" | "member_left"
+  action        String    CHECK IN ('expense_added', 'expense_edited', 'expense_deleted',
+                                    'payment_recorded', 'payment_deleted', 'member_left')
   payload       Json      // See "Activity Log System" section below for full payload shape
   createdAt     DateTime  @default(now())
 ```
@@ -194,7 +210,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 
 ### RPC Functions
 
-7 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally.
+9 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally. Each function has exactly one overload (stale overloads from earlier migrations were cleaned up).
 
 | Function | Purpose | Called from |
 |----------|---------|------------|
@@ -337,14 +353,23 @@ fetch(`/api/groups/...`, { method: "POST", ... });
 
 ## Expense Splitting
 
-**Equal split** (currently the only mode):
+Two split modes are supported:
+
+**Equal split** (`splitType = 'equal'`, default):
 - Total ÷ number of participants = base amount per person
 - Remainder (amountCents % participantCount) is distributed 1 cent at a time to the first N participants
 - Guarantees splits always sum to exactly the expense total
 
+**Custom split** (`splitType = 'custom'`):
+- Per-person amounts provided by the user
+- API validates that custom split amounts sum to exactly the expense total
+- Zero-amount splits are valid (participant opted out but still in the group)
+
+**Payer exclusion**: The payer is not required to be a participant. For example, Alice can pay $60 for Bob and Carol's lunch — Alice has no split record, and both Bob and Carol owe Alice $30. This is important for the balance computation: `buildRawDebts` skips splits where `userId === paidById`, so payer-excluded expenses naturally produce debts from all participants to the payer.
+
 **Atomic creation**: Every expense mutation (create, edit, delete) runs inside a `SECURITY DEFINER` RPC function that handles the expense record, all split records, and the activity log entry in a single database transaction.
 
-**Payer selection**: The expense creator can choose any group member as the payer (defaults to self). Participant filtering lets you exclude members from the split.
+**Payer selection**: The expense creator can choose any group member as the payer (defaults to self). Participant filtering lets you include or exclude any group members from the split.
 
 ## Activity Log System
 
@@ -427,14 +452,17 @@ App lives on its own subdomain (`aviary.gregbigelow.com`) as a standalone Vercel
 ### Why cents for money?
 `0.1 + 0.2 !== 0.3`. Integers avoid floating point errors entirely.
 
+### Why DROP + CREATE for RPC function migrations?
+PostgreSQL's `CREATE OR REPLACE FUNCTION` only replaces a function with the **exact same parameter signature**. If you add or remove parameters, it creates a new overload instead. This caused a bug where stale overloads with missing auth checks coexisted with the intended version. Always use `DROP FUNCTION IF EXISTS fn_name(param_types)` followed by `CREATE FUNCTION` when changing a function's signature.
+
 ### Why resource-oriented API routes?
 Future mobile client should reuse the same API. `/api/groups/[id]/expenses` works for any client.
 
 ### Edit/delete permissions
 Only the creator of an expense (the user who clicked "Add expense") can edit or delete it. Payments likewise enforce creator-only deletion. Expenses created before `createdById` was populated (NULL `createdById`) are treated as legacy and remain editable/deletable by any group member. Enforcement happens at three layers: UI hides buttons (`canEdit`/`canDelete` flags in `page.tsx`), API routes return 403, and RPC functions raise an exception.
 
-### Settle up (not yet implemented)
-Plan: Record settlements as special expenses (description = "Settlement", single split to creditor). Uses existing infrastructure, no schema migration needed.
+### Payments (settle up)
+Implemented via `create_payment` RPC. Payments record money sent outside the app (Venmo, cash, etc.) as a special expense with `isPayment=true`. See "Core Concepts" above for how this flows through the balance pipeline.
 
 ### Group deletion (not yet implemented)
 Plan: Hard delete. Cascade deletes handle all cleanup. No soft delete until audit trail is needed.
@@ -574,4 +602,3 @@ npm run cy:run                # Headless CI mode
 - **Expense categories**: Small predefined enum with "Other"? Or free-text tags?
 - **Notifications**: Start with in-app toasts. Email notifications are a separate effort.
 - **Mobile client**: Same API routes + CORS headers for cross-origin native apps.
-- **Non-equal splits UI**: Per-person amount entry (not percentages). "Equal" default, "Custom" toggle.
