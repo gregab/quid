@@ -20,6 +20,8 @@ For any change: understand the code first, make changes, write tests, run tests,
 
 **Before marking anything done:** Run tests and verify correctness. `npm run build` must pass. Diff your changes and ask: "Would this hold up in code review?"
 
+> **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
+
 > **Tests are non-negotiable.** Every bug fix, feature addition, and significant change must ship with tests. A task is not done until the tests are written and passing. No exceptions.
 
 ## Commands
