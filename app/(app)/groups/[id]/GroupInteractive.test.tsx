@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, within, fireEvent } from "@testing-library/react";
 import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow } from "./ExpensesList";
 
@@ -327,8 +327,7 @@ describe("GroupInteractive — deleted account balance integrity", () => {
       />
     );
     expect(screen.getByText("Dave")).toBeDefined();
-    expect(screen.getByText("owes")).toBeDefined();
-    expect(screen.getByText("You")).toBeDefined();
+    expect(screen.getByText("you")).toBeDefined();
     expect(screen.getAllByText("$40.00").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -444,7 +443,7 @@ describe("GroupInteractive — balance UI improvements", () => {
     expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
   });
 
-  it("current user's debt row appears before rows not involving them", () => {
+  it("current user's debt appears before debts not involving them", () => {
     // Two debts: Alice owes Bob $5 (involves user), Carol owes Bob $5 (does not)
     const aliceOwesBob = makeExpense({
       id: "e1",
@@ -464,45 +463,13 @@ describe("GroupInteractive — balance UI improvements", () => {
     const { container } = render(
       <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[carolOwesBob, aliceOwesBob]} />
     );
-    const nameEls = Array.from(
-      container.querySelectorAll("[class*='font-semibold']")
-    ).map((el) => el.textContent);
-    const youIndex = nameEls.findIndex((t) => t === "You");
-    const carolIndex = nameEls.findIndex((t) => t === "Carol");
-    expect(youIndex).toBeGreaterThanOrEqual(0);
-    expect(carolIndex).toBeGreaterThanOrEqual(0);
-    expect(youIndex).toBeLessThan(carolIndex);
-  });
-
-  it("applies highlight background class to the current user's debt row", () => {
-    const expense = makeExpense({
-      amountCents: 1000,
-      paidById: "user-b",
-      paidByDisplayName: "Bob",
-      participantIds: ["user-a", "user-b"],
-    });
-    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    const section = screen.getByText("Balances").closest("section")!;
-    const highlightedRows = Array.from(section.querySelectorAll("[class*='bg-gray-50']"));
-    expect(highlightedRows.length).toBeGreaterThan(0);
-  });
-
-  it("does not apply highlight background to rows not involving the current user", () => {
-    // Bob paid for Carol — Alice uninvolved
-    const expense = makeExpense({
-      amountCents: 1000,
-      paidById: "user-b",
-      paidByDisplayName: "Bob",
-      participantIds: ["user-c"],
-      splits: [{ userId: "user-c", amountCents: 1000 }],
-    });
-    render(
-      <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[expense]} />
-    );
-    // Scope to the Balances <section> to avoid matching bg-gray-50 from child components
-    const section = screen.getByText("Balances").closest("section")!;
-    const highlightedRows = Array.from(section.querySelectorAll("[class*='bg-gray-50']"));
-    expect(highlightedRows.length).toBe(0);
+    // The balances are inline text; "You" should appear before "Carol" in the text content
+    const balancesText = container.textContent ?? "";
+    const youPos = balancesText.indexOf("You owe");
+    const carolPos = balancesText.indexOf("Carol owes");
+    expect(youPos).toBeGreaterThanOrEqual(0);
+    expect(carolPos).toBeGreaterThanOrEqual(0);
+    expect(youPos).toBeLessThan(carolPos);
   });
 
   it("colors amount red when current user owes money", () => {
@@ -512,9 +479,8 @@ describe("GroupInteractive — balance UI improvements", () => {
       paidByDisplayName: "Bob",
       participantIds: ["user-a", "user-b"],
     });
-    render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    const section = screen.getByText("Balances").closest("section")!;
-    expect(section.querySelector("[class*='text-red-']")).not.toBeNull();
+    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(container.querySelector("[class*='text-red-']")).not.toBeNull();
   });
 
   it("colors amount green when current user is owed money", () => {
@@ -524,8 +490,153 @@ describe("GroupInteractive — balance UI improvements", () => {
       paidByDisplayName: "Alice",
       participantIds: ["user-a", "user-b"],
     });
+    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(container.querySelector("[class*='text-emerald-']")).not.toBeNull();
+  });
+
+  it("renders balances as inline text with · separators between multiple debts", () => {
+    const aliceOwesBob = makeExpense({
+      id: "e1",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    const carolOwesBob = makeExpense({
+      id: "e2",
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-c", "user-b"],
+    });
+    const { container } = render(
+      <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[aliceOwesBob, carolOwesBob]} />
+    );
+    // · separators appear between debts
+    const separators = container.querySelectorAll("span");
+    const dotSeparators = Array.from(separators).filter((el) => el.textContent?.trim() === "·");
+    expect(dotSeparators.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not render · separator when there is only one debt", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    const separators = Array.from(container.querySelectorAll("span")).filter(
+      (el) => el.textContent?.trim() === "·"
+    );
+    expect(separators.length).toBe(0);
+  });
+
+  it("uses lowercase 'you' when current user is the recipient", () => {
+    // Alice paid $10 split with Bob — Bob owes Alice (current user)
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-b"],
+    });
+    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    // "Bob owes you $5.00" — lowercase "you"
+    expect(container.textContent).toContain("owes you");
+  });
+
+  it("uses capitalized 'You' when current user owes money", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    const { container } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
+    // "You owe Bob $5.00" — capitalized "You"
+    expect(container.textContent).toContain("You owe");
+  });
+
+  it("renders no Balances heading or card wrapper", () => {
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
-    const section = screen.getByText("Balances").closest("section")!;
-    expect(section.querySelector("[class*='text-emerald-']")).not.toBeNull();
+    expect(screen.queryByText("Balances")).toBeNull();
+  });
+});
+
+// ─── Settle Up: userOwesDebts integration ────────────────────────────────────
+//
+// These tests verify that GroupInteractive computes `userOwesDebts` correctly
+// from the expense state and passes it to RecordPaymentForm, so the Settle Up
+// modal shows the right people and amounts.
+
+describe("GroupInteractive — Settle Up modal shows correct debts", () => {
+  beforeEach(() => {
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function openSettleUpModal() {
+    // ExpensesList renders the button twice (desktop + mobile); click the first.
+    const buttons = screen.getAllByRole("button", { name: /settle up/i });
+    fireEvent.click(buttons[0]!);
+  }
+
+  it("shows Bob in the Settle Up modal when Alice owes Bob money", () => {
+    // Bob paid $10 split with Alice → Alice owes Bob $5
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-b",
+      paidByDisplayName: "Bob",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[expense]} />);
+    openSettleUpModal();
+    // Scope to the modal so we don't collide with Bob appearing in the Balances section
+    const modal = document.querySelector(".modal-content")!;
+    expect(within(modal).getByText("Bob")).toBeTruthy();
+    expect(within(modal).getByText("$5.00")).toBeTruthy();
+  });
+
+  it("shows settled-up message when Alice is not in debt (she is owed money)", () => {
+    // Alice paid $10 split with Bob → Bob owes Alice, not the other way
+    const expense = makeExpense({
+      amountCents: 1000,
+      paidById: "user-a",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-a", "user-b"],
+    });
+    render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[expense]} />);
+    openSettleUpModal();
+    // Scope to the modal — Bob appears in the Balances section but NOT as a debt row in the modal
+    const modal = document.querySelector(".modal-content")!;
+    expect(within(modal).getByText(/you're all settled up/i)).toBeTruthy();
+    expect(within(modal).queryByText("Bob")).toBeNull();
+  });
+
+  it("shows settled-up message when no expenses exist", () => {
+    render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[]} />);
+    openSettleUpModal();
+    expect(screen.getByText(/you're all settled up/i)).toBeTruthy();
+  });
+
+  it("shows settled-up message when debts cancel out", () => {
+    // Alice paid $10 for both, Bob paid $10 for both → net zero
+    const exp1 = makeExpense({ id: "1", amountCents: 1000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
+    const exp2 = makeExpense({ id: "2", amountCents: 1000, paidById: "user-b", participantIds: ["user-a", "user-b"] });
+    render(<GroupInteractive {...BASE_PROPS} hasMoreLogs={false} initialExpenses={[exp1, exp2]} />);
+    openSettleUpModal();
+    expect(screen.getByText(/you're all settled up/i)).toBeTruthy();
   });
 });
