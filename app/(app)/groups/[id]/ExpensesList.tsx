@@ -35,6 +35,7 @@ interface ExpensesListProps {
   currentUserDisplayName: string;
   initialExpenses: ExpenseRow[];
   members: Member[];
+  allUserNames: Record<string, string>;
   onOptimisticActivity: (log: ActivityLog) => void;
   onExpensesChange?: (expenses: ExpenseRow[]) => void;
 }
@@ -57,6 +58,7 @@ export function ExpensesList({
   currentUserDisplayName,
   initialExpenses,
   members,
+  allUserNames,
   onOptimisticActivity,
   onExpensesChange,
 }: ExpensesListProps) {
@@ -213,6 +215,11 @@ export function ExpensesList({
                       <p className="font-semibold text-sm text-gray-900 truncate dark:text-gray-100">{expense.description}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         Paid by {expense.paidByDisplayName} · {formatDate(expense.date)}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5 truncate">
+                        {(expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId))
+                          .map((id) => allUserNames[id] ?? members.find((m) => m.userId === id)?.displayName ?? "Unknown")
+                          .join(", ")}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

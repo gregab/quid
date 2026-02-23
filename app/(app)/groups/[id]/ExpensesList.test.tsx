@@ -20,6 +20,10 @@ const BASE_PROPS = {
     { userId: "user-1", displayName: "Alice" },
     { userId: "user-2", displayName: "Bob" },
   ],
+  allUserNames: {
+    "user-1": "Alice",
+    "user-2": "Bob",
+  },
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
@@ -307,5 +311,60 @@ describe("ExpensesList — payment card rendering", () => {
     expect(screen.getByText("Dinner")).toBeDefined();
     // Should NOT render Payment badge
     expect(screen.queryByText("Payment")).toBeNull();
+  });
+});
+
+// ----------------------------
+// Participant display
+// ----------------------------
+
+describe("ExpensesList — participant display on regular expenses", () => {
+  it("shows participant names for a regular expense", () => {
+    const expense = makeExpense({ participantIds: ["user-1", "user-2"] });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getByText("Alice, Bob")).toBeDefined();
+  });
+
+  it("shows a single participant name when only one person split the expense", () => {
+    const expense = makeExpense({ participantIds: ["user-1"] });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getByText("Alice")).toBeDefined();
+  });
+
+  it("falls back to all members when participantIds is empty", () => {
+    const expense = makeExpense({ participantIds: [] });
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[expense]} />);
+    expect(screen.getByText("Alice, Bob")).toBeDefined();
+  });
+
+  it("resolves names from allUserNames for departed members not in members list", () => {
+    const expense = makeExpense({ participantIds: ["user-1", "user-99"] });
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        allUserNames={{ "user-1": "Alice", "user-2": "Bob", "user-99": "Charlie" }}
+        initialExpenses={[expense]}
+      />
+    );
+    expect(screen.getByText("Alice, Charlie")).toBeDefined();
+  });
+
+  it("does not show participant line for payment rows", () => {
+    const payment = {
+      id: "payment-1",
+      description: "Payment",
+      amountCents: 5000,
+      date: "2024-03-01",
+      paidById: "user-1",
+      paidByDisplayName: "Alice",
+      participantIds: ["user-2"],
+      canEdit: false,
+      canDelete: true,
+      isPayment: true as const,
+      createdById: "user-1",
+    };
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={[payment]} />);
+    // The payment card shows Alice → Bob format, not a comma-separated participants line
+    expect(screen.queryByText("Alice, Bob")).toBeNull();
   });
 });

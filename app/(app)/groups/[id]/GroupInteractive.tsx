@@ -133,6 +133,7 @@ export function GroupInteractive({
         currentUserDisplayName={currentUserDisplayName}
         initialExpenses={initialExpenses}
         members={members}
+        allUserNames={allUserNames}
         onOptimisticActivity={addOptimisticLog}
         onExpensesChange={handleExpensesChange}
       />
