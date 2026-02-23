@@ -113,11 +113,11 @@ export function AddMemberForm({
                     setEmail(e.target.value);
                     setError(null);
                   }}
-                  className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400"
+                  className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:focus:ring-amber-400 dark:focus:border-amber-400 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                 />
               </div>
 
-              {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+              {error && <p className="text-sm text-red-600 dark:text-red-400 mb-3">{error}</p>}
 
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="ghost" onClick={handleClose}>

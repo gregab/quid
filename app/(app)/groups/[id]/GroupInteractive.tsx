@@ -88,7 +88,7 @@ export function GroupInteractive({
       <section>
         <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Balances</h2>
         {resolvedDebts.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+          <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -119,10 +119,10 @@ export function GroupInteractive({
                   <span
                     className={`text-sm font-bold tabular-nums shrink-0 ${
                       isCurrentUserOwing
-                        ? "text-red-600"
+                        ? "text-red-600 dark:text-red-400"
                         : isCurrentUserReceiving
-                        ? "text-emerald-600"
-                        : "text-gray-700"
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-gray-700 dark:text-gray-300"
                     }`}
                   >
                     {formatCents(debt.amountCents)}

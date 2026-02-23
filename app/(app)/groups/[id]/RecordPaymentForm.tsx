@@ -170,7 +170,7 @@ export function RecordPaymentForm({
                   id="paymentFrom"
                   value={fromUserId}
                   onChange={(e) => handleFromChange(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -187,7 +187,7 @@ export function RecordPaymentForm({
                   id="paymentTo"
                   value={toUserId}
                   onChange={(e) => setToUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
                 >
                   {toOptions.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -226,7 +226,7 @@ export function RecordPaymentForm({
                   className="appearance-none"
                 />
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel

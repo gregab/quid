@@ -86,7 +86,7 @@ export default function CreateGroupButton({ userId }: { userId: string }) {
                   autoFocus
                 />
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
+              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
               <div className="flex gap-2 justify-end pt-1">
                 <Button type="button" variant="ghost" onClick={handleClose}>
                   Cancel

@@ -171,7 +171,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                       <>{" "}<span className="font-medium">{payload.description}</span></>
                     )}
                     {detail && (
-                      <span className="text-gray-500"> ({detail})</span>
+                      <span className="text-gray-500 dark:text-gray-400"> ({detail})</span>
                     )}
                   </p>
                   <span className="text-xs text-gray-400 shrink-0 mt-0.5">
@@ -197,7 +197,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                       </>
                     )}
                     {typeof payload.amountCents === "number" && (
-                      <span className="text-gray-500"> ({formatCents(payload.amountCents)})</span>
+                      <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
                     )}
                   </p>
                   <span className="text-xs text-gray-400 shrink-0 mt-0.5">
@@ -236,7 +236,7 @@ export function ActivityFeed({ logs }: { logs: ActivityLog[] }) {
                     <span className="font-medium">{payload.description}</span>
                   )}
                   {hasAmount && (
-                    <span className="text-gray-500">
+                    <span className="text-gray-500 dark:text-gray-400">
                       {" "}({formatCents(payload.amountCents!)})
                     </span>
                   )}
