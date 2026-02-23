@@ -304,15 +304,13 @@ export function ExpensesList({
             const isSettledUp = expense.isPayment && expense.settledUp;
 
             // Left accent bar color
-            const accentColor = isSettledUp
-              ? "border-l-emerald-500"
-              : expense.isPayment
-                ? "border-l-indigo-400"
-                : personalContext?.positive
-                  ? "border-l-emerald-500"
-                  : personalContext
-                    ? "border-l-rose-400"
-                    : "border-l-gray-200 dark:border-l-gray-700";
+            const accentColor = expense.isPayment
+              ? "border-l-gray-200 dark:border-l-gray-700"
+              : personalContext?.positive
+                ? "border-l-emerald-500"
+                : personalContext
+                  ? "border-l-rose-400"
+                  : "border-l-gray-200 dark:border-l-gray-700";
 
             // Payment row background tint
             const paymentBg = isSettledUp
