@@ -106,6 +106,36 @@ Cypress requires `npm run dev` running. Credentials in `cypress.env.json` (gitig
 
 See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress details.
 
+## Visual Design Language
+
+**Always use the `frontend-design` skill** when making UI/visual changes.
+
+**Brand identity:** Warm, naturalist, bird-themed. The app is called "Aviary" — it should feel like a well-designed nature journal meets modern fintech. Approachable, not corporate.
+
+**Color system:**
+- **Primary accent:** Amber/stone warm tones (`amber-600`, `stone-800`). Used for CTAs, active states, brand elements.
+- **Background:** `#f8f9fc` (light), `#0a0a0f` (dark). Not pure white/black — slightly warm.
+- **Group identity colors:** Each group gets a unique color from a 12-palette set of nature-inspired hues (honeycomb, teal, iris, rosefinch, jay blue, forest, terracotta, plum, kingfisher, ochre, indigo, cardinal). Used for card backgrounds (subtle tints) and accent stripes. Adjacent groups must never share a color.
+- **Surfaces:** Cards use `bg-white` / `dark:bg-gray-800` with `border-gray-200` / `dark:border-gray-700`. Rounded corners: `rounded-xl` for cards, `rounded-2xl` for larger containers, `rounded-lg` for inputs/buttons.
+
+**Typography:**
+- **Body/UI:** Geist Sans (`--font-geist-sans`) — the system font for all functional text.
+- **Logo/editorial:** Cormorant Garamond (`--font-serif-logo`, weight 400) — used only for the "Aviary" wordmark and the bird fact section. Gives an editorial, premium feel. Don't overuse it.
+- **Hierarchy:** Bold (`font-bold`) for headings, `font-semibold` for card titles, `font-medium` for secondary labels. Use `tracking-tight` on headings.
+
+**Components:**
+- **Buttons:** `stone-800` primary, white secondary, ghost for tertiary. All have `active:scale-[0.97]` press feedback. Amber for warm CTAs (e.g., "Start a group").
+- **Inputs:** `rounded-lg`, `border-gray-300`, `focus:ring-amber-500`. Amber focus ring ties to brand.
+- **Cards:** Soft shadow (`shadow-sm`), subtle border. Hover: lift (`-translate-y-0.5`) + increased shadow. Keep it understated.
+- **Modals:** Backdrop blur (`backdrop-blur-sm`), slide-up entrance animation, `rounded-2xl`.
+
+**Motion:**
+- Entrance animations: `slide-up` (0.2–0.4s, `ease-out`). Stagger with `animation-delay` for lists.
+- Hover: `transition-all duration-200`. Lift + shadow for clickable cards. Scale for small interactive elements.
+- Keep motion subtle and functional — no decorative animations.
+
+**Dark mode:** All components must support `dark:` variants. Use Tailwind's `dark:` prefix consistently. Dark surfaces are gray-800/900, not pure black.
+
 ## Code Conventions
 - TypeScript strict. No `any`. `async/await`, not `.then()`.
 - Named exports (except Next.js page/layout defaults).

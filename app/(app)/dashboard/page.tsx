@@ -2,21 +2,21 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
-// Vivid, nature-inspired palettes. Each group gets a bold stripe color,
-// a noticeable card tint, and a matching text accent. Named after birds.
+// Nature-inspired palettes — softer tints with a bold stripe accent.
+// Card backgrounds are gentle washes; the stripe provides the pop of color.
 const GROUP_PALETTES = [
-  { stripe: "#d97706", card: "#fef3c7", cardDark: "#422006", accent: "#b45309" },  // honeycomb
-  { stripe: "#0d9488", card: "#ccfbf1", cardDark: "#042f2e", accent: "#0f766e" },  // teal tanager
-  { stripe: "#7c3aed", card: "#ede9fe", cardDark: "#1e1b4b", accent: "#6d28d9" },  // iris
-  { stripe: "#e11d48", card: "#ffe4e6", cardDark: "#4c0519", accent: "#be123c" },  // rosefinch
-  { stripe: "#2563eb", card: "#dbeafe", cardDark: "#172554", accent: "#1d4ed8" },  // jay blue
-  { stripe: "#059669", card: "#d1fae5", cardDark: "#022c22", accent: "#047857" },  // forest warbler
-  { stripe: "#ea580c", card: "#ffedd5", cardDark: "#431407", accent: "#c2410c" },  // terracotta
-  { stripe: "#9333ea", card: "#f3e8ff", cardDark: "#2e1065", accent: "#7c3aed" },  // plum starling
-  { stripe: "#0284c7", card: "#e0f2fe", cardDark: "#082f49", accent: "#0369a1" },  // kingfisher
-  { stripe: "#ca8a04", card: "#fef9c3", cardDark: "#3f2d06", accent: "#a16207" },  // ochre oriole
-  { stripe: "#4f46e5", card: "#e0e7ff", cardDark: "#1e1b4b", accent: "#4338ca" },  // indigo bunting
-  { stripe: "#dc2626", card: "#fee2e2", cardDark: "#450a0a", accent: "#b91c1c" },  // cardinal
+  { stripe: "#d97706", card: "#fefbf3", accent: "#b45309" },  // honeycomb
+  { stripe: "#0d9488", card: "#f3fdfb", accent: "#0f766e" },  // teal tanager
+  { stripe: "#7c3aed", card: "#f8f5ff", accent: "#6d28d9" },  // iris
+  { stripe: "#e11d48", card: "#fff5f6", accent: "#be123c" },  // rosefinch
+  { stripe: "#2563eb", card: "#f3f7ff", accent: "#1d4ed8" },  // jay blue
+  { stripe: "#059669", card: "#f2fdf8", accent: "#047857" },  // forest warbler
+  { stripe: "#ea580c", card: "#fef7f2", accent: "#c2410c" },  // terracotta
+  { stripe: "#9333ea", card: "#f9f5ff", accent: "#7c3aed" },  // plum starling
+  { stripe: "#0284c7", card: "#f2f9ff", accent: "#0369a1" },  // kingfisher
+  { stripe: "#ca8a04", card: "#fefdf3", accent: "#a16207" },  // ochre oriole
+  { stripe: "#4f46e5", card: "#f3f4ff", accent: "#4338ca" },  // indigo bunting
+  { stripe: "#dc2626", card: "#fef5f5", accent: "#b91c1c" },  // cardinal
 ];
 
 function hashGroupId(id: string): number {
@@ -27,8 +27,24 @@ function hashGroupId(id: string): number {
   return Math.abs(h);
 }
 
-function getGroupPalette(id: string) {
-  return GROUP_PALETTES[hashGroupId(id) % GROUP_PALETTES.length]!;
+// Assign palettes to an ordered list of groups ensuring no two adjacent
+// groups share the same color. Each group's palette is deterministic (based
+// on its ID hash) but shifted if it would collide with its neighbor.
+function assignGroupPalettes(groupIds: string[]) {
+  const assignments = new Map<string, (typeof GROUP_PALETTES)[number]>();
+  let prevIndex = -1;
+
+  for (const id of groupIds) {
+    let idx = hashGroupId(id) % GROUP_PALETTES.length;
+    // If this would repeat the previous card's color, bump forward
+    if (idx === prevIndex) {
+      idx = (idx + 1) % GROUP_PALETTES.length;
+    }
+    assignments.set(id, GROUP_PALETTES[idx]!);
+    prevIndex = idx;
+  }
+
+  return assignments;
 }
 
 const BIRD_FACTS = [
@@ -120,6 +136,8 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ??
     "friend";
 
+  const paletteMap = assignGroupPalettes(groups.map((g) => g.id));
+
   return (
     <div className="space-y-8 sm:space-y-10">
       {/* Hero */}
@@ -179,7 +197,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="space-y-3">
             {groups.map((group, i) => {
-              const palette = getGroupPalette(group.id);
+              const palette = paletteMap.get(group.id)!;
               const memberCount = memberCountMap.get(group.id) ?? 0;
 
               return (
@@ -187,29 +205,29 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-transparent pl-0 pr-5 py-0 transition-all duration-300 hover:-translate-y-[2px] hover:shadow-xl"
+                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl pl-0 pr-5 py-0 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/20"
                   style={{
                     background: palette.card,
                     animationDelay: `${i * 80}ms`,
                   }}
                 >
-                  {/* Bold color stripe */}
+                  {/* Color stripe */}
                   <div
                     className="self-stretch w-1.5 flex-shrink-0 rounded-l-2xl transition-all duration-300 group-hover:w-2"
                     style={{ background: palette.stripe }}
                   />
 
-                  {/* Content — large name, compact meta */}
+                  {/* Content */}
                   <div className="min-w-0 flex-1 py-4">
-                    <p className="truncate text-[17px] font-bold tracking-tight text-gray-900" style={{ color: `color-mix(in srgb, ${palette.accent} 30%, #111827)` }}>
+                    <p className="truncate text-[17px] font-bold tracking-tight text-gray-900 dark:text-white">
                       {group.name}
                     </p>
                     <div className="mt-1 flex items-center gap-2 text-[13px]">
                       <span className="font-medium" style={{ color: palette.accent }}>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <span style={{ color: `color-mix(in srgb, ${palette.accent} 30%, transparent)` }}>&middot;</span>
-                      <span style={{ color: `color-mix(in srgb, ${palette.accent} 50%, #9ca3af)` }}>
+                      <span className="text-gray-300 dark:text-gray-600">&middot;</span>
+                      <span className="text-gray-400 dark:text-gray-500">
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
@@ -223,7 +241,7 @@ export default async function DashboardPage() {
                     className="flex-shrink-0 transition-all duration-300 group-hover:translate-x-1"
                     style={{ color: palette.stripe }}
                   >
-                    <svg className="h-5 w-5 opacity-50 transition-opacity duration-300 group-hover:opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 opacity-40 transition-opacity duration-300 group-hover:opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
