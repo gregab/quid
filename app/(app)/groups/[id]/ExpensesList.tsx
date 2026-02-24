@@ -170,7 +170,7 @@ export function ExpensesList({
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [openDetailExpenseId, setOpenDetailExpenseId] = useState<string | null>(null);
-  const [displayCount, setDisplayCount] = useState(30);
+  const [displayCount, setDisplayCount] = useState(20);
   const { canShare, copied, share } = useInviteShare(inviteToken);
 
   // FAB: track whether inline buttons are out of view
@@ -547,10 +547,10 @@ export function ExpensesList({
         <div className="flex justify-center pt-2">
           <button
             type="button"
-            onClick={() => setDisplayCount((c) => c + 30)}
+            onClick={() => setDisplayCount((c) => c + 20)}
             className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors"
           >
-            Show {Math.min(expenses.length - displayCount, 30)} more
+            Show {Math.min(expenses.length - displayCount, 20)} more
           </button>
         </div>
       )}

@@ -881,44 +881,44 @@ describe("ExpensesList — display truncation", () => {
     );
   }
 
-  it("shows all expenses when there are 30 or fewer", () => {
-    const expenses = makeExpenses(30);
+  it("shows all expenses when there are 20 or fewer", () => {
+    const expenses = makeExpenses(20);
     render(<ExpensesList {...BASE_PROPS} initialExpenses={expenses} />);
     expect(screen.queryByText(/Show \d+ more/)).toBeNull();
     const items = document.querySelectorAll("li");
-    expect(items).toHaveLength(30);
+    expect(items).toHaveLength(20);
   });
 
-  it("shows only 30 expenses when there are more than 30", () => {
-    const expenses = makeExpenses(35);
+  it("shows only 20 expenses when there are more than 20", () => {
+    const expenses = makeExpenses(25);
     render(<ExpensesList {...BASE_PROPS} initialExpenses={expenses} />);
     const items = document.querySelectorAll("li");
-    expect(items).toHaveLength(30);
+    expect(items).toHaveLength(20);
   });
 
-  it("shows 'Show N more' button when more than 30 expenses exist", () => {
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+  it("shows 'Show N more' button when more than 20 expenses exist", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(25)} />);
     expect(screen.getByText("Show 5 more")).toBeDefined();
   });
 
   it("reveals more expenses when 'Show N more' is clicked", () => {
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(25)} />);
     fireEvent.click(screen.getByText("Show 5 more"));
     const items = document.querySelectorAll("li");
-    expect(items).toHaveLength(35);
+    expect(items).toHaveLength(25);
   });
 
   it("hides the Show more button after all expenses are revealed", () => {
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(35)} />);
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(25)} />);
     fireEvent.click(screen.getByText("Show 5 more"));
     expect(screen.queryByText(/Show \d+ more/)).toBeNull();
   });
 
-  it("caps each 'Show more' click at 30 additional items", () => {
-    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(65)} />);
-    expect(screen.getByText("Show 30 more")).toBeDefined();
-    fireEvent.click(screen.getByText("Show 30 more"));
-    expect(document.querySelectorAll("li")).toHaveLength(60);
+  it("caps each 'Show more' click at 20 additional items", () => {
+    render(<ExpensesList {...BASE_PROPS} initialExpenses={makeExpenses(45)} />);
+    expect(screen.getByText("Show 20 more")).toBeDefined();
+    fireEvent.click(screen.getByText("Show 20 more"));
+    expect(document.querySelectorAll("li")).toHaveLength(40);
     expect(screen.getByText("Show 5 more")).toBeDefined();
   });
 });
