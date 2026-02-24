@@ -194,7 +194,7 @@ function renderWaves(
 const BW = 800;
 const BH = 160;
 
-/** Orbs/Bokeh — large overlapping radial-gradient circles. Maps from "circles" thumbnail. */
+/** Orbs/Bokeh — large overlapping radial-gradient circles + solid accents. Maps from "circles" thumbnail. */
 function renderBannerOrbs(
   seeds: number[],
   fg: string,
@@ -214,32 +214,50 @@ function renderBannerOrbs(
     const cx = (seeds[si]! / 255) * BW;
     const cy = (seeds[si2]! / 255) * BH;
 
-    // Layer sizes: first 2-3 large background, then medium, then small highlights
+    // Layer sizes: large background washes → medium → small bright highlights
     let r: number;
-    let opacity: number;
+    let innerOpacity: number;
+    let outerOpacity: number;
     if (i < 3) {
       r = 60 + (seeds[si3]! / 255) * 80; // 60-140
-      opacity = 0.12 + (seeds[si]! / 255) * 0.1;
+      innerOpacity = 0.25 + (seeds[si]! / 255) * 0.15;
+      outerOpacity = 0.05;
     } else if (i < 6) {
       r = 30 + (seeds[si3]! / 255) * 50; // 30-80
-      opacity = 0.18 + (seeds[si]! / 255) * 0.15;
+      innerOpacity = 0.35 + (seeds[si]! / 255) * 0.15;
+      outerOpacity = 0.08;
     } else {
       r = 10 + (seeds[si3]! / 255) * 25; // 10-35
-      opacity = 0.25 + (seeds[si]! / 255) * 0.2;
+      innerOpacity = 0.45 + (seeds[si]! / 255) * 0.2;
+      outerOpacity = 0.1;
     }
 
     const colors = [fg, accent, mid];
     const color = colors[i % 3]!;
     const gradId = `${prefix}og${i}`;
 
-    defs += `<radialGradient id="${gradId}"><stop offset="0%" stop-color="${color}" stop-opacity="${opacity.toFixed(2)}"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></radialGradient>`;
+    defs += `<radialGradient id="${gradId}"><stop offset="0%" stop-color="${color}" stop-opacity="${innerOpacity.toFixed(2)}"/><stop offset="100%" stop-color="${color}" stop-opacity="${outerOpacity.toFixed(2)}"/></radialGradient>`;
     circles += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="url(#${gradId})" />`;
   }
 
-  return `<defs>${defs}</defs><rect width="${BW}" height="${BH}" fill="${bg}"/>${circles}`;
+  // Solid accent dots for visual crispness
+  let accents = "";
+  const accentCount = 3 + (seeds[3]! % 3); // 3-5 small solid dots
+  for (let i = 0; i < accentCount; i++) {
+    const si = (10 + i) % seeds.length;
+    const si2 = (11 + i) % seeds.length;
+    const cx = (seeds[si]! / 255) * BW * 0.9 + BW * 0.05;
+    const cy = (seeds[si2]! / 255) * BH * 0.8 + BH * 0.1;
+    const r = 3 + (seeds[(12 + i) % seeds.length]! / 255) * 6; // 3-9
+    const colors = [fg, accent, mid];
+    const color = colors[i % 3]!;
+    accents += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" fill-opacity="0.4" />`;
+  }
+
+  return `<defs>${defs}</defs><rect width="${BW}" height="${BH}" fill="${bg}"/>${circles}${accents}`;
 }
 
-/** Gradient Bands — diagonal bands with soft linear gradients. Maps from "stripes" thumbnail. */
+/** Gradient Bands — diagonal bands with soft linear gradients + solid accent lines. Maps from "stripes" thumbnail. */
 function renderBannerBands(
   seeds: number[],
   fg: string,
@@ -257,16 +275,26 @@ function renderBannerBands(
     const si = (6 + i) % seeds.length;
     const colors = [fg, accent, mid];
     const color = colors[i % 3]!;
-    const opacity = 0.1 + (seeds[si]! / 255) * 0.2;
+    const opacity = 0.2 + (seeds[si]! / 255) * 0.2;
     const bandW = BW / count + (seeds[(7 + i) % seeds.length]! / 255) * 40 - 20;
     const x = (i / count) * BW;
     const gradId = `${prefix}bg${i}`;
 
-    defs += `<linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${color}" stop-opacity="${opacity.toFixed(2)}"/><stop offset="50%" stop-color="${color}" stop-opacity="${(opacity * 1.5).toFixed(2)}"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient>`;
+    defs += `<linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="${color}" stop-opacity="${(opacity * 0.3).toFixed(2)}"/><stop offset="30%" stop-color="${color}" stop-opacity="${opacity.toFixed(2)}"/><stop offset="70%" stop-color="${color}" stop-opacity="${(opacity * 0.8).toFixed(2)}"/><stop offset="100%" stop-color="${color}" stop-opacity="${(opacity * 0.15).toFixed(2)}"/></linearGradient>`;
     bands += `<rect x="${x.toFixed(1)}" y="${-BH * 0.5}" width="${bandW.toFixed(1)}" height="${BH * 2}" fill="url(#${gradId})" />`;
   }
 
-  return `<defs>${defs}</defs><rect width="${BW}" height="${BH}" fill="${bg}"/><g transform="rotate(${angle.toFixed(1)} ${BW / 2} ${BH / 2})">${bands}</g>`;
+  // Thin solid accent lines along band edges for definition
+  let lines = "";
+  const lineCount = 2 + (seeds[3]! % 3); // 2-4 lines
+  for (let i = 0; i < lineCount; i++) {
+    const x = ((i + 1) / (lineCount + 1)) * BW;
+    const colors = [fg, accent, mid];
+    const color = colors[i % 3]!;
+    lines += `<line x1="${x.toFixed(1)}" y1="${-BH * 0.5}" x2="${x.toFixed(1)}" y2="${BH * 2}" stroke="${color}" stroke-opacity="0.2" stroke-width="1.5" />`;
+  }
+
+  return `<defs>${defs}</defs><rect width="${BW}" height="${BH}" fill="${bg}"/><g transform="rotate(${angle.toFixed(1)} ${BW / 2} ${BH / 2})">${bands}${lines}</g>`;
 }
 
 /** Particle Field — scattered circles at varying sizes. Maps from "dots" thumbnail. */
@@ -300,7 +328,7 @@ function renderBannerParticles(
 
     const colors = [fg, accent, mid];
     const color = colors[i % 3]!;
-    const opacity = 0.15 + (seeds[(8 + i) % seeds.length]! / 255) * 0.35;
+    const opacity = 0.25 + (seeds[(8 + i) % seeds.length]! / 255) * 0.35;
     particles += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="${color}" fill-opacity="${opacity.toFixed(2)}" />`;
   }
 
@@ -329,7 +357,7 @@ function renderBannerRidgelines(
 
     const colors = [fg, mid, accent];
     const color = colors[i % 3]!;
-    const opacity = 0.15 + (i / count) * 0.25;
+    const opacity = 0.2 + (i / count) * 0.3;
 
     // Build smooth curve across the width
     const steps = 40;
