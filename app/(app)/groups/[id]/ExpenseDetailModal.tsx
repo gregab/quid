@@ -84,6 +84,7 @@ export function ExpenseDetailModal({
   const router = useRouter();
   const [mode, setMode] = useState<ModalMode>("view");
   const [stopRecurringLoading, setStopRecurringLoading] = useState(false);
+  const [stopRecurringError, setStopRecurringError] = useState<string | null>(null);
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState((expense.amountCents / 100).toFixed(2));
   const [date, setDate] = useState(expense.date);
@@ -436,10 +437,16 @@ export function ExpenseDetailModal({
   async function handleStopRecurring() {
     if (!expense.recurringExpense) return;
     setStopRecurringLoading(true);
-    await fetch(`/api/groups/${groupId}/recurring/${expense.recurringExpense.id}`, {
+    setStopRecurringError(null);
+    const res = await fetch(`/api/groups/${groupId}/recurring/${expense.recurringExpense.id}`, {
       method: "DELETE",
     });
     setStopRecurringLoading(false);
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({})) as { error?: string };
+      setStopRecurringError(json.error ?? "Something went wrong. Please try again.");
+      return;
+    }
     onClose();
     router.refresh();
   }
@@ -598,7 +605,8 @@ export function ExpenseDetailModal({
 
             {/* Recurring metadata + stop button */}
             {expense.recurringExpense && (
-              <div className="mb-4 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
+              <div className="mb-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 overflow-hidden">
+              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <svg
                     className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0"
@@ -626,6 +634,12 @@ export function ExpenseDetailModal({
                 >
                   {stopRecurringLoading ? "Stopping…" : "Stop recurring"}
                 </button>
+              </div>
+              {stopRecurringError && (
+                <p className="px-3 pb-2.5 text-xs text-rose-600 dark:text-rose-400">
+                  {stopRecurringError}
+                </p>
+              )}
               </div>
             )}
 
