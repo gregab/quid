@@ -5,12 +5,14 @@ import { GroupSettingsModal } from "./GroupSettingsModal";
 
 interface Props {
   groupId: string;
+  currentGroupName: string;
   currentBannerUrl: string | null;
   onBanner?: boolean;
 }
 
 export function GroupSettingsButton({
   groupId,
+  currentGroupName,
   currentBannerUrl,
   onBanner = false,
 }: Props) {
@@ -46,6 +48,7 @@ export function GroupSettingsButton({
       {open && (
         <GroupSettingsModal
           groupId={groupId}
+          currentGroupName={currentGroupName}
           currentBannerUrl={currentBannerUrl}
           onClose={() => setOpen(false)}
         />

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 const updateSettingsSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
   bannerUrl: z.string().url().nullable().optional(),
 });
 
@@ -42,14 +43,15 @@ export async function PUT(
     );
   }
 
-  const updates: { bannerUrl?: string | null } = {};
+  const updates: { name?: string; bannerUrl?: string | null } = {};
+  if (parsed.data.name !== undefined) updates.name = parsed.data.name;
   if ("bannerUrl" in parsed.data) updates.bannerUrl = parsed.data.bannerUrl ?? null;
 
   const { data, error } = await supabase
     .from("Group")
     .update(updates)
     .eq("id", groupId)
-    .select("id, bannerUrl")
+    .select("id, name, bannerUrl")
     .single();
 
   if (error) {

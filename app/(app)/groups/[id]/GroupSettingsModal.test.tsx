@@ -30,6 +30,7 @@ vi.mock("@/lib/compressImage", () => ({
 
 const defaultProps = {
   groupId: "g1",
+  currentGroupName: "Test Group",
   currentBannerUrl: null,
   onClose: vi.fn(),
 };
@@ -49,12 +50,18 @@ afterEach(() => {
 });
 
 describe("GroupSettingsModal", () => {
+  it("renders group name input with current name", () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+    const input = screen.getByLabelText("Group name") as HTMLInputElement;
+    expect(input.value).toBe("Test Group");
+  });
+
   it("renders banner section", () => {
     render(<GroupSettingsModal {...defaultProps} />);
     expect(screen.getByText("Banner image")).toBeTruthy();
   });
 
-  it("calls PUT /api/groups/g1/settings with correct payload on save", async () => {
+  it("calls PUT /api/groups/g1/settings with correct payload on save (no name change)", async () => {
     render(<GroupSettingsModal {...defaultProps} />);
 
     await act(async () => {
@@ -66,6 +73,25 @@ describe("GroupSettingsModal", () => {
       expect.objectContaining({
         method: "PUT",
         body: JSON.stringify({ bannerUrl: null }),
+      })
+    );
+  });
+
+  it("includes name in payload when group name is changed", async () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+
+    const input = screen.getByLabelText("Group name") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "Renamed Group" } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Save"));
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/groups/g1/settings",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ name: "Renamed Group", bannerUrl: null }),
       })
     );
   });

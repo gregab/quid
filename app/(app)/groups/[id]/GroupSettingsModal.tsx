@@ -7,16 +7,19 @@ import { compressImage } from "@/lib/compressImage";
 
 interface Props {
   groupId: string;
+  currentGroupName: string;
   currentBannerUrl: string | null;
   onClose: () => void;
 }
 
 export function GroupSettingsModal({
   groupId,
+  currentGroupName,
   currentBannerUrl,
   onClose,
 }: Props) {
   const router = useRouter();
+  const [groupName, setGroupName] = useState(currentGroupName);
   const [bannerUrl, setBannerUrl] = useState<string | null>(currentBannerUrl);
   const [bannerPreview, setBannerPreview] = useState<string | null>(currentBannerUrl);
   const [isPending, startTransition] = useTransition();
@@ -207,6 +210,7 @@ export function GroupSettingsModal({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(groupName !== currentGroupName && { name: groupName }),
           bannerUrl: finalBannerUrl || null,
         }),
       });
@@ -244,6 +248,21 @@ export function GroupSettingsModal({
         </div>
 
         <div className="px-5 py-5 space-y-6">
+          {/* Group name */}
+          <div>
+            <label htmlFor="group-name" className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">
+              Group name
+            </label>
+            <input
+              id="group-name"
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              maxLength={100}
+              className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+
           {/* Banner image */}
           <div>
             <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">

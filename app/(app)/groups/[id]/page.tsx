@@ -197,6 +197,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className="absolute top-2 right-2">
               <GroupSettingsButton
                 groupId={group.id}
+                currentGroupName={group.name}
                 currentBannerUrl={group.bannerUrl ?? null}
                 onBanner
               />
@@ -212,6 +213,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             </h1>
             <GroupSettingsButton
               groupId={group.id}
+              currentGroupName={group.name}
               currentBannerUrl={group.bannerUrl ?? null}
             />
           </div>

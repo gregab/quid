@@ -35,6 +35,7 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
+        currentGroupName="Test Group"
         currentBannerUrl={null}
       />
     );
@@ -45,6 +46,7 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
+        currentGroupName="Test Group"
         currentBannerUrl={null}
       />
     );
@@ -56,6 +58,7 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
+        currentGroupName="Test Group"
         currentBannerUrl={null}
       />
     );
