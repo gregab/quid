@@ -1237,6 +1237,83 @@ describe("buildRawDebts — departed member balances", () => {
   });
 });
 
+// ─── Input validation ─────────────────────────────────────────────────────────
+
+describe("buildRawDebts — input validation", () => {
+  it("throws when a split has a negative amountCents", () => {
+    const expense: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [
+        { userId: "alice", amountCents: 10000 },
+        { userId: "bob", amountCents: -500 },
+      ],
+    };
+    expect(() => buildRawDebts([expense])).toThrow(/negative/i);
+  });
+
+  it("throws when the payer's own split is negative", () => {
+    const expense: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [{ userId: "alice", amountCents: -1 }],
+    };
+    expect(() => buildRawDebts([expense])).toThrow();
+  });
+
+  it("throws when a non-payer split is negative, even if payer split is fine", () => {
+    const expense: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [
+        { userId: "alice", amountCents: 5000 },
+        { userId: "bob", amountCents: 5000 },
+        { userId: "carol", amountCents: -1 }, // one bad split
+      ],
+    };
+    expect(() => buildRawDebts([expense])).toThrow();
+  });
+
+  it("throws when a negative split appears on the second expense in the list", () => {
+    const good: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [{ userId: "bob", amountCents: 1000 }],
+    };
+    const bad: ExpenseForDebt = {
+      paidById: "bob",
+      splits: [{ userId: "alice", amountCents: -100 }],
+    };
+    expect(() => buildRawDebts([good, bad])).toThrow();
+  });
+
+  it("does NOT validate that split amounts sum to any particular total (API enforces this)", () => {
+    // buildRawDebts trusts its inputs — if splits don't match the expense total,
+    // the downstream balance will be wrong. Zod at the API boundary is the guard.
+    const expense: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [
+        { userId: "alice", amountCents: 5000 },
+        { userId: "bob", amountCents: 5000 },
+        // total 10000 but suppose the real expense was only 8000
+      ],
+    };
+    // No throw — it processes whatever it receives
+    const debts = buildRawDebts([expense]);
+    expect(debts).toHaveLength(1);
+    expect(debts[0]!.amount).toBe(5000); // bob's split used as-is
+  });
+
+  it("zero amountCents on a split is allowed (treated as no debt)", () => {
+    const expense: ExpenseForDebt = {
+      paidById: "alice",
+      splits: [
+        { userId: "alice", amountCents: 10000 },
+        { userId: "bob", amountCents: 0 }, // opted out
+      ],
+    };
+    expect(() => buildRawDebts([expense])).not.toThrow();
+    const debts = buildRawDebts([expense]);
+    expect(debts.find((d) => d.from === "bob")?.amount ?? 0).toBe(0);
+  });
+});
+
 describe("E2E scenarios — member departure lifecycle", () => {
   it("member leaves after settling — no effect on remaining balances", () => {
     const expenses: ExpenseForDebt[] = [];

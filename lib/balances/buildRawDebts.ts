@@ -22,6 +22,11 @@ export function buildRawDebts(expenses: ExpenseForDebt[]): Debt[] {
   const debts: Debt[] = [];
   for (const expense of expenses) {
     for (const split of expense.splits) {
+      if (split.amountCents < 0) {
+        throw new Error(
+          `Split amount cannot be negative (userId=${split.userId}, amount=${split.amountCents})`
+        );
+      }
       if (split.userId === expense.paidById) continue;
       debts.push({
         from: split.userId,
