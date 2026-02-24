@@ -136,74 +136,64 @@ export function GroupSettingsModal({
     setImgDisplaySize(null);
   }
 
-  async function handleApplyCrop() {
-    if (!pendingObjectUrl || !containerRef.current || !imgDisplaySize || !panImgRef.current) return;
-
-    setUploading(true);
-    setError(null);
-
-    try {
-      const img = panImgRef.current;
-      const natW = img.naturalWidth;
-      const natH = img.naturalHeight;
-      const cW = containerRef.current.clientWidth;
-      const cH = containerRef.current.clientHeight;
-      const scale = Math.max(cW / natW, cH / natH);
-
-      // Crop region in natural image coordinates
-      const cropX = Math.round(-pan.x / scale);
-      const cropY = Math.round(-pan.y / scale);
-      const cropW = Math.round(cW / scale);
-      const cropH = Math.round(cH / scale);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = cropW;
-      canvas.height = cropH;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas not supported");
-
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-
-      const croppedBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error("Canvas toBlob failed"));
-          },
-          "image/jpeg",
-          0.95
-        );
-      });
-
-      // compressImage handles resizing to MAX_WIDTH × MAX_HEIGHT and quality reduction
-      const croppedFile = new File([croppedBlob], "banner.jpg", { type: "image/jpeg" });
-      const compressed = await compressImage(croppedFile);
-
-      const supabase = createClient();
-      const path = `${groupId}/banner.jpg`;
-      const { error: uploadError } = await supabase.storage
-        .from("group-banners")
-        .upload(path, compressed, { upsert: true, contentType: "image/jpeg" });
-
-      if (uploadError) throw new Error(uploadError.message);
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("group-banners")
-        .getPublicUrl(path);
-
-      const urlWithBust = `${publicUrl}?t=${Date.now()}`;
-      setBannerUrl(urlWithBust);
-      setBannerPreview(urlWithBust);
-
-      // Clean up
-      URL.revokeObjectURL(pendingObjectUrl);
-      setPendingObjectUrl(null);
-      setImgDisplaySize(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setUploading(false);
+  async function cropAndUpload(): Promise<string> {
+    if (!pendingObjectUrl || !containerRef.current || !imgDisplaySize || !panImgRef.current) {
+      throw new Error("Crop state missing");
     }
+
+    const img = panImgRef.current;
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    const cW = containerRef.current.clientWidth;
+    const cH = containerRef.current.clientHeight;
+    const scale = Math.max(cW / natW, cH / natH);
+
+    // Crop region in natural image coordinates
+    const cropX = Math.round(-pan.x / scale);
+    const cropY = Math.round(-pan.y / scale);
+    const cropW = Math.round(cW / scale);
+    const cropH = Math.round(cH / scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = cropW;
+    canvas.height = cropH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+
+    ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error("Canvas toBlob failed"));
+        },
+        "image/jpeg",
+        0.95
+      );
+    });
+
+    // compressImage handles resizing to MAX_WIDTH × MAX_HEIGHT and quality reduction
+    const croppedFile = new File([croppedBlob], "banner.jpg", { type: "image/jpeg" });
+    const compressed = await compressImage(croppedFile);
+
+    const supabase = createClient();
+    const path = `${groupId}/banner.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from("group-banners")
+      .upload(path, compressed, { upsert: true, contentType: "image/jpeg" });
+
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("group-banners")
+      .getPublicUrl(path);
+
+    URL.revokeObjectURL(pendingObjectUrl);
+    setPendingObjectUrl(null);
+    setImgDisplaySize(null);
+
+    return `${publicUrl}?t=${Date.now()}`;
   }
 
   function handleRemoveBanner() {
@@ -212,15 +202,31 @@ export function GroupSettingsModal({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function handleSave() {
+  async function handleSave() {
     setError(null);
+
+    let finalBannerUrl = bannerUrl;
+
+    // If the user picked a new image and hasn't applied it yet, crop+upload now
+    if (pendingObjectUrl) {
+      setUploading(true);
+      try {
+        finalBannerUrl = await cropAndUpload();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Upload failed");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     startTransition(async () => {
       const res = await fetch(`/api/groups/${groupId}/settings`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           emoji: emoji.trim() || null,
-          bannerUrl: bannerUrl || null,
+          bannerUrl: finalBannerUrl || null,
         }),
       });
 
@@ -339,22 +345,14 @@ export function GroupSettingsModal({
                     Drag to reposition
                   </div>
                 </div>
-                <div className="mt-2 flex items-center gap-3">
+                <div className="mt-2">
                   <button
                     type="button"
                     onClick={handleCancelCrop}
-                    disabled={uploading}
+                    disabled={isBusy}
                     className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleApplyCrop}
-                    disabled={uploading}
-                    className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-semibold text-white hover:bg-amber-600 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {uploading ? "Uploading…" : "Use this photo"}
                   </button>
                 </div>
               </div>
@@ -431,7 +429,7 @@ export function GroupSettingsModal({
             disabled={isBusy}
             className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 active:scale-[0.97] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isPending ? "Saving…" : "Save"}
+            {uploading ? "Uploading…" : isPending ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

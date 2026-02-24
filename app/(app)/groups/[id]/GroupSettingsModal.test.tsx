@@ -195,7 +195,6 @@ describe("GroupSettingsModal", () => {
     });
 
     expect(screen.getByText("Drag to reposition")).toBeTruthy();
-    expect(screen.getByText("Use this photo")).toBeTruthy();
     // Upload button should be hidden during pan
     expect(screen.queryByText("Upload banner")).toBeNull();
   });
@@ -220,7 +219,7 @@ describe("GroupSettingsModal", () => {
     expect(screen.getByText("Upload banner")).toBeTruthy();
   });
 
-  it("uploads after applying crop", async () => {
+  it("uploads when Save is clicked with a pending crop", async () => {
     // Mock canvas — save original to avoid recursive call
     const originalCreateElement = document.createElement.bind(document);
     const mockGetContext = vi.fn().mockReturnValue({
@@ -255,14 +254,14 @@ describe("GroupSettingsModal", () => {
     fireEvent.load(panImg);
 
     await act(async () => {
-      fireEvent.click(screen.getByText("Use this photo"));
+      fireEvent.click(screen.getByText("Save"));
     });
 
     await waitFor(() => {
       expect(mockUpload).toHaveBeenCalled();
     });
 
-    // Pan UI should be gone, preview should be shown
+    // Modal should have closed (pan UI gone)
     expect(screen.queryByText("Drag to reposition")).toBeNull();
   });
 

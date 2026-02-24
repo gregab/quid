@@ -192,11 +192,19 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-              <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow">
+              <h1 className="text-xl sm:text-2xl font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
                 {group.emoji ?? defaultGroupEmoji} {group.name}
               </h1>
+            </div>
+            <div className="absolute top-2 right-2">
+              <GroupSettingsButton
+                groupId={group.id}
+                currentEmoji={group.emoji ?? null}
+                currentBannerUrl={group.bannerUrl ?? null}
+                defaultEmoji={defaultGroupEmoji}
+              />
             </div>
           </div>
         )}
@@ -207,18 +215,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {group.emoji ?? defaultGroupEmoji} {group.name}
             </h1>
-            <GroupSettingsButton
-              groupId={group.id}
-              currentEmoji={group.emoji ?? null}
-              currentBannerUrl={group.bannerUrl ?? null}
-              defaultEmoji={defaultGroupEmoji}
-            />
-          </div>
-        )}
-
-        {/* Settings button when banner is shown (sits below banner) */}
-        {group.bannerUrl && (
-          <div className="flex items-center justify-end -mt-1 mb-1">
             <GroupSettingsButton
               groupId={group.id}
               currentEmoji={group.emoji ?? null}
