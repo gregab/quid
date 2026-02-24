@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
+import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
+import { formatCents } from "@/lib/format";
 
 // Nature-inspired palettes — softer tints with a bold stripe accent.
 // Card backgrounds are gentle washes; the stripe provides the pop of color.
@@ -131,6 +133,30 @@ export default async function DashboardPage() {
     }
   }
 
+  // Fetch expenses with splits for balance computation
+  const balanceMap = new Map<string, number>();
+  if (groups.length > 0) {
+    const { data: expenses } = await supabase
+      .from("Expense")
+      .select("groupId, paidById, ExpenseSplit(userId, amountCents)")
+      .in("groupId", groups.map((g) => g.id));
+    if (expenses) {
+      // Group expenses by groupId
+      const byGroup = new Map<string, Array<{ paidById: string; splits: Array<{ userId: string; amountCents: number }> }>>();
+      for (const e of expenses) {
+        const gId = e.groupId;
+        if (!byGroup.has(gId)) byGroup.set(gId, []);
+        byGroup.get(gId)!.push({
+          paidById: e.paidById,
+          splits: (e.ExpenseSplit ?? []) as Array<{ userId: string; amountCents: number }>,
+        });
+      }
+      for (const [gId, exps] of byGroup) {
+        balanceMap.set(gId, getUserBalanceCents(exps, user.id));
+      }
+    }
+  }
+
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
@@ -149,7 +175,7 @@ export default async function DashboardPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
         <div className="relative z-10 p-6 sm:p-8 pt-16 sm:pt-24">
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
+          <h1 className="text-3xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
             Hey {displayName}.
           </h1>
         </div>
@@ -159,8 +185,8 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
-            <p className="mt-0.5 text-[13px] text-stone-400 dark:text-stone-500">
+            <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
+            <p className="mt-0.5 text-sm sm:text-[13px] text-stone-500 dark:text-stone-400">
               {groups.length === 0
                 ? "Start a group and have fun."
                 : groups.length === 1
@@ -182,13 +208,13 @@ export default async function DashboardPage() {
               >
                 <span className="text-2xl text-white" style={{ fontFamily: "var(--font-serif-logo)" }}>A</span>
               </div>
-              <p className="mb-1.5 text-lg font-bold text-stone-800 dark:text-stone-200">Welcome to the nest</p>
-              <p className="mx-auto mb-7 max-w-xs text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+              <p className="mb-1.5 text-xl sm:text-lg font-bold text-stone-800 dark:text-stone-200">Welcome to the nest</p>
+              <p className="mx-auto mb-7 max-w-xs text-base sm:text-sm leading-relaxed text-stone-600 dark:text-stone-400">
                 Start a group to split expenses with friends, roommates, or travel buddies.
               </p>
               <div className="flex flex-col items-center gap-3">
                 <CreateGroupButton userId={user.id} variant="large" />
-                <p className="text-xs text-stone-400 dark:text-stone-500">
+                <p className="text-sm sm:text-xs text-stone-500 dark:text-stone-400">
                   Or ask a friend for an invite link to join theirs
                 </p>
               </div>
@@ -199,6 +225,7 @@ export default async function DashboardPage() {
             {groups.map((group, i) => {
               const palette = paletteMap.get(group.id)!;
               const memberCount = memberCountMap.get(group.id) ?? 0;
+              const balance = balanceMap.get(group.id) ?? 0;
 
               return (
                 <Link
@@ -219,10 +246,10 @@ export default async function DashboardPage() {
 
                   {/* Content */}
                   <div className="min-w-0 flex-1 py-4">
-                    <p className="truncate text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
+                    <p className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
                       {group.name}
                     </p>
-                    <div className="mt-1 flex items-center gap-2 text-[13px]">
+                    <div className="mt-1 flex items-center gap-2 text-sm sm:text-[13px]">
                       <span className="font-medium" style={{ color: palette.accent }}>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
@@ -233,6 +260,25 @@ export default async function DashboardPage() {
                           year: "numeric",
                         })}
                       </span>
+                      {balance !== 0 && (
+                        <>
+                          <span className="text-stone-300 dark:text-stone-600">&middot;</span>
+                          <span className={`font-semibold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
+                            {balance > 0 ? `you're owed ${formatCents(balance)}` : `you owe ${formatCents(Math.abs(balance))}`}
+                          </span>
+                        </>
+                      )}
+                      {balance === 0 && (
+                        <>
+                          <span className="text-stone-300 dark:text-stone-600">&middot;</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                            </svg>
+                            settled
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -254,26 +300,26 @@ export default async function DashboardPage() {
 
       {/* Bird fact — subtle editorial aside */}
       <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">
-        <div className="absolute top-3 right-4 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-300 dark:text-stone-700">
+        <div className="absolute top-3 right-4 text-[11px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-stone-300 dark:text-stone-700">
           Aviary
         </div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/60 dark:text-amber-400/50">
+        <p className="text-[11px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70">
           Bird fact
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400" style={{ fontFamily: "var(--font-serif-logo)" }}>
+        <p className="mt-1.5 text-base sm:text-sm leading-relaxed text-stone-700 dark:text-stone-300" style={{ fontFamily: "var(--font-serif-logo)" }}>
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>
 
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
-        <p className="pb-2 text-center text-xs italic text-stone-400 dark:text-stone-500">
+        <p className="pb-2 text-center text-sm sm:text-xs italic text-stone-500 dark:text-stone-400">
           Maybe the real financial independence is the friends we meticulously tracked along the way.
         </p>
       )}
 
       {/* Support + Legal links */}
-      <div className="pb-4 text-center text-xs text-stone-400 dark:text-stone-500 space-y-1">
+      <div className="pb-4 text-center text-sm sm:text-xs text-stone-500 dark:text-stone-400 space-y-1">
         <p>
           <a
             href="https://buymeacoffee.com/gregbigelow"
