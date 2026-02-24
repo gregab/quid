@@ -223,7 +223,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {groups.map((group, i) => {
               const palette = paletteMap.get(group.id)!;
               const memberCount = memberCountMap.get(group.id) ?? 0;
@@ -234,62 +234,75 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl pl-0 pr-5 py-0 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/20"
+                  className="group-card group relative flex items-center gap-4 overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 px-4 sm:px-5 py-4 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/30"
                   style={{
-                    background: palette.card,
+                    borderLeftWidth: '3px',
+                    borderLeftColor: palette.stripe,
                     animationDelay: `${i * 80}ms`,
                   }}
                 >
-                  {/* Color stripe */}
+                  {/* Subtle colored gradient wash */}
                   <div
-                    className="self-stretch w-1.5 flex-shrink-0 rounded-l-2xl transition-all duration-300 group-hover:w-2"
-                    style={{ background: palette.stripe }}
+                    className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.07] transition-opacity duration-300 group-hover:opacity-[0.07] dark:group-hover:opacity-[0.12]"
+                    style={{ background: `linear-gradient(120deg, ${palette.stripe} 0%, transparent 50%)` }}
                   />
 
-                  {/* Content */}
-                  <div className="min-w-0 flex-1 py-4">
+                  {/* Group initial avatar */}
+                  <div
+                    className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white font-bold text-[17px] tracking-tight transition-transform duration-300 group-hover:scale-105"
+                    style={{
+                      background: `linear-gradient(145deg, ${palette.stripe}, ${palette.accent})`,
+                      boxShadow: `0 2px 10px ${palette.stripe}25`,
+                    }}
+                  >
+                    {group.name.charAt(0).toUpperCase()}
+                  </div>
+
+                  {/* Text content */}
+                  <div className="relative min-w-0 flex-1">
                     <p className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
                       {group.name}
                     </p>
-                    <div className="mt-1 flex items-center gap-2 text-sm sm:text-[13px]">
-                      <span className="font-medium" style={{ color: palette.accent }}>
-                        {memberCount} {memberCount === 1 ? "member" : "members"}
-                      </span>
-                      <span className="text-stone-300 dark:text-stone-600">&middot;</span>
-                      <span className="text-stone-400 dark:text-stone-500">
+                    <div className="mt-0.5 flex items-center gap-1.5 text-sm sm:text-[13px] text-stone-400 dark:text-stone-500">
+                      <svg className="h-3.5 w-3.5 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>{memberCount}</span>
+                      <span className="text-stone-300 dark:text-stone-700">&middot;</span>
+                      <span>
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
                         })}
                       </span>
-                      {balance !== 0 && (
-                        <>
-                          <span className="text-stone-300 dark:text-stone-600">&middot;</span>
-                          <span className={`font-semibold ${balance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
-                            {balance > 0 ? `you're owed ${formatCents(balance)}` : `you owe ${formatCents(Math.abs(balance))}`}
-                          </span>
-                        </>
-                      )}
-                      {balance === 0 && groupsWithExpenses.has(group.id) && (
-                        <>
-                          <span className="text-stone-300 dark:text-stone-600">&middot;</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                            settled
-                          </span>
-                        </>
-                      )}
                     </div>
                   </div>
 
-                  {/* Arrow */}
-                  <div
-                    className="flex-shrink-0 transition-all duration-300 group-hover:translate-x-1"
-                    style={{ color: palette.stripe }}
-                  >
-                    <svg className="h-5 w-5 opacity-40 transition-opacity duration-300 group-hover:opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {/* Balance pill + arrow */}
+                  <div className="relative flex items-center gap-2 flex-shrink-0">
+                    {balance !== 0 && (
+                      <div className={`px-2.5 py-1 rounded-lg text-[13px] font-semibold whitespace-nowrap ${
+                        balance > 0
+                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                          : "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
+                      }`}>
+                        {balance > 0 ? `owed ${formatCents(balance)}` : `owe ${formatCents(Math.abs(balance))}`}
+                      </div>
+                    )}
+                    {balance === 0 && groupsWithExpenses.has(group.id) && (
+                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[13px] font-semibold">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        settled
+                      </div>
+                    )}
+                    <svg
+                      className="h-4 w-4 text-stone-300 dark:text-stone-600 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-stone-400 dark:group-hover:text-stone-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
