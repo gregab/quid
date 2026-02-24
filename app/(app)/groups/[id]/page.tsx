@@ -207,22 +207,18 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Pattern banner (no uploaded banner) */}
         {!group.bannerUrl && (() => {
-          const { lightSvg, darkSvg } = generateGroupPattern(group.patternSeed, 800);
-          // Make SVGs fill container: replace fixed dimensions with 100% and use slice to cover
-          const makeFill = (svg: string) =>
-            svg
-              .replace(/width="\d+"/, 'width="100%"')
-              .replace(/height="\d+"/, 'height="100%"')
-              .replace('viewBox=', 'preserveAspectRatio="xMidYMid slice" viewBox=');
+          const { lightSvg, darkSvg } = generateGroupPattern(group.patternSeed, 120);
+          const toDataUri = (svg: string) =>
+            `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
           return (
             <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
               <div
                 className="absolute inset-0 dark:hidden"
-                dangerouslySetInnerHTML={{ __html: makeFill(lightSvg) }}
+                style={{ backgroundImage: toDataUri(lightSvg), backgroundRepeat: "repeat" }}
               />
               <div
                 className="absolute inset-0 hidden dark:block"
-                dangerouslySetInnerHTML={{ __html: makeFill(darkSvg) }}
+                style={{ backgroundImage: toDataUri(darkSvg), backgroundRepeat: "repeat" }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
