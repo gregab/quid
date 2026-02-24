@@ -123,6 +123,33 @@ describe("ExpenseDetailModal — recurring expense display", () => {
   });
 });
 
+// ─── ExpenseDetailModal — recurring expenses are not editable ────────────────
+
+describe("ExpenseDetailModal — recurring expenses cannot be edited", () => {
+  it("does not show the Edit button for a recurring expense (canEdit=false)", () => {
+    render(
+      <ExpenseDetailModal
+        {...MODAL_BASE_PROPS}
+        expense={makeExpense({
+          recurringExpense: { id: "rec-1", frequency: "monthly" },
+          canEdit: false,
+        })}
+      />
+    );
+    expect(screen.queryByRole("button", { name: /edit expense/i })).toBeNull();
+  });
+
+  it("still shows the Edit button for a non-recurring expense (canEdit=true)", () => {
+    render(
+      <ExpenseDetailModal
+        {...MODAL_BASE_PROPS}
+        expense={makeExpense({ recurringExpense: null, canEdit: true })}
+      />
+    );
+    expect(screen.getByRole("button", { name: /edit expense/i })).toBeDefined();
+  });
+});
+
 // ─── ExpenseDetailModal — Stop recurring happy path ──────────────────────────
 
 describe("ExpenseDetailModal — Stop recurring", () => {

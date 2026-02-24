@@ -150,7 +150,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       participantIds: expenseSplits.map((s) => s.userId),
       splits: expenseSplits,
       splitType: (expense.splitType as "equal" | "custom") ?? "equal",
-      canEdit: expense.isPayment ? false : expense.createdById === user.id,
+      canEdit: expense.isPayment || expense.recurringExpenseId ? false : expense.createdById === user.id,
       canDelete: expense.createdById === user.id,
       isPayment: expense.isPayment,
       settledUp: expense.settledUp ?? false,
