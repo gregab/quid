@@ -2,6 +2,57 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
+// Nature-inspired palettes — warm, earthy tones that feel cohesive with the Aviary brand.
+// Each has a rich bg for the monogram, a subtle wash tint for the card, and harmonious accents.
+const GROUP_PALETTES = [
+  { bg: "#b45309", wash: "#fffbeb", tint: "#fef3c7", text: "#92400e" },  // honeycomb
+  { bg: "#0f766e", wash: "#f0fdfa", tint: "#ccfbf1", text: "#115e59" },  // deep teal
+  { bg: "#9333ea", wash: "#faf5ff", tint: "#f3e8ff", text: "#6b21a8" },  // iris
+  { bg: "#be123c", wash: "#fff1f2", tint: "#ffe4e6", text: "#9f1239" },  // rosefinch
+  { bg: "#1d4ed8", wash: "#eff6ff", tint: "#dbeafe", text: "#1e40af" },  // jay blue
+  { bg: "#047857", wash: "#ecfdf5", tint: "#d1fae5", text: "#065f46" },  // forest
+  { bg: "#c2410c", wash: "#fff7ed", tint: "#ffedd5", text: "#9a3412" },  // terracotta
+  { bg: "#7c3aed", wash: "#f5f3ff", tint: "#ede9fe", text: "#5b21b6" },  // plum
+  { bg: "#0369a1", wash: "#f0f9ff", tint: "#e0f2fe", text: "#075985" },  // kingfisher
+  { bg: "#a16207", wash: "#fefce8", tint: "#fef9c3", text: "#854d0e" },  // ochre
+  { bg: "#4338ca", wash: "#eef2ff", tint: "#e0e7ff", text: "#3730a3" },  // indigo bunting
+  { bg: "#b91c1c", wash: "#fef2f2", tint: "#fee2e2", text: "#991b1b" },  // cardinal
+];
+
+function hashGroupId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function getGroupPalette(id: string) {
+  return GROUP_PALETTES[hashGroupId(id) % GROUP_PALETTES.length]!;
+}
+
+// Deterministic abstract pattern per group — a unique SVG "feather" motif
+// based on the group ID hash. Creates visual fingerprinting without emojis.
+function getGroupPattern(id: string): string {
+  const h = hashGroupId(id);
+  const shapes: string[] = [];
+  // Generate 3-5 soft organic ellipses at different positions/rotations
+  const count = 3 + (h % 3);
+  for (let i = 0; i < count; i++) {
+    const seed = hashGroupId(id + i.toString());
+    const cx = 20 + (seed % 60);
+    const cy = 15 + ((seed >> 4) % 70);
+    const rx = 8 + (seed % 18);
+    const ry = 4 + ((seed >> 3) % 12);
+    const rotate = (seed % 180) - 90;
+    const opacity = 0.06 + ((seed % 8) * 0.015);
+    shapes.push(
+      `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${rotate} ${cx} ${cy})" fill="currentColor" opacity="${opacity.toFixed(3)}"/>`
+    );
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">${shapes.join("")}</svg>`;
+}
+
 const BIRD_FACTS = [
   "A group of owls is called a parliament.",
   "A group of penguins is called a colony.",
@@ -54,34 +105,6 @@ const BIRD_FACTS = [
   "A group of goldfinches is called a charm. It's also just charming to watch them.",
 ];
 
-// Curated palette of 12 distinct, vibrant color pairs (bg gradient + text accent).
-// Each group gets a deterministic color based on its ID hash.
-const GROUP_PALETTES = [
-  { from: "#f97316", to: "#ea580c" }, // orange
-  { from: "#8b5cf6", to: "#7c3aed" }, // violet
-  { from: "#06b6d4", to: "#0891b2" }, // cyan
-  { from: "#ec4899", to: "#db2777" }, // pink
-  { from: "#10b981", to: "#059669" }, // emerald
-  { from: "#f59e0b", to: "#d97706" }, // amber
-  { from: "#6366f1", to: "#4f46e5" }, // indigo
-  { from: "#ef4444", to: "#dc2626" }, // red
-  { from: "#14b8a6", to: "#0d9488" }, // teal
-  { from: "#a855f7", to: "#9333ea" }, // purple
-  { from: "#3b82f6", to: "#2563eb" }, // blue
-  { from: "#84cc16", to: "#65a30d" }, // lime
-];
-
-function hashGroupId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
-function getGroupPalette(id: string) {
-  return GROUP_PALETTES[hashGroupId(id) % GROUP_PALETTES.length]!;
-}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -120,18 +143,15 @@ export default async function DashboardPage() {
     "friend";
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8 sm:space-y-10">
       {/* Hero */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
-        {/* Bird painting background */}
         <img
           src="/birds.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        {/* Warm overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
-
         <div className="relative z-10 p-6 sm:p-8 pt-16 sm:pt-24">
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
             Hey {displayName}.
@@ -141,10 +161,10 @@ export default async function DashboardPage() {
 
       {/* Groups section */}
       <div>
-        <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your groups</h2>
-            <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            <h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Your groups</h2>
+            <p className="mt-0.5 text-[13px] text-gray-400 dark:text-gray-500">
               {groups.length === 0
                 ? "Start a group and have fun."
                 : groups.length === 1
@@ -156,63 +176,94 @@ export default async function DashboardPage() {
         </div>
 
         {groups.length === 0 ? (
-          <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-amber-50/40 px-5 py-10 sm:px-8 sm:py-14 text-center shadow-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:via-stone-900/20 dark:to-amber-950/10">
-            <div className="mb-4 sm:mb-5">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg">
-                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                </svg>
+          <div className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-amber-50/60 via-stone-50 to-white px-5 py-12 sm:px-8 sm:py-16 text-center dark:border-stone-700/50 dark:from-amber-950/20 dark:via-stone-900/40 dark:to-stone-900/20">
+            {/* Decorative background texture */}
+            <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
+            <div className="relative">
+              <div
+                className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg"
+                style={{ background: "linear-gradient(135deg, #b45309, #92400e)" }}
+              >
+                <span className="text-2xl text-white" style={{ fontFamily: "var(--font-serif-logo)" }}>A</span>
               </div>
-            </div>
-            <p className="mb-1.5 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Welcome to the nest</p>
-            <p className="mx-auto mb-6 max-w-xs text-sm sm:text-base text-gray-500 dark:text-gray-400">
-              Start a group to split expenses with friends, roommates, or travel buddies.
-            </p>
-            <div className="flex flex-col items-center gap-3">
-              <CreateGroupButton userId={user.id} variant="large" />
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                Or ask a friend for an invite link to join theirs
+              <p className="mb-1.5 text-lg font-bold text-gray-800 dark:text-gray-200">Welcome to the nest</p>
+              <p className="mx-auto mb-7 max-w-xs text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                Start a group to split expenses with friends, roommates, or travel buddies.
               </p>
+              <div className="flex flex-col items-center gap-3">
+                <CreateGroupButton userId={user.id} variant="large" />
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  Or ask a friend for an invite link to join theirs
+                </p>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:gap-4">
-            {groups.map((group) => {
+          <div className="space-y-3">
+            {groups.map((group, i) => {
               const palette = getGroupPalette(group.id);
               const initial = group.name.charAt(0).toUpperCase();
               const memberCount = memberCountMap.get(group.id) ?? 0;
+              const patternSvg = getGroupPattern(group.id);
+              const patternDataUri = `data:image/svg+xml,${encodeURIComponent(patternSvg.replace("currentColor", palette.bg))}`;
+
               return (
                 <Link
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group relative flex items-center gap-4 rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:bg-gray-800/80 dark:border-gray-700/60 dark:hover:border-gray-600"
+                  className="group-card group relative flex items-center gap-4 overflow-hidden rounded-2xl border bg-white pl-5 pr-4 py-4 transition-all duration-300 hover:-translate-y-[2px] hover:shadow-xl dark:bg-gray-900/80"
+                  style={{
+                    borderColor: `color-mix(in srgb, ${palette.bg} 15%, transparent)`,
+                    animationDelay: `${i * 80}ms`,
+                  }}
                 >
-                  {/* Colored left accent bar */}
+                  {/* Subtle pattern background — unique per group */}
                   <div
-                    className="absolute left-0 top-3 bottom-3 w-1 rounded-full transition-all duration-200 group-hover:top-2 group-hover:bottom-2"
-                    style={{ background: `linear-gradient(to bottom, ${palette.from}, ${palette.to})` }}
+                    className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70 dark:opacity-20 dark:group-hover:opacity-40"
+                    style={{
+                      backgroundImage: `url("${patternDataUri}")`,
+                      backgroundSize: "140px 140px",
+                      backgroundPosition: "right center",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   />
 
-                  {/* Monogram avatar */}
+                  {/* Tinted wash on the left edge */}
                   <div
-                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white shadow-md transition-transform duration-200 group-hover:scale-105"
-                    style={{ background: `linear-gradient(135deg, ${palette.from}, ${palette.to})` }}
+                    className="pointer-events-none absolute inset-y-0 left-0 w-24 opacity-30 dark:opacity-15"
+                    style={{
+                      background: `linear-gradient(to right, ${palette.tint}, transparent)`,
+                    }}
+                  />
+
+                  {/* Monogram — uses the serif logo font for an editorial feel */}
+                  <div
+                    className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.06]"
+                    style={{
+                      background: palette.bg,
+                      boxShadow: `0 4px 14px -3px color-mix(in srgb, ${palette.bg} 40%, transparent)`,
+                    }}
                   >
-                    {initial}
+                    <span
+                      className="text-xl leading-none"
+                      style={{ fontFamily: "var(--font-serif-logo)" }}
+                    >
+                      {initial}
+                    </span>
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-white">{group.name}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-1.053M18 10.5a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12.75 6.75a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                  {/* Content */}
+                  <div className="relative min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold tracking-tight text-gray-900 dark:text-white">
+                      {group.name}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs">
+                      <span style={{ color: palette.text }} className="font-medium dark:opacity-80">
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <span className="hidden sm:inline">&middot;</span>
-                      <span className="hidden sm:inline">
+                      <span className="text-gray-300 dark:text-gray-600">/</span>
+                      <span className="text-gray-400 dark:text-gray-500">
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
@@ -221,15 +272,13 @@ export default async function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Arrow — picks up the group's color on hover */}
-                  <div className="flex-shrink-0 text-gray-300 transition-all duration-200 group-hover:translate-x-0.5 dark:text-gray-600">
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  {/* Arrow */}
+                  <div
+                    className="relative flex-shrink-0 transition-all duration-300 group-hover:translate-x-1"
+                    style={{ color: palette.bg }}
+                  >
+                    <svg className="h-4 w-4 opacity-40 transition-opacity duration-300 group-hover:opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </Link>
@@ -239,12 +288,15 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Bird fact */}
-      <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-stone-50/80 px-5 py-4 dark:border-amber-900/40 dark:from-amber-950/30 dark:to-stone-900/30">
-        <p className="text-xs font-semibold uppercase tracking-wider text-amber-700/70 dark:text-amber-400/70">
+      {/* Bird fact — subtle editorial aside */}
+      <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">
+        <div className="absolute top-3 right-4 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-300 dark:text-stone-700">
+          Aviary
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/60 dark:text-amber-400/50">
           Bird fact
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+        <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400" style={{ fontFamily: "var(--font-serif-logo)" }}>
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>
@@ -252,7 +304,7 @@ export default async function DashboardPage() {
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
         <p className="pb-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
-          Maybe the real financial independence is the friends we meticulously tracked along the way. 🪶
+          Maybe the real financial independence is the friends we meticulously tracked along the way.
         </p>
       )}
 
@@ -263,15 +315,15 @@ export default async function DashboardPage() {
             href="https://buymeacoffee.com/gregbigelow"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-amber-700 dark:hover:text-amber-400"
+            className="hover:text-amber-700 dark:hover:text-amber-400 transition-colors"
           >
-            Like Aviary? Buy me a coffee. 🙏
+            Like Aviary? Buy me a coffee.
           </a>
         </p>
         <p>
-          <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">Privacy Policy</Link>
-          <span className="mx-2">&middot;</span>
-          <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400">Terms of Service</Link>
+          <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Privacy Policy</Link>
+          <span className="mx-2 text-gray-300 dark:text-gray-700">&middot;</span>
+          <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Terms of Service</Link>
         </p>
       </div>
     </div>

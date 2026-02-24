@@ -59,3 +59,19 @@ body {
 .expense-item-exit {
   animation: fade-out-scale 0.2s ease-out forwards;
 }
+
+/* Dashboard group card staggered entrance */
+@keyframes group-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.group-card {
+  animation: group-card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
