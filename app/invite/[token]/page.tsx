@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     if (data) {
       const group = data as { id: string; name: string; memberCount: number; isMember: boolean };
       const title = `Join ${group.name} on Aviary`;
-      const description = `You've been invited to join ${group.name}. Aviary is a friendly expense splitting app — track shared costs with ease.`;
+      const description = `You've been invited to join ${group.name}. Aviary is a friendly expense splitting app — track shared costs with ease and joy.`;
 
       const ogImage = {
         url: "/og-image.jpg",
