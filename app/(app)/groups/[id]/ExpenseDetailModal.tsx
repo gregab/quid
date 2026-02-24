@@ -66,6 +66,20 @@ function scaleAmounts(
   return result;
 }
 
+/** Strips non-numeric characters, allowing at most one decimal point. */
+function filterDecimalInput(value: string): string {
+  let filtered = "";
+  let hasDot = false;
+  for (const ch of value) {
+    if (ch >= "0" && ch <= "9") filtered += ch;
+    else if (ch === "." && !hasDot) {
+      filtered += ch;
+      hasDot = true;
+    }
+  }
+  return filtered;
+}
+
 export function ExpenseDetailModal({
   groupId,
   expense,
@@ -761,20 +775,20 @@ export function ExpenseDetailModal({
 
                 {/* Split type toggle */}
                 {participantIds.size > 0 && (
-                  <div className="mt-3">
-                    <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium">
-                      {(["equal", "percentage", "custom"] as SplitType[]).map((type, i) => (
+                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60">
+                    <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700/60 p-0.5 text-xs font-medium">
+                      {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
                         <button
                           key={type}
                           type="button"
                           onClick={() => handleEditSplitTypeChange(type)}
-                          className={`px-3 py-1.5 transition-colors ${i > 0 ? "border-l border-gray-200 dark:border-gray-700" : ""} ${
+                          className={`px-3.5 py-1.5 rounded-full transition-all ${
                             editSplitType === type
-                              ? "bg-indigo-600 text-white"
-                              : "bg-white text-gray-600 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                           }`}
                         >
-                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom"}
+                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
                         </button>
                       ))}
                     </div>
@@ -783,95 +797,113 @@ export function ExpenseDetailModal({
 
                 {/* Percentage inputs for edit mode */}
                 {editSplitType === "percentage" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {orderedEditParticipants.map((m) => (
-                      <div key={m.userId} className="flex items-center gap-2">
+                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                    {orderedEditParticipants.map((m, idx) => (
+                      <div
+                        key={m.userId}
+                        className={`flex items-center gap-2 px-3 py-2.5 ${
+                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                        }`}
+                      >
                         <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
                             <span className="ml-1 text-xs text-gray-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-24 flex items-center gap-1">
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
+                        <div className="w-24 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
+                          <input
+                            type="text"
+                            inputMode="decimal"
                             placeholder="0.00"
                             value={editPercentages.get(m.userId) ?? "0.00"}
-                            onChange={(e) =>
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const val = filterDecimalInput(e.target.value);
                               setEditPercentages((prev) =>
-                                new Map(prev).set(m.userId, e.target.value)
-                              )
-                            }
-                            className="text-right text-sm py-1"
+                                new Map(prev).set(m.userId, val)
+                              );
+                            }}
+                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
                           />
-                          <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">%</span>
+                          <span className="pr-2 text-sm text-gray-400 dark:text-gray-500 select-none">%</span>
                         </div>
                       </div>
                     ))}
                     {editPercentageRemaining !== null && (
-                      <p
-                        className={`text-xs font-medium text-right ${
-                          Math.abs(editPercentageRemaining) < 0.005
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-500 dark:text-rose-400"
-                        }`}
-                      >
-                        {Math.abs(editPercentageRemaining) < 0.005
-                          ? "Adds up to 100% ✓"
-                          : editPercentageRemaining > 0
-                          ? `Remaining: ${editPercentageRemaining.toFixed(2)}%`
-                          : `Over by: ${Math.abs(editPercentageRemaining).toFixed(2)}%`}
-                      </p>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            Math.abs(editPercentageRemaining) < 0.005
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                          }`}
+                        >
+                          {Math.abs(editPercentageRemaining) < 0.005
+                            ? "100% ✓"
+                            : editPercentageRemaining > 0
+                            ? `${(100 - editPercentageRemaining).toFixed(2)}% of 100%`
+                            : `${(100 - editPercentageRemaining).toFixed(2)}% — over by ${Math.abs(editPercentageRemaining).toFixed(2)}%`}
+                        </span>
+                      </div>
                     )}
                   </div>
                 )}
 
                 {/* Custom amount inputs for edit mode */}
                 {editSplitType === "custom" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {orderedEditParticipants.map((m) => (
-                      <div key={m.userId} className="flex items-center gap-2">
+                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                    {orderedEditParticipants.map((m, idx) => (
+                      <div
+                        key={m.userId}
+                        className={`flex items-center gap-2 px-3 py-2.5 ${
+                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                        }`}
+                      >
                         <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
                             <span className="ml-1 text-xs text-gray-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-24">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
+                        <div className="w-28 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
+                          <span className="pl-2.5 text-sm text-gray-400 dark:text-gray-500 select-none">$</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
                             placeholder="0.00"
                             value={editCustomAmounts.get(m.userId) ?? "0.00"}
-                            onChange={(e) =>
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => {
+                              const val = filterDecimalInput(e.target.value);
                               setEditCustomAmounts((prev) =>
-                                new Map(prev).set(m.userId, e.target.value)
-                              )
-                            }
-                            className="text-right text-sm py-1"
+                                new Map(prev).set(m.userId, val)
+                              );
+                            }}
+                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
                           />
                         </div>
                       </div>
                     ))}
                     {/* Running total indicator */}
                     {totalCentsValid && editCustomRemaining !== null && (
-                      <p
-                        className={`text-xs font-medium text-right ${
-                          editCustomRemaining === 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-500 dark:text-rose-400"
-                        }`}
-                      >
-                        {editCustomRemaining === 0
-                          ? "Amounts add up ✓"
-                          : editCustomRemaining > 0
-                          ? `Remaining: $${(editCustomRemaining / 100).toFixed(2)}`
-                          : `Over by: $${(Math.abs(editCustomRemaining) / 100).toFixed(2)}`}
-                      </p>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                        <span
+                          className={`text-xs font-semibold ${
+                            editCustomRemaining === 0
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                          }`}
+                        >
+                          {editCustomRemaining === 0
+                            ? `$${(parsedAmountCents / 100).toFixed(2)} ✓`
+                            : editCustomRemaining > 0
+                            ? `$${(editCustomSumCents / 100).toFixed(2)} of $${(parsedAmountCents / 100).toFixed(2)}`
+                            : `$${(editCustomSumCents / 100).toFixed(2)} — over by $${(Math.abs(editCustomRemaining) / 100).toFixed(2)}`}
+                        </span>
+                      </div>
                     )}
                   </div>
                 )}
