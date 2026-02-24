@@ -235,6 +235,7 @@ export type Database = {
           id: string
           inviteToken: string
           name: string
+          patternSeed: number
         }
         Insert: {
           bannerUrl?: string | null
@@ -244,6 +245,7 @@ export type Database = {
           id?: string
           inviteToken?: string
           name: string
+          patternSeed?: number
         }
         Update: {
           bannerUrl?: string | null
@@ -253,6 +255,7 @@ export type Database = {
           id?: string
           inviteToken?: string
           name?: string
+          patternSeed?: number
         }
         Relationships: [
           {

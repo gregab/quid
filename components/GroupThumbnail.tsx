@@ -1,11 +1,11 @@
 import { generateGroupPattern } from "@/lib/groupPattern";
 
 export function GroupThumbnail({
-  groupId,
+  patternSeed,
   bannerUrl,
   size = 44,
 }: {
-  groupId: string;
+  patternSeed: number;
   bannerUrl: string | null;
   size?: number;
 }) {
@@ -23,7 +23,7 @@ export function GroupThumbnail({
     );
   }
 
-  const { lightSvg, darkSvg } = generateGroupPattern(groupId, size);
+  const { lightSvg, darkSvg } = generateGroupPattern(patternSeed, size);
 
   return (
     <div className="flex-shrink-0" style={{ width: size, height: size }}>

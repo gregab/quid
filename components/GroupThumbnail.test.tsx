@@ -3,13 +3,13 @@ import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { GroupThumbnail } from "./GroupThumbnail";
 
-const GROUP_ID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
+const SEED = 123456789;
 
 describe("GroupThumbnail", () => {
   describe("with bannerUrl", () => {
     it("renders an img tag", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl="https://example.com/banner.jpg" />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl="https://example.com/banner.jpg" />,
       );
       const img = container.querySelector("img");
       expect(img).not.toBeNull();
@@ -18,7 +18,7 @@ describe("GroupThumbnail", () => {
 
     it("applies lazy loading", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl="https://example.com/banner.jpg" />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl="https://example.com/banner.jpg" />,
       );
       const img = container.querySelector("img");
       expect(img!.getAttribute("loading")).toBe("lazy");
@@ -26,7 +26,7 @@ describe("GroupThumbnail", () => {
 
     it("uses default size of 44", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl="https://example.com/banner.jpg" />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl="https://example.com/banner.jpg" />,
       );
       const img = container.querySelector("img");
       expect(img!.getAttribute("width")).toBe("44");
@@ -35,7 +35,7 @@ describe("GroupThumbnail", () => {
 
     it("respects custom size", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl="https://example.com/banner.jpg" size={60} />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl="https://example.com/banner.jpg" size={60} />,
       );
       const img = container.querySelector("img");
       expect(img!.getAttribute("width")).toBe("60");
@@ -46,7 +46,7 @@ describe("GroupThumbnail", () => {
   describe("without bannerUrl", () => {
     it("renders SVG patterns (light and dark)", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl={null} />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl={null} />,
       );
       const svgs = container.querySelectorAll("svg");
       expect(svgs.length).toBe(2); // light + dark
@@ -54,7 +54,7 @@ describe("GroupThumbnail", () => {
 
     it("has dark:hidden on light variant and hidden dark:block on dark variant", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl={null} />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl={null} />,
       );
       const wrappers = container.querySelectorAll("[class*='rounded-lg']");
       expect(wrappers.length).toBe(2);
@@ -65,7 +65,7 @@ describe("GroupThumbnail", () => {
 
     it("applies flex-shrink-0 on root wrapper", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl={null} />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl={null} />,
       );
       const root = container.firstElementChild as HTMLElement;
       expect(root.className).toContain("flex-shrink-0");
@@ -73,7 +73,7 @@ describe("GroupThumbnail", () => {
 
     it("does not render an img tag", () => {
       const { container } = render(
-        <GroupThumbnail groupId={GROUP_ID} bannerUrl={null} />,
+        <GroupThumbnail patternSeed={SEED} bannerUrl={null} />,
       );
       expect(container.querySelector("img")).toBeNull();
     });

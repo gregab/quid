@@ -38,14 +38,16 @@ function hsl(c: { h: number; s: number; l: number }): string {
   return `hsl(${c.h} ${c.s}% ${c.l}%)`;
 }
 
-/** Parse UUID hex digits into seed bytes (0-255). */
-export function parseSeeds(groupId: string): number[] {
-  const hex = groupId.replace(/-/g, "");
-  const seeds: number[] = [];
-  for (let i = 0; i < hex.length - 1; i += 2) {
-    seeds.push(parseInt(hex.slice(i, i + 2), 16));
+/** Derive 16 pseudo-random bytes (0-255) from an integer seed. */
+export function seedToBytes(seed: number): number[] {
+  const bytes: number[] = [];
+  let v = Math.abs(Math.round(seed));
+  for (let i = 0; i < 16; i++) {
+    // Simple LCG-style mixing: multiply, add, take low byte
+    v = ((v * 1103515245 + 12345) >>> 0) & 0x7fffffff;
+    bytes.push(v & 0xff);
   }
-  return seeds;
+  return bytes;
 }
 
 type PatternType = "circles" | "stripes" | "dots" | "waves";
@@ -155,15 +157,10 @@ function renderWaves(
 }
 
 export function generateGroupPattern(
-  groupId: string,
+  seed: number,
   size = 44,
 ): { lightSvg: string; darkSvg: string } {
-  const seeds = parseSeeds(groupId);
-  if (seeds.length < 10) {
-    // Fallback for invalid/short IDs
-    const fb = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="hsl(35 85% 52%)"/></svg>`;
-    return { lightSvg: fb, darkSvg: fb };
-  }
+  const seeds = seedToBytes(seed);
 
   // Pick two distinct colors
   const colorIdx1 = seeds[0]! % PALETTE_LIGHT.length;

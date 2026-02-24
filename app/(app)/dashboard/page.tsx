@@ -197,7 +197,7 @@ export default async function DashboardPage() {
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {/* Thumbnail */}
-                  <GroupThumbnail groupId={group.id} bannerUrl={null} />
+                  <GroupThumbnail patternSeed={group.patternSeed} bannerUrl={group.bannerUrl} />
 
                   {/* Left: group info */}
                   <div className="min-w-0 flex-1">

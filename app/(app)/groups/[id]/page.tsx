@@ -9,6 +9,7 @@ import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
+import { generateGroupPattern } from "@/lib/groupPattern";
 
 // Each member gets a unique color. Full class strings required for Tailwind JIT.
 const MEMBER_COLORS: MemberColor[] = [
@@ -204,19 +205,42 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {/* Title row (no banner) */}
-        {!group.bannerUrl && (
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-white">
-              {group.name}
-            </h1>
-            <GroupSettingsButton
-              groupId={group.id}
-              currentGroupName={group.name}
-              currentBannerUrl={group.bannerUrl ?? null}
-            />
-          </div>
-        )}
+        {/* Pattern banner (no uploaded banner) */}
+        {!group.bannerUrl && (() => {
+          const { lightSvg, darkSvg } = generateGroupPattern(group.patternSeed, 800);
+          // Make SVGs fill container: replace fixed dimensions with 100% and use slice to cover
+          const makeFill = (svg: string) =>
+            svg
+              .replace(/width="\d+"/, 'width="100%"')
+              .replace(/height="\d+"/, 'height="100%"')
+              .replace('viewBox=', 'preserveAspectRatio="xMidYMid slice" viewBox=');
+          return (
+            <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
+              <div
+                className="absolute inset-0 dark:hidden"
+                dangerouslySetInnerHTML={{ __html: makeFill(lightSvg) }}
+              />
+              <div
+                className="absolute inset-0 hidden dark:block"
+                dangerouslySetInnerHTML={{ __html: makeFill(darkSvg) }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+                <h1 className="text-xl sm:text-2xl font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
+                  {group.name}
+                </h1>
+              </div>
+              <div className="absolute top-2 right-2">
+                <GroupSettingsButton
+                  groupId={group.id}
+                  currentGroupName={group.name}
+                  currentBannerUrl={group.bannerUrl ?? null}
+                  onBanner
+                />
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Member chips */}
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
