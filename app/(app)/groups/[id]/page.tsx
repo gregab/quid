@@ -9,6 +9,7 @@ import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserDebtCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
+import { ExportButton } from "./ExportButton";
 
 // None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
 const MEMBER_EMOJIS = [
@@ -244,6 +245,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             />
           ))}
           <CopyInviteLinkButton inviteToken={group.inviteToken} />
+          <ExportButton groupId={group.id} />
         </div>
       </div>
 
