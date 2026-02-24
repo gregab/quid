@@ -97,7 +97,7 @@ export function GroupInteractive({
             Everyone&apos;s settled up!
           </p>
         ) : (
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5 text-gray-400 dark:text-gray-500">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5 text-gray-500 dark:text-gray-400">
             {userIsSettledUp && (
               <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,11 +116,11 @@ export function GroupInteractive({
 
               return (
                 <span key={i} className="whitespace-nowrap">
-                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                  <span className={involvesUser ? "text-gray-700 dark:text-gray-200" : ""}>
                     {fromName}
                   </span>
                   {" "}{verb}{" "}
-                  <span className={involvesUser ? "text-gray-600 dark:text-gray-300" : ""}>
+                  <span className={involvesUser ? "text-gray-700 dark:text-gray-200" : ""}>
                     {toName}
                   </span>
                   {" "}
