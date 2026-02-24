@@ -102,9 +102,9 @@ describe("GroupInteractive — Balances section", () => {
     const expense = makeExpense({ amountCents: 2000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
     rerender(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
 
-    // Bob now owes Alice $10
+    // Bob now owes Alice $10 — appears in balances section and expense row
     expect(screen.queryByText(/everyone.*settled up/i)).toBeNull();
-    expect(screen.getByText("$10.00")).toBeTruthy();
+    expect(screen.getAllByText("$10.00").length).toBeGreaterThanOrEqual(1);
   });
 });
 

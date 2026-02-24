@@ -211,6 +211,38 @@ describe("ExpensesList — optimistic add: pending item resolved after prop upda
 });
 
 // ----------------------------
+// Non-pending prop sync (e.g. recurring stopped)
+// ----------------------------
+
+describe("ExpensesList — syncs initialExpenses even when no pending items", () => {
+  it("updates display when initialExpenses prop changes without any pending items", () => {
+    const recurring = makeExpense({
+      id: "exp-1",
+      description: "Rent",
+      isPending: false,
+      recurringExpense: { id: "rec-1", frequency: "monthly" },
+    });
+    const stopped = makeExpense({
+      id: "exp-1",
+      description: "Rent",
+      isPending: false,
+      recurringExpense: null,
+    });
+
+    const { rerender, container } = render(
+      <ExpensesList {...BASE_PROPS} initialExpenses={[recurring]} />
+    );
+
+    expect(container.querySelector('[aria-label="Recurring"]')).not.toBeNull();
+
+    // Simulate router.refresh() after stopping recurring — no pending items
+    rerender(<ExpensesList {...BASE_PROPS} initialExpenses={[stopped]} />);
+
+    expect(container.querySelector('[aria-label="Recurring"]')).toBeNull();
+  });
+});
+
+// ----------------------------
 // Auto-reorder on date edit
 // ----------------------------
 

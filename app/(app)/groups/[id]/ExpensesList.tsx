@@ -161,14 +161,12 @@ export function ExpensesList({
   const [openDetailExpenseId, setOpenDetailExpenseId] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(30);
 
-  // When router.refresh() delivers fresh server data, replace any pending items.
+  // When router.refresh() delivers fresh server data, sync local state.
   // useState(initialExpenses) only uses the prop as the initial value and ignores
-  // subsequent changes, so we need this effect to reconcile optimistic ghosts.
+  // subsequent changes, so we need this effect to reconcile. Always sync — no
+  // real-time updates mean initialExpenses only changes after our own API calls.
   useEffect(() => {
-    setExpenses((prev) => {
-      if (!prev.some((e) => e.isPending)) return prev;
-      return initialExpenses;
-    });
+    setExpenses(initialExpenses);
   }, [initialExpenses]);
 
   // Notify parent when expenses change so it can recompute balances.
