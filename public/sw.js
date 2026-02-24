@@ -1,6 +1,7 @@
 // Aviary Service Worker — lightweight app-shell caching
 const CACHE_VERSION = "aviary-v1";
 const APP_SHELL_CACHE = `app-shell-${CACHE_VERSION}`;
+const MAX_CACHED_ASSETS = 80;
 
 // App shell resources to pre-cache
 const APP_SHELL = ["/offline.html"];
@@ -29,6 +30,18 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Trim cache to prevent unbounded growth from hashed asset URLs
+async function trimCache(cacheName, maxItems) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxItems) {
+    // Delete oldest entries (first in list) until under limit
+    await Promise.all(
+      keys.slice(0, keys.length - maxItems).map((key) => cache.delete(key))
+    );
+  }
+}
+
 // Fetch: network-first for everything, offline fallback for navigations
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -46,7 +59,12 @@ self.addEventListener("fetch", (event) => {
   // Navigation requests: network-first with offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html"))
+      fetch(request).catch(
+        () =>
+          caches.match("/offline.html").then(
+            (cached) => cached || new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } })
+          )
+      )
     );
     return;
   }
@@ -60,13 +78,18 @@ self.addEventListener("fetch", (event) => {
   ) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        const fetched = fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(APP_SHELL_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
+        const fetched = fetch(request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches
+                .open(APP_SHELL_CACHE)
+                .then((cache) => cache.put(request, clone))
+                .then(() => trimCache(APP_SHELL_CACHE, MAX_CACHED_ASSETS));
+            }
+            return response;
+          })
+          .catch(() => cached); // Network failed — fall back to cache (may be undefined)
         return cached || fetched;
       })
     );
