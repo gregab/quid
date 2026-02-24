@@ -8,6 +8,7 @@ interface Props {
   currentEmoji: string | null;
   currentBannerUrl: string | null;
   defaultEmoji: string;
+  onBanner?: boolean;
 }
 
 export function GroupSettingsButton({
@@ -15,6 +16,7 @@ export function GroupSettingsButton({
   currentEmoji,
   currentBannerUrl,
   defaultEmoji,
+  onBanner = false,
 }: Props) {
   const [open, setOpen] = useState(false);
 
@@ -23,7 +25,11 @@ export function GroupSettingsButton({
       <button
         onClick={() => setOpen(true)}
         aria-label="Group settings"
-        className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className={
+          onBanner
+            ? "rounded-lg p-1.5 text-white/80 hover:text-white hover:bg-black/30 transition-colors"
+            : "rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        }
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

@@ -204,6 +204,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                 currentEmoji={group.emoji ?? null}
                 currentBannerUrl={group.bannerUrl ?? null}
                 defaultEmoji={defaultGroupEmoji}
+                onBanner
               />
             </div>
           </div>
