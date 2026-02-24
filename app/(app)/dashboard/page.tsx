@@ -4,6 +4,7 @@ import CreateGroupButton from "./CreateGroupButton";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
 import { GroupThumbnail } from "@/components/GroupThumbnail";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const BIRD_FACTS = [
   "A group of owls is called a parliament.",
@@ -258,6 +259,9 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* PWA install prompt — mobile only, hidden if already using PWA */}
+      <InstallPrompt />
 
       {/* Bird fact — subtle editorial aside */}
       <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">

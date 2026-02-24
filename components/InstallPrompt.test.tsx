@@ -15,10 +15,15 @@ describe("InstallPrompt", () => {
     addEventListenerSpy = vi.spyOn(window, "addEventListener");
     removeEventListenerSpy = vi.spyOn(window, "removeEventListener");
 
-    // Default: not standalone
+    // Default: not standalone, mobile (pointer: coarse)
     Object.defineProperty(window, "matchMedia", {
       writable: true,
-      value: vi.fn().mockReturnValue({ matches: false }),
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches:
+          query === "(pointer: coarse)"
+            ? true // default: mobile device
+            : false, // (display-mode: standalone) = false
+      })),
     });
 
     // Default: Android Chrome UA
@@ -43,7 +48,26 @@ describe("InstallPrompt", () => {
   it("renders nothing when already in standalone mode", () => {
     Object.defineProperty(window, "matchMedia", {
       writable: true,
-      value: vi.fn().mockReturnValue({ matches: true }),
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: true, // standalone = true, pointer: coarse = true
+      })),
+    });
+    const { container } = render(<InstallPrompt />);
+    expect(container.innerHTML).toBe("");
+  });
+
+  it("renders nothing on desktop (no coarse pointer)", () => {
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        matches: false, // both standalone and pointer: coarse are false
+      })),
+    });
+    Object.defineProperty(navigator, "userAgent", {
+      writable: true,
+      configurable: true,
+      value:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
     });
     const { container } = render(<InstallPrompt />);
     expect(container.innerHTML).toBe("");

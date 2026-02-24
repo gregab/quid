@@ -14,6 +14,7 @@ export function InstallPrompt() {
     useState<BeforeInstallPromptEvent | null>(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [dismissed, setDismissed] = useState(true); // start hidden
 
   useEffect(() => {
@@ -23,6 +24,10 @@ export function InstallPrompt() {
       ("standalone" in navigator &&
         (navigator as unknown as { standalone: boolean }).standalone);
     setIsStandalone(!!standalone);
+
+    // Only show on mobile/touch-primary devices (not desktop)
+    const mobile = window.matchMedia("(pointer: coarse)").matches;
+    setIsMobile(mobile);
 
     // Check if previously dismissed
     setDismissed(localStorage.getItem(DISMISS_KEY) === "true");
@@ -58,8 +63,8 @@ export function InstallPrompt() {
     localStorage.setItem(DISMISS_KEY, "true");
   }, []);
 
-  // Don't render if: already installed, dismissed, or no install signal
-  if (isStandalone || dismissed) return null;
+  // Don't render if: already installed, dismissed, desktop, or no install signal
+  if (isStandalone || dismissed || !isMobile) return null;
   if (!deferredPrompt && !isIOS) return null;
 
   return (
