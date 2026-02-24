@@ -38,6 +38,14 @@ else
     echo -n "."
     sleep 1
   done
+
+  # In Next.js dev mode each route compiles on first request, which can take
+  # 20-30s. Warm up the key routes now so Cypress page loads are instant.
+  echo "→ Warming up routes..."
+  curl -s -o /dev/null "http://localhost:$PORT/login"
+  curl -s -o /dev/null "http://localhost:$PORT/dashboard"
+  curl -s -o /dev/null "http://localhost:$PORT/invite/warmup"
+  echo "→ Routes ready."
 fi
 
 # Run Cypress — exit code is preserved for the caller
