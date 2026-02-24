@@ -1,7 +1,55 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { InviteJoinForm } from "./InviteJoinForm";
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.rpc("get_group_by_invite_token", { _token: token });
+
+    if (data) {
+      const group = data as { id: string; name: string; memberCount: number; isMember: boolean };
+      const title = `Join ${group.name} on Aviary`;
+      const description = `You've been invited to join ${group.name}. Aviary is a friendly expense splitting app — track shared costs with ease.`;
+
+      return {
+        title,
+        description,
+        openGraph: {
+          title,
+          description,
+          siteName: "Aviary — Friendly Expense Splitting",
+        },
+        twitter: {
+          card: "summary",
+          title,
+          description,
+        },
+      };
+    }
+  } catch {
+    // fall through to default
+  }
+
+  return {
+    title: "You've been invited — Aviary",
+    description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
+    openGraph: {
+      title: "You've been invited — Aviary",
+      description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
+      siteName: "Aviary — Friendly Expense Splitting",
+    },
+    twitter: {
+      card: "summary",
+      title: "You've been invited — Aviary",
+      description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
+    },
+  };
+}
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
