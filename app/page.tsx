@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -56,6 +57,9 @@ export default async function LandingPage() {
               )}
             </div>
           </div>
+
+          {/* PWA install prompt — mobile only */}
+          <InstallPrompt />
         </div>
       </main>
 

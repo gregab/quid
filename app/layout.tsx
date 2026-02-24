@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,12 +24,22 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#d97706",
 };
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://aviary.gregbigelow.com"),
   title: "Aviary",
   description: "Friendly expense splitting",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Aviary",
+  },
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
   openGraph: {
     title: "Aviary",
     description: "Friendly expense splitting",
@@ -69,6 +80,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${cormorantGaramond.variable} antialiased`}
       >
         {children}
+        <ServiceWorkerRegistration />
         <Analytics />
       </body>
     </html>
