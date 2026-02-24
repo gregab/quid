@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
@@ -21,6 +21,7 @@ interface AddExpenseFormProps {
 }
 
 type SplitType = "equal" | "percentage" | "custom";
+type MobileScreen = "quick-entry" | "split-options" | "advanced-split";
 
 /**
  * Scales existing custom amounts proportionally when the total changes.
@@ -57,6 +58,49 @@ function filterDecimalInput(value: string): string {
   return filtered;
 }
 
+/** Hook to detect mobile viewport (< 640px, matching Tailwind's `sm:` breakpoint). */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
+/** Generate human-readable summary of the current split configuration. */
+function getSplitSummary(
+  paidByUserId: string,
+  currentUserId: string,
+  members: Member[],
+  splitType: SplitType,
+  participantIds: Set<string>,
+  allMemberIds: string[]
+): string {
+  const paidByMe = paidByUserId === currentUserId;
+  const paidByMember = members.find((m) => m.userId === paidByUserId);
+  const paidByName = paidByMe ? "you" : (paidByMember?.displayName ?? "someone");
+
+  const allParticipating = participantIds.size === allMemberIds.length &&
+    allMemberIds.every((id) => participantIds.has(id));
+
+  let splitText: string;
+  if (splitType === "equal" && allParticipating) {
+    splitText = "split equally";
+  } else if (splitType === "equal") {
+    splitText = `split equally among ${participantIds.size}`;
+  } else if (splitType === "percentage") {
+    splitText = "split by percentage";
+  } else {
+    splitText = "split with custom amounts";
+  }
+
+  return `Paid by ${paidByName}, ${splitText}`;
+}
+
 export function AddExpenseForm({
   groupId,
   currentUserId,
@@ -67,6 +111,7 @@ export function AddExpenseForm({
   onOptimisticActivity,
 }: AddExpenseFormProps) {
   const allMemberIds = members.map((m) => m.userId);
+  const isMobile = useIsMobile();
 
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
@@ -84,13 +129,24 @@ export function AddExpenseForm({
   const [amountErrorMessage, setAmountErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Mobile multi-screen state
+  const [screen, setScreen] = useState<MobileScreen>("quick-entry");
+  const [slideDirection, setSlideDirection] = useState<"forward" | "back">("forward");
+
   const parsedTotalCents = Math.round(parseFloat(stripAmountFormatting(amount)) * 100);
   const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0 && parsedTotalCents <= MAX_AMOUNT_CENTS;
+
+  function navigateTo(target: MobileScreen) {
+    const order: MobileScreen[] = ["quick-entry", "split-options", "advanced-split"];
+    const currentIdx = order.indexOf(screen);
+    const targetIdx = order.indexOf(target);
+    setSlideDirection(targetIdx > currentIdx ? "forward" : "back");
+    setScreen(target);
+  }
 
   function handleSplitTypeChange(type: SplitType) {
     const ids = [...participantIds];
     if (type === "percentage" && splitType === "equal") {
-      // Derive percentages from the penny-distributed equal cent split (same data as Custom view)
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedTotalCents, ids.length);
         const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
@@ -99,10 +155,8 @@ export function AddExpenseForm({
         setPercentages(new Map(ids.map((id) => [id, "0.00"])));
       }
     } else if (type === "percentage" && splitType === "custom") {
-      // Derive percentages from current dollar amounts
       setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
     } else if (type === "custom" && splitType === "equal") {
-      // Prefill equal dollar amounts
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedTotalCents, ids.length);
         const map = new Map<string, string>();
@@ -114,7 +168,6 @@ export function AddExpenseForm({
         setCustomAmounts(map);
       }
     } else if (type === "custom" && splitType === "percentage") {
-      // Derive dollars from current percentages
       if (ids.length > 0 && totalCentsValid) {
         const centMap = percentagesToCents(percentages, ids, parsedTotalCents);
         const map = new Map<string, string>();
@@ -151,7 +204,7 @@ export function AddExpenseForm({
     });
   }
 
-  // Scale custom amounts when total changes (percentage inputs stay fixed, dollar outputs update automatically)
+  // Scale custom amounts when total changes
   useEffect(() => {
     if (splitType !== "custom" || !totalCentsValid) return;
     if (customAmounts.size === 0) return;
@@ -204,6 +257,23 @@ export function AddExpenseForm({
     setAmountError(false);
     setAmountErrorMessage(null);
   }
+
+  /** Apply a preset split configuration (used on mobile split-options screen). */
+  const applyPreset = useCallback((
+    newPaidBy: string,
+    newSplitType: SplitType,
+    newParticipantIds: string[],
+    newCustomAmounts?: Map<string, string>
+  ) => {
+    setPaidByUserId(newPaidBy);
+    setSplitType(newSplitType);
+    setParticipantIds(new Set(newParticipantIds));
+    if (newCustomAmounts) {
+      setCustomAmounts(newCustomAmounts);
+    }
+    navigateTo("quick-entry");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -358,6 +428,8 @@ export function AddExpenseForm({
     setError(null);
     setAmountError(false);
     setAmountErrorMessage(null);
+    setScreen("quick-entry");
+    setSlideDirection("forward");
   }
 
   function handleClose() {
@@ -365,7 +437,727 @@ export function AddExpenseForm({
     resetForm();
   }
 
-  const orderedParticipants = members.filter((m) => participantIds.has(m.userId));
+  // Format today's date nicely for the mobile date pill
+  function formatDatePill(dateStr: string): string {
+    const today = new Date().toISOString().split("T")[0];
+    if (dateStr === today) return "Today";
+    const [year, month, day] = dateStr.split("-");
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[parseInt(month!, 10) - 1]} ${parseInt(day!, 10)}, ${year}`;
+  }
+
+  const summaryText = getSplitSummary(paidByUserId, currentUserId, members, splitType, participantIds, allMemberIds);
+
+  // ─── Shared Split Section (used by desktop + mobile advanced screen) ───
+
+  function renderSplitSection() {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-medium text-stone-700 dark:text-stone-300">Split between</p>
+          {participantIds.size > 0 && (
+            <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
+              {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleSplitTypeChange(type)}
+                  className={`px-2.5 py-1 rounded-full transition-all ${
+                    splitType === type
+                      ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
+                      : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                  }`}
+                >
+                  {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
+          {members.map((m, idx) => {
+            const isParticipant = participantIds.has(m.userId);
+            return (
+              <div
+                key={m.userId}
+                className={`flex items-center gap-2.5 px-3 py-2 ${
+                  idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={isParticipant}
+                  onChange={() => toggleParticipant(m.userId)}
+                  className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0"
+                />
+                <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-700 dark:text-stone-300" : "text-stone-400 dark:text-stone-500"}`}>
+                  {m.displayName}
+                  {m.userId === currentUserId && (
+                    <span className="ml-1 text-xs text-stone-400">(you)</span>
+                  )}
+                </span>
+                {/* Percentage input */}
+                {splitType === "percentage" && isParticipant && (
+                  <div className="w-20 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={percentages.get(m.userId) ?? "0.00"}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = filterDecimalInput(e.target.value);
+                        setPercentages((prev) => new Map(prev).set(m.userId, val));
+                      }}
+                      className="w-full bg-transparent pl-2 pr-0.5 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
+                    />
+                    <span className="pr-1.5 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
+                  </div>
+                )}
+                {/* Custom $ input */}
+                {splitType === "custom" && isParticipant && (
+                  <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                    <span className="pl-2 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={customAmounts.get(m.userId) ?? "0.00"}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = filterDecimalInput(e.target.value);
+                        setCustomAmounts((prev) => new Map(prev).set(m.userId, val));
+                      }}
+                      className="w-full bg-transparent px-1 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Equal split preview */}
+          {splitType === "equal" && totalCentsValid && participantIds.size > 0 && (
+            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+              <span className="text-xs text-stone-400 dark:text-stone-500">Per person</span>
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                {formatCents(splitAmount(parsedTotalCents, participantIds.size)[0]!)} each
+                {parsedTotalCents % participantIds.size !== 0 && (
+                  <span className="ml-1 text-stone-400 dark:text-stone-500 font-normal">(penny rounded)</span>
+                )}
+              </span>
+            </div>
+          )}
+
+          {/* Running total indicator for percentages */}
+          {splitType === "percentage" && percentageRemaining !== null && (
+            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+              <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+              <span
+                className={`text-xs font-semibold ${
+                  Math.abs(percentageRemaining) < 0.005
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-500 dark:text-rose-400"
+                }`}
+              >
+                {Math.abs(percentageRemaining) < 0.005
+                  ? "100% \u2713"
+                  : percentageRemaining > 0
+                  ? `${(100 - percentageRemaining).toFixed(2)}% of 100%`
+                  : `${(100 - percentageRemaining).toFixed(2)}% — over by ${Math.abs(percentageRemaining).toFixed(2)}%`}
+              </span>
+            </div>
+          )}
+
+          {/* Running total indicator for custom */}
+          {splitType === "custom" && totalCentsValid && customRemaining !== null && (
+            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+              <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+              <span
+                className={`text-xs font-semibold ${
+                  customRemaining === 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-rose-500 dark:text-rose-400"
+                }`}
+              >
+                {customRemaining === 0
+                  ? `$${(parsedTotalCents / 100).toFixed(2)} \u2713`
+                  : customRemaining > 0
+                  ? `$${(customSumCents / 100).toFixed(2)} of $${(parsedTotalCents / 100).toFixed(2)}`
+                  : `$${(customSumCents / 100).toFixed(2)} — over by $${(Math.abs(customRemaining) / 100).toFixed(2)}`}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Desktop Modal ───
+
+  function renderDesktopModal() {
+    return (
+      <div
+        className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[10vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
+        onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
+      >
+        <div className="modal-content bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
+          {/* Header */}
+          <div className="px-5 pt-5 pb-3 border-b border-stone-100 dark:border-stone-700/60">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Add an expense</h2>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors dark:hover:text-stone-200 dark:hover:bg-stone-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+            <div>
+              <label htmlFor="expenseDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                Description
+              </label>
+              <Input
+                id="expenseDescription"
+                type="text"
+                required
+                placeholder="e.g. Birdseed, Field Guide, Binoculars"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="expenseAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                Amount
+              </label>
+              <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-shadow bg-white dark:bg-stone-900 ${
+                amountError
+                  ? "border-red-400 focus-within:ring-red-400 focus-within:border-red-400 dark:border-red-500"
+                  : "border-stone-300 focus-within:ring-amber-500 focus-within:border-amber-500 dark:border-stone-700"
+              }`}>
+                <span className="pl-3 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
+                <input
+                  id="expenseAmount"
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  aria-label="Amount"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                  onBlur={handleAmountBlur}
+                  onFocus={handleAmountFocus}
+                  className="w-full bg-transparent px-2 py-2 text-base sm:text-sm text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
+                />
+              </div>
+              {amountErrorMessage && (
+                <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                  <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {amountErrorMessage}
+                </p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="expenseDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                Date
+              </label>
+              <Input
+                id="expenseDate"
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="appearance-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                Paid by
+              </label>
+              <select
+                id="expensePaidBy"
+                value={paidByUserId}
+                onChange={(e) => setPaidByUserId(e.target.value)}
+                className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+              >
+                {members.map((m) => (
+                  <option key={m.userId} value={m.userId}>
+                    {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {renderSplitSection()}
+
+            {/* Repeat toggle */}
+            <div>
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => setRecurring(e.target.checked)}
+                  className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
+              </label>
+              {recurring && (
+                <div className="mt-2 ml-6">
+                  <select
+                    value={recurringFrequency}
+                    onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                    className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                  >
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+            {/* Footer actions */}
+            <div className="flex gap-2 justify-end pt-1">
+              <Button type="button" variant="ghost" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Add expense
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Mobile Screen 1: Quick Entry ───
+
+  function renderMobileQuickEntry() {
+    return (
+      <div
+        key="quick-entry"
+        className={slideDirection === "back" ? "screen-slide-back" : ""}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 dark:border-stone-700/60">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-white">Add an expense</h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 -mr-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors dark:hover:text-stone-200 dark:hover:bg-stone-700"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 px-4 pt-5 pb-6">
+          <div className="space-y-4 flex-1">
+            {/* Description - large input */}
+            <div>
+              <label htmlFor="mobileDescription" className="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">
+                What was it for?
+              </label>
+              <input
+                id="mobileDescription"
+                type="text"
+                required
+                placeholder="e.g. Birdseed, Field Guide"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                autoFocus
+                className="w-full text-lg px-0 py-2 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
+              />
+            </div>
+
+            {/* Amount - large prominent input */}
+            <div>
+              <label htmlFor="mobileAmount" className="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">
+                How much?
+              </label>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-stone-300 dark:text-stone-600 select-none">$</span>
+                <input
+                  id="mobileAmount"
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  aria-label="Amount"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                  onBlur={handleAmountBlur}
+                  onFocus={handleAmountFocus}
+                  className="flex-1 text-2xl font-bold px-0 py-2 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
+                />
+              </div>
+              {amountErrorMessage && (
+                <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
+                  <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {amountErrorMessage}
+                </p>
+              )}
+            </div>
+
+            {/* Date pill */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="mobileDatePicker" className="text-sm text-stone-500 dark:text-stone-400">Date:</label>
+              <div className="relative">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-700/60 text-sm font-medium text-stone-700 dark:text-stone-300">
+                  <svg className="w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  {formatDatePill(date)}
+                </span>
+                <input
+                  id="mobileDatePicker"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Summary pill - tappable, navigates to split options */}
+            <button
+              type="button"
+              onClick={() => navigateTo("split-options")}
+              data-testid="split-summary-pill"
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-700/40 border border-stone-150 dark:border-stone-700 text-left transition-colors hover:bg-stone-100 dark:hover:bg-stone-700/60 active:scale-[0.99]"
+            >
+              <span className="text-sm text-stone-600 dark:text-stone-300">{summaryText}</span>
+              <svg className="w-4 h-4 text-stone-400 dark:text-stone-500 shrink-0 ml-2" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+
+            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          </div>
+
+          {/* Full-width submit button at bottom */}
+          <div className="mt-6">
+            <button
+              type="submit"
+              className="w-full py-3.5 rounded-xl bg-amber-600 text-white font-semibold text-base shadow-sm transition-all duration-150 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+            >
+              Add expense
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ─── Mobile Screen 2: Split Options ───
+
+  function renderMobileSplitOptions() {
+    const otherMembers = members.filter((m) => m.userId !== currentUserId);
+    const is2Person = members.length === 2 && otherMembers.length === 1;
+    const otherMember = otherMembers[0];
+
+    /** Compute what someone owes for a preset, returns formatted string or null if amount not entered. */
+    function presetOwesText(payerId: string, fullAmount: boolean): string | null {
+      if (!totalCentsValid) return null;
+      if (is2Person) {
+        if (fullAmount) {
+          return formatCents(parsedTotalCents);
+        }
+        // Split equally between 2
+        const perPerson = splitAmount(parsedTotalCents, 2);
+        // The non-payer owes the payer their share
+        return formatCents(perPerson[1]!);
+      }
+      return null;
+    }
+
+    return (
+      <div
+        key="split-options"
+        className={slideDirection === "forward" ? "screen-slide-forward" : "screen-slide-back"}
+      >
+        {/* Header with back button */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 dark:border-stone-700/60">
+          <button
+            type="button"
+            onClick={() => navigateTo("quick-entry")}
+            className="p-1 -ml-1 rounded-lg text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors dark:text-stone-400 dark:hover:text-stone-200 dark:hover:bg-stone-700"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <h2 className="text-lg font-bold text-stone-900 dark:text-white">Split options</h2>
+        </div>
+
+        <div className="px-4 py-4 space-y-3">
+          {is2Person && otherMember ? (
+            <>
+              {/* 2-person preset cards */}
+              {/* You paid, split equally */}
+              <button
+                type="button"
+                data-testid="preset-you-paid-equal"
+                onClick={() => applyPreset(currentUserId, "equal", allMemberIds)}
+                className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
+                  paidByUserId === currentUserId && splitType === "equal"
+                    ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                    : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
+                }`}
+              >
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">You paid, split equally</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  {otherMember.displayName} owes you {presetOwesText(currentUserId, false) ?? "half"}
+                </p>
+              </button>
+
+              {/* You are owed the full amount */}
+              <button
+                type="button"
+                data-testid="preset-you-owed-full"
+                onClick={() => {
+                  const custom = new Map<string, string>();
+                  custom.set(currentUserId, "0.00");
+                  custom.set(otherMember.userId, totalCentsValid ? (parsedTotalCents / 100).toFixed(2) : "0.00");
+                  applyPreset(currentUserId, "custom", allMemberIds, custom);
+                }}
+                className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
+                  paidByUserId === currentUserId && splitType === "custom" &&
+                  Math.round(parseFloat(customAmounts.get(currentUserId) ?? "0") * 100) === 0
+                    ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                    : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
+                }`}
+              >
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">You are owed the full amount</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  {otherMember.displayName} owes you {presetOwesText(currentUserId, true) ?? "the full amount"}
+                </p>
+              </button>
+
+              {/* Other person paid, split equally */}
+              <button
+                type="button"
+                data-testid="preset-other-paid-equal"
+                onClick={() => applyPreset(otherMember.userId, "equal", allMemberIds)}
+                className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
+                  paidByUserId === otherMember.userId && splitType === "equal"
+                    ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                    : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
+                }`}
+              >
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">{otherMember.displayName} paid, split equally</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  You owe {otherMember.displayName} {presetOwesText(otherMember.userId, false) ?? "half"}
+                </p>
+              </button>
+
+              {/* Other person is owed the full amount */}
+              <button
+                type="button"
+                data-testid="preset-other-owed-full"
+                onClick={() => {
+                  const custom = new Map<string, string>();
+                  custom.set(otherMember.userId, "0.00");
+                  custom.set(currentUserId, totalCentsValid ? (parsedTotalCents / 100).toFixed(2) : "0.00");
+                  applyPreset(otherMember.userId, "custom", allMemberIds, custom);
+                }}
+                className={`w-full text-left px-4 py-3.5 rounded-xl border transition-all active:scale-[0.98] ${
+                  paidByUserId === otherMember.userId && splitType === "custom" &&
+                  Math.round(parseFloat(customAmounts.get(otherMember.userId) ?? "0") * 100) === 0
+                    ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                    : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
+                }`}
+              >
+                <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">{otherMember.displayName} is owed the full amount</p>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  You owe {otherMember.displayName} {presetOwesText(otherMember.userId, true) ?? "the full amount"}
+                </p>
+              </button>
+            </>
+          ) : (
+            <>
+              {/* 3+ person: paid by selector + equal default */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
+                  Paid by
+                </label>
+                <div className="space-y-1.5">
+                  {members.map((m) => (
+                    <button
+                      key={m.userId}
+                      type="button"
+                      onClick={() => { setPaidByUserId(m.userId); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all active:scale-[0.98] ${
+                        paidByUserId === m.userId
+                          ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                          : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
+                        paidByUserId === m.userId
+                          ? "bg-amber-200 text-amber-800 dark:bg-amber-700 dark:text-amber-100"
+                          : "bg-stone-100 text-stone-500 dark:bg-stone-700 dark:text-stone-400"
+                      }`}>
+                        {m.displayName.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-stone-800 dark:text-stone-200">
+                        {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                      </span>
+                      {paidByUserId === m.userId && (
+                        <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 px-1 py-2">
+                <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700"></div>
+                <span className="text-xs text-stone-400 dark:text-stone-500">Split equally among all</span>
+                <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSplitType("equal");
+                  setParticipantIds(new Set(allMemberIds));
+                  navigateTo("quick-entry");
+                }}
+                className="w-full py-3 rounded-xl bg-amber-600 text-white font-semibold text-sm shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] dark:bg-amber-500 dark:hover:bg-amber-600"
+              >
+                Done
+              </button>
+            </>
+          )}
+
+          {/* "More options" link to advanced screen */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => navigateTo("advanced-split")}
+              className="w-full py-2.5 text-sm font-medium text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
+            >
+              More options...
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Mobile Screen 3: Advanced Split ───
+
+  function renderMobileAdvancedSplit() {
+    return (
+      <div
+        key="advanced-split"
+        className={slideDirection === "forward" ? "screen-slide-forward" : "screen-slide-back"}
+      >
+        {/* Header with back button */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-stone-100 dark:border-stone-700/60">
+          <button
+            type="button"
+            onClick={() => navigateTo("split-options")}
+            className="p-1 -ml-1 rounded-lg text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-colors dark:text-stone-400 dark:hover:text-stone-200 dark:hover:bg-stone-700"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <h2 className="text-lg font-bold text-stone-900 dark:text-white">Advanced options</h2>
+        </div>
+
+        <div className="px-4 py-4 space-y-4">
+          {/* Paid by dropdown */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+              Paid by
+            </label>
+            <select
+              value={paidByUserId}
+              onChange={(e) => setPaidByUserId(e.target.value)}
+              className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2.5 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+            >
+              {members.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Split configuration */}
+          {renderSplitSection()}
+
+          {/* Recurring toggle */}
+          <div>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={recurring}
+                onChange={(e) => setRecurring(e.target.checked)}
+                className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
+            </label>
+            {recurring && (
+              <div className="mt-2 ml-6">
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2.5 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Done button */}
+          <button
+            type="button"
+            onClick={() => navigateTo("quick-entry")}
+            className="w-full py-3 rounded-xl bg-amber-600 text-white font-semibold text-sm shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] dark:bg-amber-500 dark:hover:bg-amber-600"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Mobile Modal (full-screen takeover) ───
+
+  function renderMobileModal() {
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-stone-900 flex flex-col overflow-y-auto modal-backdrop">
+        {screen === "quick-entry" && renderMobileQuickEntry()}
+        {screen === "split-options" && renderMobileSplitOptions()}
+        {screen === "advanced-split" && renderMobileAdvancedSplit()}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -377,293 +1169,10 @@ export function AddExpenseForm({
         <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        {loading ? "Adding…" : "Add expense"}
+        {loading ? "Adding\u2026" : "Add expense"}
       </button>
 
-      {open && (
-        <div
-          className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[10vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
-        >
-          <div className="modal-content bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
-            {/* Header */}
-            <div className="px-5 pt-5 pb-3 border-b border-stone-100 dark:border-stone-700/60">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold text-stone-900 dark:text-white">Add an expense</h2>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="p-1 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors dark:hover:text-stone-200 dark:hover:bg-stone-700"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
-              <div>
-                <label htmlFor="expenseDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                  Description
-                </label>
-                <Input
-                  id="expenseDescription"
-                  type="text"
-                  required
-                  placeholder="e.g. Birdseed, Field Guide, Binoculars"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label htmlFor="expenseAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                  Amount
-                </label>
-                <div className={`flex items-center rounded-lg border overflow-hidden focus-within:ring-2 transition-shadow bg-white dark:bg-stone-900 ${
-                  amountError
-                    ? "border-red-400 focus-within:ring-red-400 focus-within:border-red-400 dark:border-red-500"
-                    : "border-stone-300 focus-within:ring-amber-500 focus-within:border-amber-500 dark:border-stone-700"
-                }`}>
-                  <span className="pl-3 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
-                  <input
-                    id="expenseAmount"
-                    type="text"
-                    inputMode="decimal"
-                    required
-                    aria-label="Amount"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
-                    onBlur={handleAmountBlur}
-                    onFocus={handleAmountFocus}
-                    className="w-full bg-transparent px-2 py-2 text-base sm:text-sm text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
-                  />
-                </div>
-                {amountErrorMessage && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                    <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {amountErrorMessage}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="expenseDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                  Date
-                </label>
-                <Input
-                  id="expenseDate"
-                  type="date"
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="appearance-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                  Paid by
-                </label>
-                <select
-                  id="expensePaidBy"
-                  value={paidByUserId}
-                  onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                >
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Split between section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-stone-700 dark:text-stone-300">Split between</p>
-                  {/* Split type toggle */}
-                  {participantIds.size > 0 && (
-                    <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
-                      {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => handleSplitTypeChange(type)}
-                          className={`px-2.5 py-1 rounded-full transition-all ${
-                            splitType === type
-                              ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
-                              : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
-                          }`}
-                        >
-                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
-                  {members.map((m, idx) => {
-                    const isParticipant = participantIds.has(m.userId);
-                    return (
-                      <div
-                        key={m.userId}
-                        className={`flex items-center gap-2.5 px-3 py-2 ${
-                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isParticipant}
-                          onChange={() => toggleParticipant(m.userId)}
-                          className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0"
-                        />
-                        <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-700 dark:text-stone-300" : "text-stone-400 dark:text-stone-500"}`}>
-                          {m.displayName}
-                          {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-stone-400">(you)</span>
-                          )}
-                        </span>
-                        {/* Percentage input */}
-                        {splitType === "percentage" && isParticipant && (
-                          <div className="w-20 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              placeholder="0.00"
-                              value={percentages.get(m.userId) ?? "0.00"}
-                              onFocus={(e) => e.target.select()}
-                              onChange={(e) => {
-                                const val = filterDecimalInput(e.target.value);
-                                setPercentages((prev) => new Map(prev).set(m.userId, val));
-                              }}
-                              className="w-full bg-transparent pl-2 pr-0.5 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
-                            />
-                            <span className="pr-1.5 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
-                          </div>
-                        )}
-                        {/* Custom $ input */}
-                        {splitType === "custom" && isParticipant && (
-                          <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
-                            <span className="pl-2 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              placeholder="0.00"
-                              value={customAmounts.get(m.userId) ?? "0.00"}
-                              onFocus={(e) => e.target.select()}
-                              onChange={(e) => {
-                                const val = filterDecimalInput(e.target.value);
-                                setCustomAmounts((prev) => new Map(prev).set(m.userId, val));
-                              }}
-                              className="w-full bg-transparent px-1 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Equal split preview */}
-                  {splitType === "equal" && totalCentsValid && participantIds.size > 0 && (
-                    <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-                      <span className="text-xs text-stone-400 dark:text-stone-500">Per person</span>
-                      <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                        {formatCents(splitAmount(parsedTotalCents, participantIds.size)[0]!)} each
-                        {parsedTotalCents % participantIds.size !== 0 && (
-                          <span className="ml-1 text-stone-400 dark:text-stone-500 font-normal">(penny rounded)</span>
-                        )}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Running total indicator for percentages */}
-                  {splitType === "percentage" && percentageRemaining !== null && (
-                    <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-                      <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
-                      <span
-                        className={`text-xs font-semibold ${
-                          Math.abs(percentageRemaining) < 0.005
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-500 dark:text-rose-400"
-                        }`}
-                      >
-                        {Math.abs(percentageRemaining) < 0.005
-                          ? "100% ✓"
-                          : percentageRemaining > 0
-                          ? `${(100 - percentageRemaining).toFixed(2)}% of 100%`
-                          : `${(100 - percentageRemaining).toFixed(2)}% — over by ${Math.abs(percentageRemaining).toFixed(2)}%`}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Running total indicator for custom */}
-                  {splitType === "custom" && totalCentsValid && customRemaining !== null && (
-                    <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-                      <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
-                      <span
-                        className={`text-xs font-semibold ${
-                          customRemaining === 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-500 dark:text-rose-400"
-                        }`}
-                      >
-                        {customRemaining === 0
-                          ? `$${(parsedTotalCents / 100).toFixed(2)} ✓`
-                          : customRemaining > 0
-                          ? `$${(customSumCents / 100).toFixed(2)} of $${(parsedTotalCents / 100).toFixed(2)}`
-                          : `$${(customSumCents / 100).toFixed(2)} — over by $${(Math.abs(customRemaining) / 100).toFixed(2)}`}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Repeat toggle */}
-              <div>
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={recurring}
-                    onChange={(e) => setRecurring(e.target.checked)}
-                    className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
-                  />
-                  <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
-                </label>
-                {recurring && (
-                  <div className="mt-2 ml-6">
-                    <select
-                      value={recurringFrequency}
-                      onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                      className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                    >
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-              {/* Footer actions */}
-              <div className="flex gap-2 justify-end pt-1">
-                <Button type="button" variant="ghost" onClick={handleClose}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Add expense
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {open && (isMobile ? renderMobileModal() : renderDesktopModal())}
     </>
   );
 }
