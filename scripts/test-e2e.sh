@@ -39,13 +39,20 @@ else
     sleep 1
   done
 
-  # In Next.js dev mode each route compiles on first request, which can take
-  # 20-30s. Warm up the key routes now so Cypress page loads are instant.
-  echo "→ Warming up routes..."
+  # In Next.js dev mode each route compiles on first request (HTML), and JS
+  # bundles compile separately when the browser first requests them. Warm up
+  # the HTML now to trigger compilation, then wait for the bundles to finish.
+  echo "→ Warming up routes (HTML)..."
   curl -s -o /dev/null "http://localhost:$PORT/login"
   curl -s -o /dev/null "http://localhost:$PORT/dashboard"
   curl -s -o /dev/null "http://localhost:$PORT/invite/warmup"
-  echo "→ Routes ready."
+
+  echo -n "→ Waiting for JS bundle compilation"
+  for i in {1..20}; do
+    echo -n "."
+    sleep 1
+  done
+  echo " done."
 fi
 
 # Run Cypress — exit code is preserved for the caller
