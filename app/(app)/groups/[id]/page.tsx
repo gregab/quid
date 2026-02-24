@@ -9,7 +9,6 @@ import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
-import { ExportButton } from "./ExportButton";
 
 // Each member gets a unique color. Full class strings required for Tailwind JIT.
 const MEMBER_COLORS: MemberColor[] = [
@@ -252,7 +251,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
       <div className="flex items-center justify-between pt-4">
         <LeaveGroupButton groupId={group.id} userOutstandingCents={userOutstandingCents} />
-        <ExportButton groupId={group.id} />
       </div>
     </div>
   );

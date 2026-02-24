@@ -7,6 +7,7 @@ import { AddExpenseForm } from "./AddExpenseForm";
 import { RecordPaymentForm, type UserOwesDebt } from "./RecordPaymentForm";
 import { ExpenseDetailModal } from "./ExpenseDetailModal";
 import { useInviteShare } from "./useInviteShare";
+import { ExportButton } from "./ExportButton";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
@@ -309,6 +310,7 @@ export function ExpensesList({
               </svg>
             </button>
           )}
+          {expenses.length > 0 && <ExportButton groupId={groupId} />}
         </div>
         {/* Desktop: buttons in header */}
         <div ref={inlineButtonsRef} className="hidden sm:flex items-center gap-2">
