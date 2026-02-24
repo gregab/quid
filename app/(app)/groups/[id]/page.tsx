@@ -9,7 +9,7 @@ import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
-import { generateGroupPattern } from "@/lib/groupPattern";
+import { generateGroupBanner } from "@/lib/groupPattern";
 
 // Each member gets a unique color. Full class strings required for Tailwind JIT.
 const MEMBER_COLORS: MemberColor[] = [
@@ -207,18 +207,16 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Pattern banner (no uploaded banner) */}
         {!group.bannerUrl && (() => {
-          const { lightSvg, darkSvg } = generateGroupPattern(group.patternSeed, 120);
-          const toDataUri = (svg: string) =>
-            `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+          const { lightSvg, darkSvg } = generateGroupBanner(group.patternSeed);
           return (
             <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
               <div
                 className="absolute inset-0 dark:hidden"
-                style={{ backgroundImage: toDataUri(lightSvg), backgroundRepeat: "repeat" }}
+                dangerouslySetInnerHTML={{ __html: lightSvg }}
               />
               <div
                 className="absolute inset-0 hidden dark:block"
-                style={{ backgroundImage: toDataUri(darkSvg), backgroundRepeat: "repeat" }}
+                dangerouslySetInnerHTML={{ __html: darkSvg }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
