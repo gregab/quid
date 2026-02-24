@@ -10,6 +10,13 @@ declare global {
        * Requires SMOKE_TEST_EMAIL and SMOKE_TEST_PASSWORD in cypress.env.json.
        */
       login(email?: string, password?: string): Chainable<void>;
+
+      /**
+       * Shorthand for cy.login() using the secondary test account
+       * (SMOKE_TEST_EMAIL_2 / SMOKE_TEST_PASSWORD_2).
+       * Used for multi-user flows such as the invite join tests.
+       */
+      login2(): Chainable<void>;
     }
   }
 }
@@ -44,6 +51,20 @@ Cypress.Commands.add("login", (email?: string, password?: string) => {
       },
     }
   );
+});
+
+Cypress.Commands.add("login2", () => {
+  const e = Cypress.env("SMOKE_TEST_EMAIL_2") as string;
+  const p = Cypress.env("SMOKE_TEST_PASSWORD_2") as string;
+
+  if (!e || !p) {
+    throw new Error(
+      "Missing credentials for cy.login2(). " +
+        "Set SMOKE_TEST_EMAIL_2 and SMOKE_TEST_PASSWORD_2 in cypress.env.json."
+    );
+  }
+
+  cy.login(e, p);
 });
 
 export {};
