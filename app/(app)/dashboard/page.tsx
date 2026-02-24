@@ -185,18 +185,16 @@ export default async function DashboardPage() {
 
       {/* Groups section */}
       <div>
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
+        <div className="mb-5">
+          <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
-            <p className="mt-0.5 text-sm sm:text-[13px] text-stone-500 dark:text-stone-400">
-              {groups.length === 0
-                ? "Start a group and have fun."
-                : groups.length === 1
-                ? "1 circle of trust (financially speaking)"
-                : `${groups.length} circles of trust (financially speaking)`}
-            </p>
+            <CreateGroupButton userId={user.id} />
           </div>
-          <CreateGroupButton userId={user.id} />
+          {groups.length > 0 && (
+            <p className="mt-1 text-sm sm:text-[13px] text-stone-400 dark:text-stone-500">
+              {groups.length === 1 ? "1 circle of trust" : `${groups.length} circles of trust`}
+            </p>
+          )}
         </div>
 
         {groups.length === 0 ? (
@@ -314,13 +312,6 @@ export default async function DashboardPage() {
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>
-
-      {/* Footer quip — only when there are groups */}
-      {groups.length > 0 && (
-        <p className="pb-2 text-center text-sm sm:text-xs italic text-stone-500 dark:text-stone-400">
-          Maybe the real financial independence is the friends we meticulously tracked along the way.
-        </p>
-      )}
 
       {/* Support + Legal links */}
       <div className="pb-4 text-center text-sm sm:text-xs text-stone-500 dark:text-stone-400 space-y-1">
