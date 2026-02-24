@@ -25,6 +25,7 @@ const BASE_PROPS = {
     "user-2": "Bob",
   },
   userOwesDebts: [],
+  inviteToken: "test-invite-token",
   onOptimisticActivity: vi.fn(),
 };
 
@@ -919,5 +920,67 @@ describe("ExpensesList — display truncation", () => {
     fireEvent.click(screen.getByText("Show 30 more"));
     expect(document.querySelectorAll("li")).toHaveLength(60);
     expect(screen.getByText("Show 5 more")).toBeDefined();
+  });
+});
+
+// ─── Empty state: invite vs add expense ──────────────────────────────────────
+
+describe("ExpensesList — empty state conditional CTA", () => {
+  it("shows invite CTA when group has only 1 member and no expenses", () => {
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        members={[{ userId: "user-1", displayName: "Alice" }]}
+        initialExpenses={[]}
+      />
+    );
+    expect(screen.getByText("Invite your group")).toBeDefined();
+    expect(screen.getByText(/Share the invite link/)).toBeDefined();
+    expect(screen.queryByText("No expenses yet")).toBeNull();
+  });
+
+  it("shows add expense CTA when group has 2+ members and no expenses", () => {
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        members={[
+          { userId: "user-1", displayName: "Alice" },
+          { userId: "user-2", displayName: "Bob" },
+        ]}
+        initialExpenses={[]}
+      />
+    );
+    expect(screen.getByText("No expenses yet")).toBeDefined();
+    expect(screen.getByText(/Add your first expense/)).toBeDefined();
+    expect(screen.queryByText("Invite your group")).toBeNull();
+  });
+
+  it("shows invite button with correct label (copy or share)", () => {
+    render(
+      <ExpensesList
+        {...BASE_PROPS}
+        members={[{ userId: "user-1", displayName: "Alice" }]}
+        initialExpenses={[]}
+      />
+    );
+    // Should show either "Copy invite link" or "Share invite link"
+    const btn = screen.getByRole("button", { name: /invite link/i });
+    expect(btn).toBeDefined();
+  });
+});
+
+// ─── Floating action button ──────────────────────────────────────────────────
+
+describe("ExpensesList — floating action button", () => {
+  it("renders a FAB with the fab-button class", () => {
+    const { container } = render(
+      <ExpensesList
+        {...BASE_PROPS}
+        initialExpenses={[makeExpense()]}
+      />
+    );
+    const fab = container.querySelector(".fab-button") as HTMLElement;
+    expect(fab).not.toBeNull();
+    expect(fab.getAttribute("aria-label")).toBe("Add expense");
   });
 });

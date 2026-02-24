@@ -68,6 +68,7 @@ const LIST_BASE_PROPS = {
   members: MEMBERS,
   allUserNames: { "user-1": "Alice", "user-2": "Bob" },
   userOwesDebts: [],
+  inviteToken: "test-invite-token",
   onOptimisticActivity: vi.fn(),
 };
 

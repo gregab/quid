@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { AddExpenseForm } from "./AddExpenseForm";
 import { RecordPaymentForm, type UserOwesDebt } from "./RecordPaymentForm";
 import { ExpenseDetailModal } from "./ExpenseDetailModal";
+import { useInviteShare } from "./useInviteShare";
 import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
@@ -49,6 +50,7 @@ interface ExpensesListProps {
   members: Member[];
   allUserNames: Record<string, string>;
   userOwesDebts: UserOwesDebt[];
+  inviteToken: string;
   onOptimisticActivity: (log: ActivityLog) => void;
   onExpensesChange?: (expenses: ExpenseRow[]) => void;
   onCelebration?: (name: string) => void;
@@ -156,6 +158,7 @@ export function ExpensesList({
   members,
   allUserNames,
   userOwesDebts,
+  inviteToken,
   onOptimisticActivity,
   onExpensesChange,
   onCelebration,
@@ -167,6 +170,30 @@ export function ExpensesList({
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
   const [openDetailExpenseId, setOpenDetailExpenseId] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(30);
+  const { canShare, copied, share } = useInviteShare(inviteToken);
+
+  // FAB: track whether inline buttons are out of view
+  const inlineButtonsRef = useRef<HTMLDivElement>(null);
+  const [fabVisible, setFabVisible] = useState(false);
+  const [fabCompact, setFabCompact] = useState(false);
+
+  useEffect(() => {
+    const target = inlineButtonsRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) return;
+        // Show FAB when inline buttons scroll out of view
+        setFabVisible(!entry.isIntersecting);
+        // Compact when scrolled well past
+        setFabCompact(entry.boundingClientRect.bottom < -100);
+      },
+      { threshold: 0 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
 
   // When router.refresh() delivers fresh server data, sync local state.
   // useState(initialExpenses) only uses the prop as the initial value and ignores
@@ -241,6 +268,8 @@ export function ExpensesList({
     router.refresh();
   }, [router]);
 
+  const needsMembers = members.length <= 1;
+
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
@@ -266,7 +295,7 @@ export function ExpensesList({
           )}
         </div>
         {/* Desktop: buttons in header */}
-        <div className="hidden sm:flex items-center gap-2">
+        <div ref={inlineButtonsRef} className="hidden sm:flex items-center gap-2">
           <RecordPaymentForm
             groupId={groupId}
             currentUserId={currentUserId}
@@ -315,22 +344,49 @@ export function ExpensesList({
       </div>
 
       {expenses.length === 0 ? (
-        <Card className="px-5 py-10 text-center">
-          <svg className="mx-auto h-10 w-10 text-stone-300 dark:text-stone-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m3 2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2z" />
-          </svg>
-          <p className="font-semibold text-stone-700 dark:text-stone-200 mb-1">No expenses yet</p>
-          <p className="text-sm text-stone-400 dark:text-stone-500 mb-4">Add your first expense to start splitting costs.</p>
-          <AddExpenseForm
-            groupId={groupId}
-            currentUserId={currentUserId}
-            currentUserDisplayName={currentUserDisplayName}
-            members={members}
-            onOptimisticAdd={handleOptimisticAdd}
-            onSettled={handleAddSettled}
-            onOptimisticActivity={onOptimisticActivity}
-          />
-        </Card>
+        needsMembers ? (
+          /* Empty state: solo group — encourage inviting people */
+          <Card className="px-5 py-10 text-center">
+            <svg className="mx-auto h-10 w-10 text-amber-300 dark:text-amber-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+            </svg>
+            <p className="font-semibold text-stone-700 dark:text-stone-200 mb-1">Invite your group</p>
+            <p className="text-sm text-stone-400 dark:text-stone-500 mb-4">Share the invite link so friends can join and start splitting expenses together.</p>
+            <button
+              onClick={share}
+              className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-amber-700 hover:shadow active:scale-[0.97] cursor-pointer dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-stone-900"
+            >
+              {canShare ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15M12 15V2.25m0 0 3 3m-3-3-3 3" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.656a4.5 4.5 0 0 0-1.242-7.244l-4.5-4.5a4.5 4.5 0 0 0-6.364 6.364L4.343 8.69" />
+                </svg>
+              )}
+              {copied ? "Copied!" : canShare ? "Share invite link" : "Copy invite link"}
+            </button>
+          </Card>
+        ) : (
+          /* Empty state: has members — encourage adding expense */
+          <Card className="px-5 py-10 text-center">
+            <svg className="mx-auto h-10 w-10 text-stone-300 dark:text-stone-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m3 2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2z" />
+            </svg>
+            <p className="font-semibold text-stone-700 dark:text-stone-200 mb-1">No expenses yet</p>
+            <p className="text-sm text-stone-400 dark:text-stone-500 mb-4">Add your first expense to start splitting costs.</p>
+            <AddExpenseForm
+              groupId={groupId}
+              currentUserId={currentUserId}
+              currentUserDisplayName={currentUserDisplayName}
+              members={members}
+              onOptimisticAdd={handleOptimisticAdd}
+              onSettled={handleAddSettled}
+              onOptimisticActivity={onOptimisticActivity}
+            />
+          </Card>
+        )
       ) : (
         <ul className="space-y-2">
           {expenses.slice(0, displayCount).map((expense) => {
@@ -503,6 +559,49 @@ export function ExpensesList({
           />
         );
       })()}
+
+      {/* Floating action button — appears when inline buttons scroll out of view */}
+      <AddExpenseForm
+        groupId={groupId}
+        currentUserId={currentUserId}
+        currentUserDisplayName={currentUserDisplayName}
+        members={members}
+        onOptimisticAdd={handleOptimisticAdd}
+        onSettled={handleAddSettled}
+        onOptimisticActivity={onOptimisticActivity}
+        renderTrigger={({ onClick, loading }) => (
+          <button
+            onClick={onClick}
+            disabled={loading}
+            aria-label="Add expense"
+            className={`fab-button fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 transition-all duration-300 ease-out hover:bg-amber-600 hover:shadow-xl hover:shadow-amber-500/30 active:scale-[0.94] disabled:opacity-50 cursor-pointer dark:bg-amber-500 dark:hover:bg-amber-400 dark:shadow-amber-500/20 ${
+              fabVisible ? "fab-enter" : "fab-exit pointer-events-none"
+            } ${
+              fabCompact
+                ? "w-12 h-12 justify-center px-0"
+                : "h-12 px-5"
+            }`}
+            style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
+          >
+            <svg
+              className={`shrink-0 transition-transform duration-300 ${fabCompact ? "w-5 h-5" : "w-4 h-4"}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            <span
+              className={`whitespace-nowrap text-sm transition-all duration-300 overflow-hidden ${
+                fabCompact ? "w-0 opacity-0" : "w-auto opacity-100"
+              }`}
+            >
+              {loading ? "Adding\u2026" : "Add expense"}
+            </span>
+          </button>
+        )}
+      />
     </section>
   );
 }

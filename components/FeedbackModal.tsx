@@ -61,7 +61,7 @@ export function FeedbackModal() {
       <button
         onClick={handleOpen}
         aria-label="Send feedback"
-        className="text-sm text-stone-500 hover:text-stone-900 transition-colors dark:text-stone-400 dark:hover:text-white"
+        className="rounded-lg p-1.5 text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors dark:text-stone-400 dark:hover:text-white dark:hover:bg-stone-800"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

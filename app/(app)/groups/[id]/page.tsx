@@ -245,6 +245,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         hasMoreLogs={(activityLogs?.length ?? 0) >= 20}
         members={members}
         allUserNames={allUserNames}
+        inviteToken={group.inviteToken}
       />
 
       <div className="flex items-center justify-between pt-4">

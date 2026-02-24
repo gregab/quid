@@ -25,6 +25,7 @@ const BASE_PROPS = {
   hasMoreLogs: false,
   members: MEMBERS,
   allUserNames: { "user-a": "Alice", "user-b": "Bob" },
+  inviteToken: "test-invite-token",
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {

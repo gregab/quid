@@ -106,3 +106,22 @@ body {
 .screen-slide-back {
   animation: slide-right-enter 0.2s ease-out;
 }
+
+/* Floating action button */
+@keyframes fab-slide-up {
+  from { opacity: 0; transform: translateY(20px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fab-slide-down {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(20px) scale(0.9); }
+}
+
+.fab-enter {
+  animation: fab-slide-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.fab-exit {
+  animation: fab-slide-down 0.2s ease-in forwards;
+}

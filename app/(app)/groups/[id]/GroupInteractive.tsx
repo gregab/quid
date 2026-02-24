@@ -22,6 +22,7 @@ interface GroupInteractiveProps {
   hasMoreLogs: boolean;
   members: Member[];
   allUserNames: Record<string, string>;
+  inviteToken: string;
 }
 
 
@@ -35,6 +36,7 @@ export function GroupInteractive({
   hasMoreLogs,
   members,
   allUserNames,
+  inviteToken,
 }: GroupInteractiveProps) {
   const { logs, addOptimisticLog, hasMore, isLoadingMore, loadMore } =
     useActivityLogs(initialLogs, groupId, hasMoreLogs);
@@ -202,6 +204,7 @@ export function GroupInteractive({
         members={members}
         allUserNames={allUserNames}
         userOwesDebts={userOwesDebts}
+        inviteToken={inviteToken}
         onOptimisticActivity={addOptimisticLog}
         onExpensesChange={handleExpensesChange}
         onCelebration={handleCelebration}
