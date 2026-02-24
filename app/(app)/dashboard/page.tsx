@@ -166,21 +166,33 @@ export default async function DashboardPage() {
 
   const paletteMap = assignGroupPalettes(groups.map((g) => g.id));
 
+  // Overall balance across all groups (for summary display)
+  const totalBalance = groups.reduce((sum, g) => sum + (balanceMap.get(g.id) ?? 0), 0);
+  const hasAnyExpenses = groupsWithExpenses.size > 0;
+
   return (
     <div className="space-y-8 sm:space-y-10">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
-        <img
-          src="/birds.jpg"
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
-        <div className="relative z-10 p-6 sm:p-8 pt-16 sm:pt-24">
-          <h1 className="text-3xl sm:text-3xl font-black tracking-tight text-white drop-shadow-md">
-            Hey {displayName}.
-          </h1>
-        </div>
+      {/* Greeting + overall balance */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900 dark:text-white">
+          Hey {displayName}.
+        </h1>
+        {groups.length > 1 && hasAnyExpenses && (
+          <p className={`mt-1.5 text-base sm:text-lg font-semibold ${
+            totalBalance > 0
+              ? "text-emerald-600 dark:text-emerald-400"
+              : totalBalance < 0
+                ? "text-rose-600 dark:text-rose-400"
+                : "text-emerald-600 dark:text-emerald-400"
+          }`}>
+            {totalBalance > 0
+              ? `You're owed ${formatCents(totalBalance)} overall`
+              : totalBalance < 0
+                ? `You owe ${formatCents(Math.abs(totalBalance))} overall`
+                : "All settled up"
+            }
+          </p>
+        )}
       </div>
 
       {/* Groups section */}
@@ -221,20 +233,21 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {groups.map((group, i) => {
               const palette = paletteMap.get(group.id)!;
               const memberCount = memberCountMap.get(group.id) ?? 0;
               const balance = balanceMap.get(group.id) ?? 0;
+              const hasExpenses = groupsWithExpenses.has(group.id);
 
               return (
                 <Link
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl pl-0 pr-4 sm:pr-5 py-0 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/20"
+                  className="group-card group relative flex overflow-hidden rounded-2xl border border-stone-200/60 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-stone-800 dark:hover:shadow-black/20"
                   style={{
-                    background: palette.card,
+                    backgroundColor: palette.card,
                     animationDelay: `${i * 80}ms`,
                   }}
                 >
@@ -244,13 +257,15 @@ export default async function DashboardPage() {
                     style={{ background: palette.stripe }}
                   />
 
-                  {/* Text content */}
-                  <div className="relative min-w-0 flex-1 py-4">
-                    <p className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
+                  <div className="flex-1 min-w-0 p-4 sm:p-5">
+                    {/* Group name */}
+                    <h3 className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
                       {group.name}
-                    </p>
+                    </h3>
+
+                    {/* Meta line */}
                     <div className="mt-0.5 flex items-center gap-1.5 text-sm sm:text-[13px] text-stone-400 dark:text-stone-500">
-                      <svg className="h-3.5 w-3.5 flex-shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-3.5 w-3.5 flex-shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                       <span>{memberCount}</span>
@@ -262,36 +277,39 @@ export default async function DashboardPage() {
                         })}
                       </span>
                     </div>
-                  </div>
 
-                  {/* Balance pill + arrow */}
-                  <div className="relative flex items-center gap-2 flex-shrink-0">
-                    {balance !== 0 && (
-                      <div className={`px-2.5 py-1 rounded-lg text-[13px] font-semibold whitespace-nowrap ${
-                        balance > 0
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
-                          : "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400"
-                      }`}>
-                        {balance > 0 ? `owed ${formatCents(balance)}` : `owe ${formatCents(Math.abs(balance))}`}
-                      </div>
-                    )}
-                    {balance === 0 && groupsWithExpenses.has(group.id) && (
-                      <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 text-[13px] font-semibold">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        settled
-                      </div>
-                    )}
-                    <svg
-                      className="h-5 w-5 opacity-40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-70"
-                      style={{ color: palette.stripe }}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    {/* Balance row */}
+                    <div className="mt-3.5 flex items-center justify-between gap-2">
+                      {balance !== 0 && (
+                        <span className={`text-[15px] font-semibold ${
+                          balance > 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}>
+                          {balance > 0 ? `owed ${formatCents(balance)}` : `owe ${formatCents(Math.abs(balance))}`}
+                        </span>
+                      )}
+                      {balance === 0 && hasExpenses && (
+                        <span className="flex items-center gap-1 text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                          settled up
+                        </span>
+                      )}
+                      {balance === 0 && !hasExpenses && (
+                        <span className="text-[13px] text-stone-300 dark:text-stone-600">no expenses yet</span>
+                      )}
+                      <svg
+                        className="h-5 w-5 flex-shrink-0 opacity-30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-60"
+                        style={{ color: palette.stripe }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
                 </Link>
               );
