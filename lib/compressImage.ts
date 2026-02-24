@@ -1,9 +1,9 @@
-/** Max output dimensions for banner images. */
-const MAX_WIDTH = 1200;
-const MAX_HEIGHT = 400;
+/** Max output dimensions for banner images (2× retina at max-w-4xl container). */
+const MAX_WIDTH = 2400;
+const MAX_HEIGHT = 800;
 
 /** Storage bucket hard limit. We guarantee output stays under this. */
-export const MAX_FILE_BYTES = 2 * 1024 * 1024; // 2 MB
+export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 /**
  * Quality ladder: try each in order until the blob fits.
@@ -67,7 +67,7 @@ export function compressImage(file: File): Promise<Blob> {
         ctx.drawImage(img, 0, 0, width, height);
 
         // Walk down the quality ladder until the blob fits under the limit.
-        // For a 1200×400 canvas this almost always resolves at the first step.
+        // For a 2400×800 canvas this almost always resolves at the first step.
         for (const quality of QUALITY_LADDER) {
           const blob = await canvasToBlob(canvas, quality);
           if (blob.size <= MAX_FILE_BYTES || quality === QUALITY_LADDER.at(-1)) {

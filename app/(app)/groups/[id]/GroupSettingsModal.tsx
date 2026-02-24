@@ -200,7 +200,7 @@ export function GroupSettingsModal({
                   </svg>
                 )}
                 <span>{uploading ? "Uploading…" : "Upload banner"}</span>
-                <span className="text-xs">JPEG, PNG, WebP · max 2 MB</span>
+                <span className="text-xs">JPEG, PNG, or WebP</span>
               </button>
             )}
 
