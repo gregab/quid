@@ -43,9 +43,9 @@ export function seedToBytes(seed: number): number[] {
   const bytes: number[] = [];
   let v = Math.abs(Math.round(seed));
   for (let i = 0; i < 16; i++) {
-    // Simple LCG-style mixing: multiply, add, take low byte
+    // LCG step — high bits have much better randomness than low bits
     v = ((v * 1103515245 + 12345) >>> 0) & 0x7fffffff;
-    bytes.push(v & 0xff);
+    bytes.push((v >>> 16) & 0xff);
   }
   return bytes;
 }
