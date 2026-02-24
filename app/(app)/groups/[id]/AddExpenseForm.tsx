@@ -78,7 +78,8 @@ function getSplitSummary(
   members: Member[],
   splitType: SplitType,
   participantIds: Set<string>,
-  allMemberIds: string[]
+  allMemberIds: string[],
+  customAmounts?: Map<string, string>
 ): string {
   const paidByMe = paidByUserId === currentUserId;
   const paidByMember = members.find((m) => m.userId === paidByUserId);
@@ -95,7 +96,23 @@ function getSplitSummary(
   } else if (splitType === "percentage") {
     splitText = "split by percentage";
   } else {
-    splitText = "split with custom amounts";
+    // Check if one person owes the full amount (2-person "owed full" preset)
+    if (customAmounts && members.length === 2) {
+      const payerAmount = Math.round(parseFloat(customAmounts.get(paidByUserId) ?? "0") * 100);
+      if (payerAmount === 0) {
+        const otherMember = members.find((m) => m.userId !== paidByUserId);
+        if (otherMember) {
+          const otherName = otherMember.userId === currentUserId ? "you owe" : `${otherMember.displayName} owes`;
+          splitText = `${otherName} the full amount`;
+        } else {
+          splitText = "split with custom amounts";
+        }
+      } else {
+        splitText = "split with custom amounts";
+      }
+    } else {
+      splitText = "split with custom amounts";
+    }
   }
 
   return `Paid by ${paidByName}, ${splitText}`;
@@ -428,6 +445,7 @@ export function AddExpenseForm({
     setError(null);
     setAmountError(false);
     setAmountErrorMessage(null);
+    setShowAmountRequired(false);
     setScreen("quick-entry");
     setSlideDirection("forward");
   }
@@ -446,7 +464,10 @@ export function AddExpenseForm({
     return `${months[parseInt(month!, 10) - 1]} ${parseInt(day!, 10)}, ${year}`;
   }
 
-  const summaryText = getSplitSummary(paidByUserId, currentUserId, members, splitType, participantIds, allMemberIds);
+  const summaryText = getSplitSummary(paidByUserId, currentUserId, members, splitType, participantIds, allMemberIds, customAmounts);
+
+  // State for "enter amount first" validation nudge
+  const [showAmountRequired, setShowAmountRequired] = useState(false);
 
   // ─── Shared Split Section (used by desktop + mobile advanced screen) ───
 
@@ -733,7 +754,7 @@ export function AddExpenseForm({
               <Button type="button" variant="ghost" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={!description.trim() || !totalCentsValid}>
                 Add expense
               </Button>
             </div>
@@ -801,7 +822,7 @@ export function AddExpenseForm({
                   aria-label="Amount"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); setShowAmountRequired(false); }}
                   onBlur={handleAmountBlur}
                   onFocus={handleAmountFocus}
                   className="flex-1 text-3xl font-bold px-0 py-2.5 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
@@ -839,10 +860,26 @@ export function AddExpenseForm({
               </div>
             </div>
 
+            {/* Amount required nudge */}
+            {showAmountRequired && (
+              <p className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 -mt-2">
+                <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Enter an amount before choosing how to split
+              </p>
+            )}
+
             {/* Summary pill - tappable, navigates to split options */}
             <button
               type="button"
-              onClick={() => navigateTo("split-options")}
+              onClick={() => {
+                if (!totalCentsValid) {
+                  setShowAmountRequired(true);
+                  return;
+                }
+                navigateTo("split-options");
+              }}
               data-testid="split-summary-pill"
               className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-700/40 border border-stone-150 dark:border-stone-700 text-left transition-colors hover:bg-stone-100 dark:hover:bg-stone-700/60 active:scale-[0.99]"
             >
@@ -859,7 +896,8 @@ export function AddExpenseForm({
           <div className="mt-6">
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-amber-600 text-white font-semibold text-base shadow-sm transition-all duration-150 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+              disabled={!description.trim() || !totalCentsValid}
+              className="w-full py-3.5 rounded-xl bg-amber-600 text-white font-semibold text-base shadow-sm transition-all duration-150 hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 dark:bg-amber-500 dark:hover:bg-amber-600"
             >
               Add expense
             </button>
@@ -926,7 +964,7 @@ export function AddExpenseForm({
                 }`}
               >
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">You paid, split equally</p>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
                   {otherMember.displayName} owes you {presetOwesText(currentUserId, false) ?? "half"}
                 </p>
               </button>
@@ -949,7 +987,7 @@ export function AddExpenseForm({
                 }`}
               >
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">You are owed the full amount</p>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
                   {otherMember.displayName} owes you {presetOwesText(currentUserId, true) ?? "the full amount"}
                 </p>
               </button>
@@ -966,7 +1004,7 @@ export function AddExpenseForm({
                 }`}
               >
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">{otherMember.displayName} paid, split equally</p>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-0.5 font-medium">
                   You owe {otherMember.displayName} {presetOwesText(otherMember.userId, false) ?? "half"}
                 </p>
               </button>
@@ -989,7 +1027,7 @@ export function AddExpenseForm({
                 }`}
               >
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">{otherMember.displayName} is owed the full amount</p>
-                <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                <p className="text-xs text-rose-600 dark:text-rose-400 mt-0.5 font-medium">
                   You owe {otherMember.displayName} {presetOwesText(otherMember.userId, true) ?? "the full amount"}
                 </p>
               </button>

@@ -60,6 +60,11 @@ function openModal() {
   fireEvent.click(buttons[0]!);
 }
 
+// Helper to enter an amount (required before navigating to split options)
+function enterAmount(value = "20.00") {
+  fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value } });
+}
+
 describe("AddExpenseForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -154,14 +159,26 @@ describe("AddExpenseForm", () => {
     it("navigates to split-options when summary pill is tapped", () => {
       renderForm();
       openModal();
+      enterAmount();
 
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       expect(screen.getByText("Split options")).toBeDefined();
     });
 
+    it("shows amount required nudge when pill tapped without amount", () => {
+      renderForm();
+      openModal();
+
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      // Should NOT navigate — should show nudge instead
+      expect(screen.queryByText("Split options")).toBeNull();
+      expect(screen.getByText("Enter an amount before choosing how to split")).toBeDefined();
+    });
+
     it("navigates back from split-options to quick-entry", () => {
       renderForm();
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       expect(screen.getByText("Split options")).toBeDefined();
 
@@ -176,6 +193,7 @@ describe("AddExpenseForm", () => {
     it("navigates to advanced-split from split-options", () => {
       renderForm();
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
 
       fireEvent.click(screen.getByText("More options..."));
@@ -185,6 +203,7 @@ describe("AddExpenseForm", () => {
     it("navigates back from advanced-split to split-options", () => {
       renderForm();
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByText("More options..."));
       expect(screen.getByText("Advanced options")).toBeDefined();
@@ -215,6 +234,26 @@ describe("AddExpenseForm", () => {
       expect(addedExpense.splitType).toBe("equal");
     });
 
+    it("disables Add expense button until description and amount entered", () => {
+      renderForm();
+      openModal();
+
+      const submitBtn = screen.getAllByText("Add expense").find(
+        (el) => el.tagName === "BUTTON" && el.closest("form")
+      ) as HTMLButtonElement;
+
+      // Both empty — disabled
+      expect(submitBtn.disabled).toBe(true);
+
+      // Only description — still disabled
+      fireEvent.change(screen.getByPlaceholderText("e.g. Birdseed, Field Guide"), { target: { value: "Lunch" } });
+      expect(submitBtn.disabled).toBe(true);
+
+      // Both filled — enabled
+      enterAmount("15.00");
+      expect(submitBtn.disabled).toBe(false);
+    });
+
     it("closes when X button is tapped on quick-entry", () => {
       renderForm();
       openModal();
@@ -237,6 +276,7 @@ describe("AddExpenseForm", () => {
     it("shows 4 preset cards for 2-person groups", () => {
       renderForm(twoMembers);
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
 
       expect(screen.getByTestId("preset-you-paid-equal")).toBeDefined();
@@ -262,6 +302,7 @@ describe("AddExpenseForm", () => {
     it("applies 'other paid, split equally' preset and updates summary", () => {
       renderForm(twoMembers);
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByTestId("preset-other-paid-equal"));
 
@@ -272,12 +313,12 @@ describe("AddExpenseForm", () => {
     it("applies 'you owed full amount' preset as custom split", () => {
       renderForm(twoMembers);
       openModal();
-      fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "50.00" } });
+      enterAmount("50.00");
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByTestId("preset-you-owed-full"));
 
       const pill = screen.getByTestId("split-summary-pill");
-      expect(pill.textContent).toContain("Paid by you, split with custom amounts");
+      expect(pill.textContent).toContain("Paid by you, Bob owes the full amount");
     });
 
     it("shows owes amounts on preset cards when amount is entered", () => {
@@ -302,6 +343,7 @@ describe("AddExpenseForm", () => {
     it("shows member list instead of presets for 3+ members", () => {
       renderForm(threeMembers);
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
 
       // Should not show preset cards
@@ -317,6 +359,7 @@ describe("AddExpenseForm", () => {
     it("Done button returns to quick-entry", () => {
       renderForm(threeMembers);
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
 
       fireEvent.click(screen.getByText("Done"));
@@ -339,6 +382,7 @@ describe("AddExpenseForm", () => {
     it("updates summary when paid-by changes via preset", () => {
       renderForm(twoMembers);
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByTestId("preset-other-paid-equal"));
       const pill = screen.getByTestId("split-summary-pill");
@@ -354,6 +398,7 @@ describe("AddExpenseForm", () => {
     it("shows paid-by dropdown, split section, and recurring toggle", () => {
       renderForm();
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByText("More options..."));
 
@@ -366,6 +411,7 @@ describe("AddExpenseForm", () => {
     it("Done button on advanced screen returns to quick-entry", () => {
       renderForm();
       openModal();
+      enterAmount();
       fireEvent.click(screen.getByTestId("split-summary-pill"));
       fireEvent.click(screen.getByText("More options..."));
 
