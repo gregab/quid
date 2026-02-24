@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
 
 type State = "idle" | "open" | "submitting" | "success" | "error";
@@ -72,7 +73,7 @@ export function FeedbackModal() {
         </svg>
       </button>
 
-      {(state === "open" || state === "submitting" || state === "success" || state === "error") && (
+      {(state === "open" || state === "submitting" || state === "success" || state === "error") && createPortal(
         <div
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
@@ -133,7 +134,8 @@ export function FeedbackModal() {
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
