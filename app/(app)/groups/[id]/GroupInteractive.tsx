@@ -12,6 +12,94 @@ import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 
+interface ResolvedDebt {
+  fromId: string;
+  fromName: string;
+  toId: string;
+  toName: string;
+  amountCents: number;
+}
+
+function DebtLine({ debt, currentUserId }: { debt: ResolvedDebt; currentUserId: string }) {
+  const isCurrentUserOwing = debt.fromId === currentUserId;
+  const isCurrentUserReceiving = debt.toId === currentUserId;
+  const verb = isCurrentUserOwing ? "owe" : "owes";
+  const fromName = isCurrentUserOwing ? "You" : debt.fromName;
+  const toName = isCurrentUserReceiving ? "you" : debt.toName;
+
+  const dotColor = isCurrentUserOwing
+    ? "bg-rose-400 dark:bg-rose-500"
+    : isCurrentUserReceiving
+    ? "bg-emerald-400 dark:bg-emerald-500"
+    : "bg-stone-300 dark:bg-stone-600";
+
+  const amountColor = isCurrentUserOwing
+    ? "text-red-600 dark:text-red-400"
+    : isCurrentUserReceiving
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-stone-500 dark:text-stone-400";
+
+  const involvesUser = isCurrentUserOwing || isCurrentUserReceiving;
+  const nameColor = involvesUser ? "text-stone-700 dark:text-stone-200" : "";
+
+  return (
+    <div className="flex items-center gap-2 py-0.5">
+      <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
+      <span className="text-sm text-stone-500 dark:text-stone-400 min-w-0">
+        <span className={nameColor}>{fromName}</span>
+        {" "}{verb}{" "}
+        <span className={nameColor}>{toName}</span>
+      </span>
+      <span className={`ml-auto text-sm font-semibold tabular-nums whitespace-nowrap ${amountColor}`}>
+        {formatCents(debt.amountCents)}
+      </span>
+    </div>
+  );
+}
+
+function DebtLines({ debts, currentUserId }: { debts: ResolvedDebt[]; currentUserId: string }) {
+  const [showAll, setShowAll] = useState(false);
+
+  const userDebts = debts.filter((d) => d.fromId === currentUserId || d.toId === currentUserId);
+  const otherDebts = debts.filter((d) => d.fromId !== currentUserId && d.toId !== currentUserId);
+
+  return (
+    <div>
+      {/* User's debts — always visible */}
+      <div className="flex flex-col">
+        {userDebts.map((debt, i) => (
+          <DebtLine key={i} debt={debt} currentUserId={currentUserId} />
+        ))}
+      </div>
+
+      {/* Other debts — collapsible */}
+      {otherDebts.length > 0 && (
+        <>
+          <div className={`debt-expand ${showAll ? "open" : ""}`}>
+            <div>
+              {userDebts.length > 0 && (
+                <div className="border-t border-stone-200/60 dark:border-stone-700/60 mt-1.5 pt-1.5" />
+              )}
+              <div className="flex flex-col">
+                {otherDebts.map((debt, i) => (
+                  <DebtLine key={i} debt={debt} currentUserId={currentUserId} />
+                ))}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAll((prev) => !prev)}
+            className="mt-1 text-xs font-medium text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 transition-colors"
+          >
+            {showAll ? "Show less" : `Show all balances (${otherDebts.length} more)`}
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface GroupInteractiveProps {
   groupId: string;
   groupCreatedById: string;
@@ -127,7 +215,7 @@ export function GroupInteractive({
       {/* Balance card */}
       <Card className="px-4 py-3 -mt-2 sm:-mt-4">
         {/* Net summary line */}
-        <div className={`flex items-center gap-2 ${resolvedDebts.length > 0 ? "mb-1.5" : ""}`}>
+        <div className={`flex items-center gap-2 ${resolvedDebts.length > 0 ? "mb-2" : ""}`}>
           {resolvedDebts.length === 0 ? (
             <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,40 +246,7 @@ export function GroupInteractive({
         </div>
         {/* Individual debt lines */}
         {resolvedDebts.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5 text-sm text-stone-500 dark:text-stone-400">
-            {resolvedDebts.map((debt, i) => {
-              const isCurrentUserOwing = debt.fromId === currentUserId;
-              const isCurrentUserReceiving = debt.toId === currentUserId;
-              const involvesUser = isCurrentUserOwing || isCurrentUserReceiving;
-              const verb = isCurrentUserOwing ? "owe" : "owes";
-              const fromName = isCurrentUserOwing ? "You" : debt.fromName;
-              const toName = isCurrentUserReceiving ? "you" : debt.toName;
-
-              return (
-                <span key={i} className="whitespace-nowrap">
-                  <span className={involvesUser ? "text-stone-700 dark:text-stone-200" : ""}>
-                    {fromName}
-                  </span>
-                  {" "}{verb}{" "}
-                  <span className={involvesUser ? "text-stone-700 dark:text-stone-200" : ""}>
-                    {toName}
-                  </span>
-                  {" "}
-                  <span
-                    className={`font-semibold tabular-nums ${
-                      isCurrentUserOwing
-                        ? "text-red-600 dark:text-red-400"
-                        : isCurrentUserReceiving
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-stone-500 dark:text-stone-400"
-                    }`}
-                  >
-                    {formatCents(debt.amountCents)}
-                  </span>
-                </span>
-              );
-            })}
-          </div>
+          <DebtLines debts={resolvedDebts} currentUserId={currentUserId} />
         )}
       </Card>
 

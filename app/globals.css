@@ -125,3 +125,18 @@ body {
 .fab-exit {
   animation: fab-slide-down 0.2s ease-in forwards;
 }
+
+/* Debt list expand/collapse */
+.debt-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.debt-expand.open {
+  grid-template-rows: 1fr;
+}
+
+.debt-expand > div {
+  overflow: hidden;
+}

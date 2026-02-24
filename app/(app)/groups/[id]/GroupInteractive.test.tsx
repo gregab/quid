@@ -562,7 +562,7 @@ describe("GroupInteractive — balance UI improvements", () => {
     expect(screen.queryByText("Balances")).toBeNull();
   });
 
-  it("wraps each debt phrase as an atomic unit with whitespace-nowrap", () => {
+  it("shows user debts by default and hides third-party debts behind toggle", () => {
     const aliceOwesBob = makeExpense({
       id: "e1",
       amountCents: 1000,
@@ -580,14 +580,23 @@ describe("GroupInteractive — balance UI improvements", () => {
     const { container } = render(
       <GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[aliceOwesBob, carolOwesBob]} />
     );
-    // Each debt phrase is wrapped in a whitespace-nowrap span
-    const nowrapSpans = Array.from(container.querySelectorAll("[class*='whitespace-nowrap']"));
-    // At least one per debt (2 debts)
-    expect(nowrapSpans.length).toBeGreaterThanOrEqual(2);
-    // Each nowrap span contains a full debt phrase (name + verb + name + amount)
-    const debtTexts = nowrapSpans.map((el) => el.textContent?.trim());
-    expect(debtTexts.some((t) => t?.includes("You owe") && t?.includes("$5.00"))).toBe(true);
-    expect(debtTexts.some((t) => t?.includes("Carol owes") && t?.includes("$5.00"))).toBe(true);
+    // User's debt is visible
+    expect(container.textContent).toContain("You owe");
+    expect(container.textContent).toContain("$5.00");
+    // Third-party debt exists but is in a collapsed container
+    const expandContainer = container.querySelector(".debt-expand");
+    expect(expandContainer).not.toBeNull();
+    expect(expandContainer!.classList.contains("open")).toBe(false);
+    // Toggle button shows count
+    const toggleBtn = screen.getByText(/Show all balances/);
+    expect(toggleBtn.textContent).toContain("1 more");
+    // Click to expand
+    fireEvent.click(toggleBtn);
+    expect(expandContainer!.classList.contains("open")).toBe(true);
+    expect(container.textContent).toContain("Carol");
+    // Click to collapse
+    fireEvent.click(screen.getByText("Show less"));
+    expect(expandContainer!.classList.contains("open")).toBe(false);
   });
 });
 
