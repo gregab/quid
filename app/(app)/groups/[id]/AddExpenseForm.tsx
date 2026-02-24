@@ -996,56 +996,78 @@ export function AddExpenseForm({
             </>
           ) : (
             <>
-              {/* 3+ person: paid by selector + equal default */}
+              {/* 3+ person: payer info (read-only) + participant checklist */}
+              {(() => {
+                const payer = members.find((m) => m.userId === paidByUserId);
+                const payerName = paidByUserId === currentUserId ? "You" : (payer?.displayName ?? "Unknown");
+                return (
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 dark:bg-stone-800/60 dark:border-stone-700">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-800/60 dark:text-amber-300 overflow-hidden">
+                      {payer?.avatarUrl ? (
+                        <img src={payer.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        (payer?.displayName ?? "U").charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <span className="text-sm text-stone-600 dark:text-stone-300">
+                      Paid by <span className="font-semibold text-stone-800 dark:text-stone-100">{payerName}</span>
+                    </span>
+                  </div>
+                );
+              })()}
+
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
-                  Paid by
+                  Split between
                 </label>
                 <div className="space-y-1.5">
-                  {members.map((m) => (
-                    <button
-                      key={m.userId}
-                      type="button"
-                      onClick={() => { setPaidByUserId(m.userId); }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all active:scale-[0.98] ${
-                        paidByUserId === m.userId
-                          ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
-                          : "border-stone-200 bg-white hover:border-stone-300 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:hover:border-stone-600"
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${
-                        paidByUserId === m.userId
-                          ? "bg-amber-200 text-amber-800 dark:bg-amber-700 dark:text-amber-100"
-                          : "bg-stone-100 text-stone-500 dark:bg-stone-700 dark:text-stone-400"
-                      }`}>
-                        {m.displayName.charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-stone-800 dark:text-stone-200">
-                        {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
-                      </span>
-                      {paidByUserId === m.userId && (
-                        <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
+                  {members.map((m) => {
+                    const isChecked = participantIds.has(m.userId);
+                    return (
+                      <button
+                        key={m.userId}
+                        type="button"
+                        onClick={() => toggleParticipant(m.userId)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all active:scale-[0.98] ${
+                          isChecked
+                            ? "border-amber-400 bg-amber-50 dark:border-amber-500/60 dark:bg-amber-900/20"
+                            : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800 opacity-60"
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden ${
+                          isChecked
+                            ? "bg-amber-200 text-amber-800 dark:bg-amber-700 dark:text-amber-100"
+                            : "bg-stone-100 text-stone-400 dark:bg-stone-700 dark:text-stone-500"
+                        }`}>
+                          {m.avatarUrl ? (
+                            <img src={m.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            m.displayName.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-stone-800 dark:text-stone-200">
+                          {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                        </span>
+                        <div className={`w-5 h-5 rounded-md border-2 ml-auto flex items-center justify-center transition-colors ${
+                          isChecked
+                            ? "bg-amber-500 border-amber-500 dark:bg-amber-500 dark:border-amber-500"
+                            : "border-stone-300 dark:border-stone-600"
+                        }`}>
+                          {isChecked && (
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 px-1 py-2">
-                <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700"></div>
-                <span className="text-xs text-stone-400 dark:text-stone-500">Split equally among all</span>
-                <div className="h-px flex-1 bg-stone-200 dark:bg-stone-700"></div>
               </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  setSplitType("equal");
-                  setParticipantIds(new Set(allMemberIds));
-                  navigateTo("quick-entry");
-                }}
+                onClick={() => navigateTo("quick-entry")}
                 className="w-full py-3 rounded-xl bg-amber-600 text-white font-semibold text-sm shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] dark:bg-amber-500 dark:hover:bg-amber-600"
               >
                 Done
