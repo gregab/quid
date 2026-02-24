@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
@@ -80,7 +81,9 @@ export function ExpenseDetailModal({
   onUpdateSettled,
   onOptimisticActivity,
 }: ExpenseDetailModalProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<ModalMode>("view");
+  const [stopRecurringLoading, setStopRecurringLoading] = useState(false);
   const [description, setDescription] = useState(expense.description);
   const [amount, setAmount] = useState((expense.amountCents / 100).toFixed(2));
   const [date, setDate] = useState(expense.date);
@@ -430,6 +433,17 @@ export function ExpenseDetailModal({
     onDeleteSettled();
   }
 
+  async function handleStopRecurring() {
+    if (!expense.recurringExpense) return;
+    setStopRecurringLoading(true);
+    await fetch(`/api/groups/${groupId}/recurring/${expense.recurringExpense.id}`, {
+      method: "DELETE",
+    });
+    setStopRecurringLoading(false);
+    onClose();
+    router.refresh();
+  }
+
   // View-mode display data — use stored splits directly
   const splitsForDisplay =
     expense.splits.length > 0
@@ -579,6 +593,39 @@ export function ExpenseDetailModal({
                     Last edited · {formatDateTime(expense.updatedAt)}
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Recurring metadata + stop button */}
+            {expense.recurringExpense && (
+              <div className="mb-4 flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17 1l4 4-4 4" />
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                    <path d="M7 23l-4-4 4-4" />
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                    Recurring · {expense.recurringExpense.frequency}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleStopRecurring}
+                  disabled={stopRecurringLoading}
+                  className="text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-200 transition-colors disabled:opacity-50"
+                >
+                  {stopRecurringLoading ? "Stopping…" : "Stop recurring"}
+                </button>
               </div>
             )}
 

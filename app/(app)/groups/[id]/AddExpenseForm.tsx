@@ -62,6 +62,8 @@ export function AddExpenseForm({
   const [splitType, setSplitType] = useState<SplitType>("equal");
   const [customAmounts, setCustomAmounts] = useState<Map<string, string>>(new Map());
   const [percentages, setPercentages] = useState<Map<string, string>>(new Map());
+  const [recurring, setRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
   const [error, setError] = useState<string | null>(null);
   const [amountError, setAmountError] = useState(false);
   const [amountErrorMessage, setAmountErrorMessage] = useState<string | null>(null);
@@ -311,6 +313,9 @@ export function AddExpenseForm({
         amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
       }));
     }
+    if (recurring) {
+      body.recurring = { frequency: recurringFrequency };
+    }
 
     await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
@@ -333,6 +338,8 @@ export function AddExpenseForm({
     setSplitType("equal");
     setCustomAmounts(new Map());
     setPercentages(new Map());
+    setRecurring(false);
+    setRecurringFrequency("monthly");
     setError(null);
     setAmountError(false);
     setAmountErrorMessage(null);
@@ -570,6 +577,31 @@ export function AddExpenseForm({
                           : `Over by: $${(Math.abs(customRemaining) / 100).toFixed(2)}`}
                       </p>
                     )}
+                  </div>
+                )}
+              </div>
+              {/* Repeat toggle */}
+              <div>
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={recurring}
+                    onChange={(e) => setRecurring(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat</span>
+                </label>
+                {recurring && (
+                  <div className="mt-2 ml-6">
+                    <select
+                      value={recurringFrequency}
+                      onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                    >
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
                   </div>
                 )}
               </div>

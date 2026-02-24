@@ -36,6 +36,7 @@ export interface ExpenseRow {
   createdById?: string;
   createdAt?: string;
   updatedAt?: string | null;
+  recurringExpense?: { id: string; frequency: "weekly" | "monthly" | "yearly" } | null;
 }
 
 interface ExpensesListProps {
@@ -353,7 +354,28 @@ export function ExpensesList({
                             <>{getSettledUpTitle(expense, members, allUserNames)} ✨</>
                           ) : expense.isPayment ? (
                             <>{paymentDirection}</>
-                          ) : expense.description}
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              {expense.description}
+                              {expense.recurringExpense && (
+                                <svg
+                                  className="inline w-3.5 h-3.5 shrink-0 text-indigo-400 dark:text-indigo-500"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-label="Recurring"
+                                >
+                                  <path d="M17 1l4 4-4 4" />
+                                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                                  <path d="M7 23l-4-4 4-4" />
+                                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                                </svg>
+                              )}
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
                           {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}

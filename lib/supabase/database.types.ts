@@ -92,6 +92,7 @@ export type Database = {
           id: string
           isPayment: boolean
           paidById: string
+          recurringExpenseId: string | null
           settledUp: boolean
           splitType: string
           updatedAt: string | null
@@ -106,6 +107,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById: string
+          recurringExpenseId?: string | null
           settledUp?: boolean
           splitType?: string
           updatedAt?: string | null
@@ -120,6 +122,7 @@ export type Database = {
           id?: string
           isPayment?: boolean
           paidById?: string
+          recurringExpenseId?: string | null
           settledUp?: boolean
           splitType?: string
           updatedAt?: string | null
@@ -144,6 +147,13 @@ export type Database = {
             columns: ["paidById"]
             isOneToOne: false
             referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Expense_recurringExpenseId_fkey"
+            columns: ["recurringExpenseId"]
+            isOneToOne: false
+            referencedRelation: "RecurringExpense"
             referencedColumns: ["id"]
           },
         ]
@@ -290,6 +300,76 @@ export type Database = {
           },
         ]
       }
+      RecurringExpense: {
+        Row: {
+          amountCents: number
+          createdAt: string
+          createdById: string
+          customSplits: Json | null
+          description: string
+          frequency: string
+          groupId: string
+          id: string
+          isActive: boolean
+          nextDueDate: string
+          paidById: string
+          participantIds: string[]
+          splitType: string
+        }
+        Insert: {
+          amountCents: number
+          createdAt?: string
+          createdById: string
+          customSplits?: Json | null
+          description: string
+          frequency: string
+          groupId: string
+          id?: string
+          isActive?: boolean
+          nextDueDate: string
+          paidById: string
+          participantIds: string[]
+          splitType?: string
+        }
+        Update: {
+          amountCents?: number
+          createdAt?: string
+          createdById?: string
+          customSplits?: Json | null
+          description?: string
+          frequency?: string
+          groupId?: string
+          id?: string
+          isActive?: boolean
+          nextDueDate?: string
+          paidById?: string
+          participantIds?: string[]
+          splitType?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "RecurringExpense_createdById_fkey"
+            columns: ["createdById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "RecurringExpense_groupId_fkey"
+            columns: ["groupId"]
+            isOneToOne: false
+            referencedRelation: "Group"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "RecurringExpense_paidById_fkey"
+            columns: ["paidById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       User: {
         Row: {
           avatarUrl: string | null
@@ -348,6 +428,22 @@ export type Database = {
         }
         Returns: string
       }
+      create_recurring_expense: {
+        Args: {
+          _amount_cents: number
+          _date: string
+          _description: string
+          _frequency?: string
+          _group_id: string
+          _paid_by_display_name: string
+          _paid_by_id: string
+          _participant_display_names?: string[]
+          _participant_ids: string[]
+          _split_amounts?: number[]
+          _split_type?: string
+        }
+        Returns: string
+      }
       delete_account: { Args: never; Returns: undefined }
       delete_expense: {
         Args: {
@@ -365,6 +461,11 @@ export type Database = {
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }
+      process_due_recurring_expenses: { Args: never; Returns: number }
+      stop_recurring_expense: {
+        Args: { _recurring_id: string }
+        Returns: undefined
+      }
       update_expense: {
         Args: {
           _amount_cents: number

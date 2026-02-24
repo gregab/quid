@@ -17,6 +17,9 @@ const createExpenseSchema = z.object({
   customSplits: z
     .array(z.object({ userId: z.string().uuid(), amountCents: z.number().int().min(0) }))
     .optional(),
+  recurring: z
+    .object({ frequency: z.enum(["weekly", "monthly", "yearly"]) })
+    .optional(),
 });
 
 export async function POST(
@@ -68,6 +71,7 @@ export async function POST(
     participantIds: rawParticipantIds,
     splitType,
     customSplits,
+    recurring,
   } = parsed.data;
 
   const memberIds = new Set(members.map((m) => m.userId));
@@ -123,28 +127,51 @@ export async function POST(
     });
   }
 
-  const { data: expenseId, error } = await supabase.rpc("create_expense", {
-    _group_id: groupId,
-    _description: description,
-    _amount_cents: amountCents,
-    _date: date,
-    _paid_by_id: paidById,
-    _participant_ids: participantIds,
-    _paid_by_display_name: paidByMember.User!.displayName,
-    _split_type: effectiveSplitType,
-    _split_amounts: splitAmounts ?? undefined,
-    _participant_display_names: participantDisplayNames,
-  });
+  let expenseId: string | null = null;
 
-  if (error) {
-    return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+  if (recurring) {
+    // Create a recurring expense template + first instance
+    const { data, error } = await supabase.rpc("create_recurring_expense", {
+      _group_id: groupId,
+      _description: description,
+      _amount_cents: amountCents,
+      _date: date,
+      _paid_by_id: paidById,
+      _participant_ids: participantIds,
+      _paid_by_display_name: paidByMember.User!.displayName,
+      _split_type: effectiveSplitType,
+      _split_amounts: splitAmounts ?? undefined,
+      _participant_display_names: participantDisplayNames,
+      _frequency: recurring.frequency,
+    });
+    if (error) {
+      return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+    }
+    expenseId = data;
+  } else {
+    const { data, error } = await supabase.rpc("create_expense", {
+      _group_id: groupId,
+      _description: description,
+      _amount_cents: amountCents,
+      _date: date,
+      _paid_by_id: paidById,
+      _participant_ids: participantIds,
+      _paid_by_display_name: paidByMember.User!.displayName,
+      _split_type: effectiveSplitType,
+      _split_amounts: splitAmounts ?? undefined,
+      _participant_display_names: participantDisplayNames,
+    });
+    if (error) {
+      return NextResponse.json({ data: null, error: error.message }, { status: 500 });
+    }
+    expenseId = data;
   }
 
   // Fetch the created expense to return it
   const { data: expense } = await supabase
     .from("Expense")
     .select("*")
-    .eq("id", expenseId)
+    .eq("id", expenseId!)
     .single();
 
   return NextResponse.json({ data: expense, error: null }, { status: 201 });

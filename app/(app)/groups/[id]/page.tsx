@@ -88,10 +88,10 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
   const defaultGroupEmoji = GROUP_EMOJIS[id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GROUP_EMOJIS.length]!;
 
-  // Fetch expenses with paidBy user and splits (including split participants' display names)
+  // Fetch expenses with paidBy user, splits, and recurring template info
   const { data: expenses } = await supabase
     .from("Expense")
-    .select("*, User!paidById(*), ExpenseSplit(*, User(displayName))")
+    .select("*, User!paidById(*), ExpenseSplit(*, User(displayName)), RecurringExpense(id, frequency)")
     .eq("groupId", id)
     .order("date", { ascending: false })
     .order("createdAt", { ascending: false });
@@ -157,6 +157,12 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       createdById: expense.createdById ?? undefined,
       createdAt: expense.createdAt,
       updatedAt: expense.updatedAt,
+      recurringExpense: expense.RecurringExpense
+        ? {
+            id: expense.RecurringExpense.id,
+            frequency: expense.RecurringExpense.frequency as "weekly" | "monthly" | "yearly",
+          }
+        : null,
     };
   });
 
