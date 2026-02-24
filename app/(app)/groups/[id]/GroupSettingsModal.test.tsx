@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, act, waitFor } from "@testing-library/react";
 import { GroupSettingsModal } from "./GroupSettingsModal";
 
 const mockRefresh = vi.fn();
@@ -182,6 +182,88 @@ describe("GroupSettingsModal", () => {
     fireEvent.click(screen.getByText("Remove"));
     // After removal, the upload area should appear
     expect(screen.getByText("Upload banner")).toBeTruthy();
+  });
+
+  it("shows pan UI when a file is selected", async () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake"], "photo.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(screen.getByText("Drag to reposition")).toBeTruthy();
+    expect(screen.getByText("Use this photo")).toBeTruthy();
+    // Upload button should be hidden during pan
+    expect(screen.queryByText("Upload banner")).toBeNull();
+  });
+
+  it("cancels pan UI and returns to upload button", async () => {
+    render(<GroupSettingsModal {...defaultProps} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake"], "photo.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    expect(screen.getByText("Drag to reposition")).toBeTruthy();
+
+    // The pan Cancel is inside the pan container (not the footer Cancel)
+    const panContainer = screen.getByTestId("pan-container").parentElement!;
+    const cancelBtn = panContainer.querySelector("button") as HTMLButtonElement;
+    fireEvent.click(cancelBtn);
+    expect(screen.queryByText("Drag to reposition")).toBeNull();
+    expect(screen.getByText("Upload banner")).toBeTruthy();
+  });
+
+  it("uploads after applying crop", async () => {
+    // Mock canvas — save original to avoid recursive call
+    const originalCreateElement = document.createElement.bind(document);
+    const mockGetContext = vi.fn().mockReturnValue({
+      drawImage: vi.fn(),
+    });
+    const mockToBlob = vi.fn((cb: (b: Blob) => void) =>
+      cb(new Blob(["cropped"], { type: "image/jpeg" }))
+    );
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") {
+        const canvas = originalCreateElement("canvas") as HTMLCanvasElement;
+        Object.defineProperty(canvas, "getContext", { value: mockGetContext });
+        Object.defineProperty(canvas, "toBlob", { value: mockToBlob });
+        return canvas;
+      }
+      return originalCreateElement(tag);
+    });
+
+    render(<GroupSettingsModal {...defaultProps} />);
+
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["fake"], "photo.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      fireEvent.change(input, { target: { files: [file] } });
+    });
+
+    // Simulate image load in pan container
+    const panImg = screen.getByAltText("Position your banner") as HTMLImageElement;
+    Object.defineProperty(panImg, "naturalWidth", { value: 800 });
+    Object.defineProperty(panImg, "naturalHeight", { value: 600 });
+    fireEvent.load(panImg);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Use this photo"));
+    });
+
+    await waitFor(() => {
+      expect(mockUpload).toHaveBeenCalled();
+    });
+
+    // Pan UI should be gone, preview should be shown
+    expect(screen.queryByText("Drag to reposition")).toBeNull();
   });
 
   it("sends null bannerUrl when banner is removed", async () => {
