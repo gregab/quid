@@ -25,18 +25,18 @@ afterEach(() => {
 
 describe("InviteJoinForm", () => {
   it("renders the group name and member count", () => {
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     expect(screen.getByText("Road Trip")).toBeDefined();
     expect(screen.getByText("3 members")).toBeDefined();
   });
 
   it("renders singular 'member' for count of 1", () => {
-    render(<InviteJoinForm token="abc123" groupName="Solo" memberCount={1} />);
+    render(<InviteJoinForm token="abc123" groupName="Solo" memberCount={1} isAuthenticated={true} />);
     expect(screen.getByText("1 member")).toBeDefined();
   });
 
   it("renders join button with group name", () => {
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     expect(screen.getByRole("button", { name: /join road trip/i })).toBeDefined();
   });
 
@@ -49,7 +49,7 @@ describe("InviteJoinForm", () => {
       json: async () => ({ data: { groupId: "group-1", alreadyMember: false }, error: null }),
     } as Response);
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     const button = screen.getByRole("button", { name: /join road trip/i });
 
     await act(async () => {
@@ -66,7 +66,7 @@ describe("InviteJoinForm", () => {
     // Never resolves — keeps loading state visible
     vi.spyOn(global, "fetch").mockReturnValue(new Promise(() => {}));
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     const button = screen.getByRole("button");
 
     act(() => {
@@ -84,7 +84,7 @@ describe("InviteJoinForm", () => {
       json: async () => ({ data: null, error: "Invalid invite token" }),
     } as Response);
 
-    render(<InviteJoinForm token="bad-token" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="bad-token" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     const button = screen.getByRole("button", { name: /join road trip/i });
 
     await act(async () => {
@@ -103,7 +103,7 @@ describe("InviteJoinForm", () => {
       json: async () => ({ data: { groupId: "group-1", alreadyMember: false }, error: null }),
     } as Response);
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
     });
@@ -120,7 +120,7 @@ describe("InviteJoinForm", () => {
       json: async () => ({ data: { groupId: "group-2", alreadyMember: true }, error: null }),
     } as Response);
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
     });
@@ -131,7 +131,7 @@ describe("InviteJoinForm", () => {
   it("shows network error message when fetch throws", async () => {
     vi.spyOn(global, "fetch").mockRejectedValue(new Error("fetch failed"));
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
     });
@@ -147,11 +147,29 @@ describe("InviteJoinForm", () => {
       json: async () => ({ data: null }),
     } as Response);
 
-    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} />);
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={true} />);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /join road trip/i }));
     });
 
     expect(screen.getByText("Something went wrong.")).toBeDefined();
+  });
+
+  it("shows sign-in and sign-up links when unauthenticated", () => {
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={false} />);
+    const signInLink = screen.getByRole("link", { name: /sign in to join/i });
+    expect(signInLink).toBeDefined();
+    expect((signInLink as HTMLAnchorElement).href).toContain("/login");
+    expect((signInLink as HTMLAnchorElement).href).toContain(encodeURIComponent("/invite/abc123"));
+
+    const signUpLink = screen.getByRole("link", { name: /sign up/i });
+    expect(signUpLink).toBeDefined();
+    expect((signUpLink as HTMLAnchorElement).href).toContain("/signup");
+    expect((signUpLink as HTMLAnchorElement).href).toContain(encodeURIComponent("/invite/abc123"));
+  });
+
+  it("does not show join button when unauthenticated", () => {
+    render(<InviteJoinForm token="abc123" groupName="Road Trip" memberCount={3} isAuthenticated={false} />);
+    expect(screen.queryByRole("button", { name: /join/i })).toBeNull();
   });
 });

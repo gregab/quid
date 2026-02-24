@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
 export function InviteJoinForm({
   token,
   groupName,
   memberCount,
+  isAuthenticated,
 }: {
   token: string;
   groupName: string;
   memberCount: number;
+  isAuthenticated: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -74,13 +77,33 @@ export function InviteJoinForm({
             <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600 mb-4">{error}</p>
           )}
 
-          <Button
-            onClick={handleJoin}
-            disabled={loading}
-            className="w-full justify-center"
-          >
-            {loading ? "Joining…" : `Join ${groupName}`}
-          </Button>
+          {isAuthenticated ? (
+            <Button
+              onClick={handleJoin}
+              disabled={loading}
+              className="w-full justify-center"
+            >
+              {loading ? "Joining…" : `Join ${groupName}`}
+            </Button>
+          ) : (
+            <div className="space-y-3">
+              <Link
+                href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`}
+                className="block w-full rounded-xl bg-stone-800 py-2.5 text-center text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-stone-700"
+              >
+                Sign in to join
+              </Link>
+              <p className="text-center text-xs text-gray-400">
+                No account?{" "}
+                <Link
+                  href={`/signup?next=${encodeURIComponent(`/invite/${token}`)}`}
+                  className="font-semibold text-stone-700 hover:text-amber-700"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

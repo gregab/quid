@@ -59,8 +59,6 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
-
   const { data, error } = await supabase.rpc("get_group_by_invite_token", { _token: token });
 
   if (error || !data) {
@@ -92,6 +90,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       token={token}
       groupName={group.name}
       memberCount={group.memberCount}
+      isAuthenticated={!!user}
     />
   );
 }

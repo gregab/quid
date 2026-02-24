@@ -35,12 +35,11 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Protect all app routes
+  // Protect all app routes (invite pages are intentionally public for OG preview crawlers)
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/groups") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/invite");
+    pathname.startsWith("/settings");
 
   if (isAppRoute && !user) {
     const url = request.nextUrl.clone();
