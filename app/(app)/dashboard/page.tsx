@@ -234,32 +234,20 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex items-center gap-4 overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/60 dark:border-stone-800 px-4 sm:px-5 py-4 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/30"
+                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl pl-0 pr-4 sm:pr-5 py-0 shadow-sm transition-all duration-300 hover:-translate-y-[2px] hover:shadow-lg dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/20"
                   style={{
-                    borderLeftWidth: '3px',
-                    borderLeftColor: palette.stripe,
+                    background: palette.card,
                     animationDelay: `${i * 80}ms`,
                   }}
                 >
-                  {/* Subtle colored gradient wash */}
+                  {/* Color stripe */}
                   <div
-                    className="absolute inset-0 pointer-events-none opacity-[0.04] dark:opacity-[0.07] transition-opacity duration-300 group-hover:opacity-[0.07] dark:group-hover:opacity-[0.12]"
-                    style={{ background: `linear-gradient(120deg, ${palette.stripe} 0%, transparent 50%)` }}
+                    className="self-stretch w-1.5 flex-shrink-0 rounded-l-2xl transition-all duration-300 group-hover:w-2"
+                    style={{ background: palette.stripe }}
                   />
 
-                  {/* Group initial avatar */}
-                  <div
-                    className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white font-bold text-[17px] tracking-tight transition-transform duration-300 group-hover:scale-105"
-                    style={{
-                      background: `linear-gradient(145deg, ${palette.stripe}, ${palette.accent})`,
-                      boxShadow: `0 2px 10px ${palette.stripe}25`,
-                    }}
-                  >
-                    {group.name.charAt(0).toUpperCase()}
-                  </div>
-
                   {/* Text content */}
-                  <div className="relative min-w-0 flex-1">
+                  <div className="relative min-w-0 flex-1 py-4">
                     <p className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
                       {group.name}
                     </p>
@@ -298,7 +286,8 @@ export default async function DashboardPage() {
                       </div>
                     )}
                     <svg
-                      className="h-4 w-4 text-stone-300 dark:text-stone-600 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-stone-400 dark:group-hover:text-stone-500"
+                      className="h-5 w-5 opacity-40 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-70"
+                      style={{ color: palette.stripe }}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
