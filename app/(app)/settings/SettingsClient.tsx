@@ -11,29 +11,37 @@ interface GroupBalance {
   balanceCents: number;
 }
 
-export function SettingsClient({
-  email,
-  groupBalances,
-}: {
-  email: string;
-  groupBalances: GroupBalance[];
-}) {
+export function SettingsClient({ email }: { email: string }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [groupBalances, setGroupBalances] = useState<GroupBalance[] | null>(null);
+  const [loadingBalances, setLoadingBalances] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasOutstandingBalances = groupBalances.length > 0;
+  async function openConfirm() {
+    setConfirmOpen(true);
+    setConfirmText("");
+    setError(null);
+    setGroupBalances(null);
+    setLoadingBalances(true);
+
+    const res = await fetch(`/api/account`);
+    const json = (await res.json()) as {
+      data: { groupBalances: GroupBalance[] } | null;
+      error?: string;
+    };
+
+    setLoadingBalances(false);
+    setGroupBalances(json.data?.groupBalances ?? []);
+  }
 
   async function handleDelete() {
     setLoading(true);
     setError(null);
 
-    const res = await fetch(`/api/account`, {
-      method: "DELETE",
-    });
-
+    const res = await fetch(`/api/account`, { method: "DELETE" });
     const json = (await res.json()) as { data?: { deleted: boolean }; error?: string };
 
     if (!res.ok || json.error) {
@@ -49,6 +57,8 @@ export function SettingsClient({
     const abs = Math.abs(cents);
     return `$${(abs / 100).toFixed(2)}`;
   }
+
+  const hasOutstandingBalances = (groupBalances ?? []).length > 0;
 
   return (
     <div className="space-y-8">
@@ -83,10 +93,7 @@ export function SettingsClient({
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
         <div className="mt-4">
-          <Button
-            variant="danger"
-            onClick={() => { setConfirmOpen(true); setConfirmText(""); setError(null); }}
-          >
+          <Button variant="danger" onClick={openConfirm}>
             Delete account
           </Button>
         </div>
@@ -104,14 +111,22 @@ export function SettingsClient({
               This will permanently delete your account, remove you from all groups, and erase your data. This cannot be undone.
             </p>
 
-            {hasOutstandingBalances ? (
+            {loadingBalances ? (
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                <svg className="animate-spin size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Checking balances…
+              </div>
+            ) : hasOutstandingBalances ? (
               <>
                 <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
                   <p className="text-sm font-medium text-red-800 dark:text-red-300">
                     You must settle up before deleting your account. Outstanding balances in:
                   </p>
                   <ul className="mt-2 space-y-1">
-                    {groupBalances.map((gb) => (
+                    {groupBalances!.map((gb) => (
                       <li key={gb.groupId} className="text-sm text-red-700 dark:text-red-400">
                         <Link
                           href={`/groups/${gb.groupId}`}
