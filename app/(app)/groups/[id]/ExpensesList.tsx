@@ -174,24 +174,40 @@ export function ExpensesList({
 
   // FAB: track whether inline buttons are out of view
   const inlineButtonsRef = useRef<HTMLDivElement>(null);
+  const mobileButtonsRef = useRef<HTMLDivElement>(null);
   const [fabVisible, setFabVisible] = useState(false);
   const [fabCompact, setFabCompact] = useState(false);
 
   useEffect(() => {
-    const target = inlineButtonsRef.current;
-    if (!target) return;
+    const desktopTarget = inlineButtonsRef.current;
+    const mobileTarget = mobileButtonsRef.current;
+    if (!desktopTarget || !mobileTarget) return;
+
+    // Track intersection state for both refs. FAB shows only when
+    // the viewport-relevant buttons have scrolled out of view.
+    // display:none elements report isIntersecting=false, so we need
+    // both to be non-intersecting before showing the FAB.
+    let desktopVisible = false;
+    let mobileVisible = false;
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry) return;
-        // Show FAB when inline buttons scroll out of view
-        setFabVisible(!entry.isIntersecting);
-        // Compact when scrolled well past
-        setFabCompact(entry.boundingClientRect.bottom < -100);
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target === desktopTarget) {
+            desktopVisible = entry.isIntersecting;
+            // Compact when scrolled well past (desktop only)
+            setFabCompact(entry.boundingClientRect.bottom < -100);
+          } else if (entry.target === mobileTarget) {
+            mobileVisible = entry.isIntersecting;
+          }
+        }
+        // Show FAB only when neither set of buttons is visible
+        setFabVisible(!desktopVisible && !mobileVisible);
       },
       { threshold: 0 }
     );
-    observer.observe(target);
+    observer.observe(desktopTarget);
+    observer.observe(mobileTarget);
     return () => observer.disconnect();
   }, []);
 
@@ -320,7 +336,7 @@ export function ExpensesList({
       </div>
 
       {/* Mobile: buttons below heading, above list */}
-      <div className="flex sm:hidden gap-2 mb-3">
+      <div ref={mobileButtonsRef} className="flex sm:hidden gap-2 mb-3">
         <RecordPaymentForm
           groupId={groupId}
           currentUserId={currentUserId}
@@ -576,15 +592,15 @@ export function ExpensesList({
             aria-label="Add expense"
             className={`fab-button fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 transition-all duration-300 ease-out hover:bg-amber-600 hover:shadow-xl hover:shadow-amber-500/30 active:scale-[0.94] disabled:opacity-50 cursor-pointer dark:bg-amber-500 dark:hover:bg-amber-400 dark:shadow-amber-500/20 ${
               fabVisible ? "fab-enter" : "fab-exit pointer-events-none"
-            } ${
+            } w-14 h-14 justify-center px-0 sm:w-auto sm:h-12 ${
               fabCompact
-                ? "w-12 h-12 justify-center px-0"
-                : "h-12 px-5"
+                ? "sm:w-12 sm:h-12 sm:justify-center sm:px-0"
+                : "sm:px-5"
             }`}
             style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
           >
             <svg
-              className={`shrink-0 transition-transform duration-300 ${fabCompact ? "w-5 h-5" : "w-4 h-4"}`}
+              className={`shrink-0 transition-transform duration-300 w-6 h-6 sm:w-4 sm:h-4 ${fabCompact ? "sm:w-5 sm:h-5" : ""}`}
               fill="none"
               stroke="currentColor"
               strokeWidth={2.5}
@@ -593,8 +609,8 @@ export function ExpensesList({
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             <span
-              className={`whitespace-nowrap text-sm transition-all duration-300 overflow-hidden ${
-                fabCompact ? "w-0 opacity-0" : "w-auto opacity-100"
+              className={`whitespace-nowrap text-sm transition-all duration-300 overflow-hidden hidden sm:inline ${
+                fabCompact ? "sm:w-0 sm:opacity-0" : "sm:w-auto sm:opacity-100"
               }`}
             >
               {loading ? "Adding\u2026" : "Add expense"}
