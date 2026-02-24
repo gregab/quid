@@ -25,14 +25,14 @@ export default function DashboardLoading() {
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-2xl border border-gray-200/80 bg-white pl-5 pr-4 py-4 dark:bg-gray-900/80 dark:border-gray-700/60"
+              className="flex items-center gap-3 overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800/60"
             >
-              <div className="h-11 w-11 flex-shrink-0 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse" />
-              <div className="min-w-0 flex-1 space-y-2">
-                <div className="h-5 w-36 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                <div className="h-3 w-28 rounded-md bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              <div className="self-stretch w-1.5 rounded-l-2xl bg-gray-300 dark:bg-gray-600 animate-pulse" />
+              <div className="min-w-0 flex-1 py-4 space-y-2">
+                <div className="h-5 w-40 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                <div className="h-3.5 w-28 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
               </div>
-              <div className="h-4 w-4 flex-shrink-0 rounded bg-gray-100 dark:bg-gray-800 animate-pulse" />
+              <div className="h-5 w-5 mr-5 flex-shrink-0 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
             </div>
           ))}
         </div>

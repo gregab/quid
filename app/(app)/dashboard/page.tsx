@@ -2,21 +2,21 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
-// Nature-inspired palettes — warm, earthy tones that feel cohesive with the Aviary brand.
-// Each has a rich bg for the monogram, a subtle wash tint for the card, and harmonious accents.
+// Vivid, nature-inspired palettes. Each group gets a bold stripe color,
+// a noticeable card tint, and a matching text accent. Named after birds.
 const GROUP_PALETTES = [
-  { bg: "#b45309", wash: "#fffbeb", tint: "#fef3c7", text: "#92400e" },  // honeycomb
-  { bg: "#0f766e", wash: "#f0fdfa", tint: "#ccfbf1", text: "#115e59" },  // deep teal
-  { bg: "#9333ea", wash: "#faf5ff", tint: "#f3e8ff", text: "#6b21a8" },  // iris
-  { bg: "#be123c", wash: "#fff1f2", tint: "#ffe4e6", text: "#9f1239" },  // rosefinch
-  { bg: "#1d4ed8", wash: "#eff6ff", tint: "#dbeafe", text: "#1e40af" },  // jay blue
-  { bg: "#047857", wash: "#ecfdf5", tint: "#d1fae5", text: "#065f46" },  // forest
-  { bg: "#c2410c", wash: "#fff7ed", tint: "#ffedd5", text: "#9a3412" },  // terracotta
-  { bg: "#7c3aed", wash: "#f5f3ff", tint: "#ede9fe", text: "#5b21b6" },  // plum
-  { bg: "#0369a1", wash: "#f0f9ff", tint: "#e0f2fe", text: "#075985" },  // kingfisher
-  { bg: "#a16207", wash: "#fefce8", tint: "#fef9c3", text: "#854d0e" },  // ochre
-  { bg: "#4338ca", wash: "#eef2ff", tint: "#e0e7ff", text: "#3730a3" },  // indigo bunting
-  { bg: "#b91c1c", wash: "#fef2f2", tint: "#fee2e2", text: "#991b1b" },  // cardinal
+  { stripe: "#d97706", card: "#fef3c7", cardDark: "#422006", accent: "#b45309" },  // honeycomb
+  { stripe: "#0d9488", card: "#ccfbf1", cardDark: "#042f2e", accent: "#0f766e" },  // teal tanager
+  { stripe: "#7c3aed", card: "#ede9fe", cardDark: "#1e1b4b", accent: "#6d28d9" },  // iris
+  { stripe: "#e11d48", card: "#ffe4e6", cardDark: "#4c0519", accent: "#be123c" },  // rosefinch
+  { stripe: "#2563eb", card: "#dbeafe", cardDark: "#172554", accent: "#1d4ed8" },  // jay blue
+  { stripe: "#059669", card: "#d1fae5", cardDark: "#022c22", accent: "#047857" },  // forest warbler
+  { stripe: "#ea580c", card: "#ffedd5", cardDark: "#431407", accent: "#c2410c" },  // terracotta
+  { stripe: "#9333ea", card: "#f3e8ff", cardDark: "#2e1065", accent: "#7c3aed" },  // plum starling
+  { stripe: "#0284c7", card: "#e0f2fe", cardDark: "#082f49", accent: "#0369a1" },  // kingfisher
+  { stripe: "#ca8a04", card: "#fef9c3", cardDark: "#3f2d06", accent: "#a16207" },  // ochre oriole
+  { stripe: "#4f46e5", card: "#e0e7ff", cardDark: "#1e1b4b", accent: "#4338ca" },  // indigo bunting
+  { stripe: "#dc2626", card: "#fee2e2", cardDark: "#450a0a", accent: "#b91c1c" },  // cardinal
 ];
 
 function hashGroupId(id: string): number {
@@ -29,28 +29,6 @@ function hashGroupId(id: string): number {
 
 function getGroupPalette(id: string) {
   return GROUP_PALETTES[hashGroupId(id) % GROUP_PALETTES.length]!;
-}
-
-// Deterministic abstract pattern per group — a unique SVG "feather" motif
-// based on the group ID hash. Creates visual fingerprinting without emojis.
-function getGroupPattern(id: string): string {
-  const h = hashGroupId(id);
-  const shapes: string[] = [];
-  // Generate 3-5 soft organic ellipses at different positions/rotations
-  const count = 3 + (h % 3);
-  for (let i = 0; i < count; i++) {
-    const seed = hashGroupId(id + i.toString());
-    const cx = 20 + (seed % 60);
-    const cy = 15 + ((seed >> 4) % 70);
-    const rx = 8 + (seed % 18);
-    const ry = 4 + ((seed >> 3) % 12);
-    const rotate = (seed % 180) - 90;
-    const opacity = 0.06 + ((seed % 8) * 0.015);
-    shapes.push(
-      `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${rotate} ${cx} ${cy})" fill="currentColor" opacity="${opacity.toFixed(3)}"/>`
-    );
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">${shapes.join("")}</svg>`;
 }
 
 const BIRD_FACTS = [
@@ -202,68 +180,36 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             {groups.map((group, i) => {
               const palette = getGroupPalette(group.id);
-              const initial = group.name.charAt(0).toUpperCase();
               const memberCount = memberCountMap.get(group.id) ?? 0;
-              const patternSvg = getGroupPattern(group.id);
-              const patternDataUri = `data:image/svg+xml,${encodeURIComponent(patternSvg.replace("currentColor", palette.bg))}`;
 
               return (
                 <Link
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex items-center gap-4 overflow-hidden rounded-2xl border bg-white pl-5 pr-4 py-4 transition-all duration-300 hover:-translate-y-[2px] hover:shadow-xl dark:bg-gray-900/80"
+                  className="group-card group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-transparent pl-0 pr-5 py-0 transition-all duration-300 hover:-translate-y-[2px] hover:shadow-xl"
                   style={{
-                    borderColor: `color-mix(in srgb, ${palette.bg} 15%, transparent)`,
+                    background: palette.card,
                     animationDelay: `${i * 80}ms`,
                   }}
                 >
-                  {/* Subtle pattern background — unique per group */}
+                  {/* Bold color stripe */}
                   <div
-                    className="pointer-events-none absolute inset-0 opacity-40 transition-opacity duration-300 group-hover:opacity-70 dark:opacity-20 dark:group-hover:opacity-40"
-                    style={{
-                      backgroundImage: `url("${patternDataUri}")`,
-                      backgroundSize: "140px 140px",
-                      backgroundPosition: "right center",
-                      backgroundRepeat: "no-repeat",
-                    }}
+                    className="self-stretch w-1.5 flex-shrink-0 rounded-l-2xl transition-all duration-300 group-hover:w-2"
+                    style={{ background: palette.stripe }}
                   />
 
-                  {/* Tinted wash on the left edge */}
-                  <div
-                    className="pointer-events-none absolute inset-y-0 left-0 w-24 opacity-30 dark:opacity-15"
-                    style={{
-                      background: `linear-gradient(to right, ${palette.tint}, transparent)`,
-                    }}
-                  />
-
-                  {/* Monogram — uses the serif logo font for an editorial feel */}
-                  <div
-                    className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-white shadow-md transition-all duration-300 group-hover:shadow-lg group-hover:scale-[1.06]"
-                    style={{
-                      background: palette.bg,
-                      boxShadow: `0 4px 14px -3px color-mix(in srgb, ${palette.bg} 40%, transparent)`,
-                    }}
-                  >
-                    <span
-                      className="text-xl leading-none"
-                      style={{ fontFamily: "var(--font-serif-logo)" }}
-                    >
-                      {initial}
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="relative min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-semibold tracking-tight text-gray-900 dark:text-white">
+                  {/* Content — large name, compact meta */}
+                  <div className="min-w-0 flex-1 py-4">
+                    <p className="truncate text-[17px] font-bold tracking-tight text-gray-900" style={{ color: `color-mix(in srgb, ${palette.accent} 30%, #111827)` }}>
                       {group.name}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs">
-                      <span style={{ color: palette.text }} className="font-medium dark:opacity-80">
+                    <div className="mt-1 flex items-center gap-2 text-[13px]">
+                      <span className="font-medium" style={{ color: palette.accent }}>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <span className="text-gray-300 dark:text-gray-600">/</span>
-                      <span className="text-gray-400 dark:text-gray-500">
+                      <span style={{ color: `color-mix(in srgb, ${palette.accent} 30%, transparent)` }}>&middot;</span>
+                      <span style={{ color: `color-mix(in srgb, ${palette.accent} 50%, #9ca3af)` }}>
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
@@ -274,11 +220,11 @@ export default async function DashboardPage() {
 
                   {/* Arrow */}
                   <div
-                    className="relative flex-shrink-0 transition-all duration-300 group-hover:translate-x-1"
-                    style={{ color: palette.bg }}
+                    className="flex-shrink-0 transition-all duration-300 group-hover:translate-x-1"
+                    style={{ color: palette.stripe }}
                   >
-                    <svg className="h-4 w-4 opacity-40 transition-opacity duration-300 group-hover:opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    <svg className="h-5 w-5 opacity-50 transition-opacity duration-300 group-hover:opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </Link>
