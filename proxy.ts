@@ -48,11 +48,16 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from auth pages
+  // Redirect authenticated users away from auth pages.
+  // Honor ?next= so users land on the right page (e.g. returning to an invite link).
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
   if (isAuthRoute && user) {
+    const next = request.nextUrl.searchParams.get("next") ?? "";
+    const isSafePath = (p: string) =>
+      p.startsWith("/") && !p.startsWith("//") && !p.includes("://");
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = isSafePath(next) ? next : "/dashboard";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 
