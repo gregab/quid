@@ -195,7 +195,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
               <h1 className="text-xl sm:text-2xl font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
-                {group.emoji ?? defaultGroupEmoji} {group.name}
+                {group.name}
               </h1>
             </div>
             <div className="absolute top-2 right-2">
@@ -213,7 +213,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         {!group.bannerUrl && (
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {group.emoji ?? defaultGroupEmoji} {group.name}
+              {group.name}
             </h1>
             <GroupSettingsButton
               groupId={group.id}

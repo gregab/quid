@@ -88,7 +88,7 @@ export function GroupInteractive({
   return (
     <>
       {/* Balances — compact text beneath member pills */}
-      <div className="text-sm -mt-3 sm:-mt-5 px-3 sm:px-4">
+      <div className="text-sm -mt-3 sm:-mt-5">
         {resolvedDebts.length === 0 ? (
           <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
