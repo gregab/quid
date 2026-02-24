@@ -16,6 +16,7 @@ export interface Member {
   displayName: string;
   emoji?: string;
   color?: MemberColor;
+  avatarUrl?: string | null;
 }
 
 export interface ExpenseRow {

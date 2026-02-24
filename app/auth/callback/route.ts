@@ -23,6 +23,11 @@ export async function GET(request: Request) {
     // Without this, the user can't be added as a group member until they've
     // visited the app at least once (which triggers the upsert in app layout).
     if (user) {
+      const avatarUrl =
+        (user.user_metadata?.picture as string | undefined) ??
+        (user.user_metadata?.avatar_url as string | undefined) ??
+        null;
+
       await supabase.from("User").upsert(
         {
           id: user.id,
@@ -32,9 +37,18 @@ export async function GET(request: Request) {
             (user.user_metadata?.full_name as string | undefined) ??
             (user.user_metadata?.name as string | undefined) ??
             user.email!.split("@")[0]!,
+          avatarUrl,
         },
         { onConflict: "id", ignoreDuplicates: true }
       );
+
+      // Keep avatar fresh for returning users without touching displayName
+      if (avatarUrl) {
+        await supabase
+          .from("User")
+          .update({ avatarUrl })
+          .eq("id", user.id);
+      }
 
       // If the user arrived via an invite link, auto-join the group so they
       // land on the group page without a separate manual "Join" click.

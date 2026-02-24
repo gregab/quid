@@ -134,6 +134,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     displayName: m.User!.displayName,
     emoji: memberEmojiMap.get(m.userId)!,
     color: memberColorMap.get(m.userId)!,
+    avatarUrl: m.User!.avatarUrl,
   }));
 
   const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => {
@@ -242,6 +243,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               color={memberColorMap.get(m.userId)}
               suffix={m.userId === user.id ? "· you" : undefined}
               title={m.User?.email ?? undefined}
+              avatarUrl={m.User!.avatarUrl}
             />
           ))}
           <CopyInviteLinkButton inviteToken={group.inviteToken} />
