@@ -155,11 +155,6 @@ export default async function DashboardPage() {
             <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
             <CreateGroupButton userId={user.id} />
           </div>
-          {groups.length > 0 && (
-            <p className="mt-1 text-sm sm:text-[13px] text-stone-400 dark:text-stone-500">
-              {groups.length === 1 ? "1 circle of trust" : `${groups.length} circles of trust`}
-            </p>
-          )}
         </div>
 
         {groups.length === 0 ? (
@@ -221,19 +216,19 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {balance !== 0 && (
                       <div className="text-right">
-                        <p className={`text-sm font-semibold ${
-                          balance > 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-600 dark:text-rose-400"
-                        }`}>
-                          {balance > 0 ? `+${formatCents(balance)}` : `-${formatCents(Math.abs(balance))}`}
-                        </p>
                         <p className={`text-[11px] ${
                           balance > 0
                             ? "text-emerald-600/70 dark:text-emerald-400/70"
                             : "text-rose-600/70 dark:text-rose-400/70"
                         }`}>
                           {balance > 0 ? "you are owed" : "you owe"}
+                        </p>
+                        <p className={`text-sm font-semibold ${
+                          balance > 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}>
+                          {formatCents(Math.abs(balance))}
                         </p>
                       </div>
                     )}
