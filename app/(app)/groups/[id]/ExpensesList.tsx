@@ -51,6 +51,9 @@ interface ExpensesListProps {
   userOwesDebts: UserOwesDebt[];
   onOptimisticActivity: (log: ActivityLog) => void;
   onExpensesChange?: (expenses: ExpenseRow[]) => void;
+  onCelebration?: (name: string) => void;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }
 
 
@@ -155,6 +158,9 @@ export function ExpensesList({
   userOwesDebts,
   onOptimisticActivity,
   onExpensesChange,
+  onCelebration,
+  onRefresh,
+  refreshing,
 }: ExpensesListProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -238,7 +244,27 @@ export function ExpensesList({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-stone-900 dark:text-white">Expenses</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-white">Expenses</h2>
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="hidden sm:inline-flex items-center justify-center w-7 h-7 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:text-stone-300 dark:hover:bg-stone-800 transition-colors"
+              aria-label="Refresh"
+            >
+              <svg
+                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          )}
+        </div>
         {/* Desktop: buttons in header */}
         <div className="hidden sm:flex items-center gap-2">
           <RecordPaymentForm
@@ -250,6 +276,7 @@ export function ExpensesList({
             onOptimisticAdd={handleOptimisticAdd}
             onSettled={handleAddSettled}
             onOptimisticActivity={onOptimisticActivity}
+            onCelebration={onCelebration}
           />
           <AddExpenseForm
             groupId={groupId}
@@ -287,7 +314,22 @@ export function ExpensesList({
       </div>
 
       {expenses.length === 0 ? (
-        <p className="text-stone-400 text-sm">No expenses yet. Add one to get started.</p>
+        <Card className="px-5 py-10 text-center">
+          <svg className="mx-auto h-10 w-10 text-stone-300 dark:text-stone-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m3 2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2z" />
+          </svg>
+          <p className="font-semibold text-stone-700 dark:text-stone-200 mb-1">No expenses yet</p>
+          <p className="text-sm text-stone-400 dark:text-stone-500 mb-4">Add your first expense to start splitting costs.</p>
+          <AddExpenseForm
+            groupId={groupId}
+            currentUserId={currentUserId}
+            currentUserDisplayName={currentUserDisplayName}
+            members={members}
+            onOptimisticAdd={handleOptimisticAdd}
+            onSettled={handleAddSettled}
+            onOptimisticActivity={onOptimisticActivity}
+          />
+        </Card>
       ) : (
         <ul className="space-y-2">
           {expenses.slice(0, displayCount).map((expense) => {

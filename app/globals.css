@@ -75,3 +75,15 @@ body {
 .group-card {
   animation: group-card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Settlement celebration banner */
+@keyframes settle-celebrate {
+  0% { opacity: 0; transform: translateY(-8px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.settle-celebrate {
+  animation: settle-celebrate 3s ease-out forwards;
+}

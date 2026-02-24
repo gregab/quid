@@ -23,6 +23,7 @@ interface RecordPaymentFormProps {
   onOptimisticAdd: (expense: ExpenseRow) => void;
   onSettled: () => void;
   onOptimisticActivity: (log: ActivityLog) => void;
+  onCelebration?: (name: string) => void;
 }
 
 type ModalStep =
@@ -38,6 +39,7 @@ export function RecordPaymentForm({
   onOptimisticAdd,
   onSettled,
   onOptimisticActivity,
+  onCelebration,
 }: RecordPaymentFormProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<ModalStep>({ type: "pick" });
@@ -120,6 +122,11 @@ export function RecordPaymentForm({
 
     const debtForTo = userOwesDebts.find((d) => d.toId === submittedToId);
     const settledUp = isPreset && debtForTo !== undefined && amountCents === debtForTo.amountCents;
+
+    // Trigger celebration for settle-up payments
+    if (settledUp && onCelebration) {
+      onCelebration(toDisplayName);
+    }
 
     // Close modal and reset
     setOpen(false);

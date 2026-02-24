@@ -34,7 +34,7 @@ export default function CreateGroupButton({ userId, variant = "default" }: { use
     setOpen(false);
     setName("");
     setLoading(false);
-    router.refresh();
+    router.push(`/groups/${json.data!.id}`);
   }
 
   function handleClose() {

@@ -64,7 +64,7 @@ describe("GroupInteractive — Balances section", () => {
 
   it("shows 'Everyone's settled up!' when there are no expenses", () => {
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[]} />);
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
   });
 
   it("shows the correct debt amount when one member paid for all", () => {
@@ -92,12 +92,12 @@ describe("GroupInteractive — Balances section", () => {
     const exp1 = makeExpense({ id: "1", amountCents: 1000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
     const exp2 = makeExpense({ id: "2", amountCents: 1000, paidById: "user-b", participantIds: ["user-a", "user-b"] });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[exp1, exp2]} />);
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
   });
 
   it("updates balances when initialExpenses changes via rerender", () => {
     const { rerender } = render(<GroupInteractive {...BASE_PROPS} initialExpenses={[]} />);
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
 
     const expense = makeExpense({ amountCents: 2000, paidById: "user-a", participantIds: ["user-a", "user-b"] });
     rerender(<GroupInteractive {...BASE_PROPS} initialExpenses={[expense]} />);
@@ -238,7 +238,7 @@ describe("GroupInteractive — Balances with custom (uneven) splits", () => {
       splits: [{ userId: "user-a", amountCents: 6000 }],
     });
     render(<GroupInteractive {...BASE_PROPS} initialExpenses={[exp1, exp2]} />);
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
   });
 });
 
@@ -381,7 +381,7 @@ describe("GroupInteractive — deleted account balance integrity", () => {
         initialExpenses={[exp1, exp2]}
       />
     );
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
   });
 });
 
@@ -441,7 +441,7 @@ describe("GroupInteractive — balance UI improvements", () => {
     render(<GroupInteractive {...THREE_MEMBER_PROPS} initialExpenses={[]} />);
     expect(screen.queryByText(/you're all settled up/i)).toBeNull();
     // The "everyone" message appears instead
-    expect(screen.getByText(/everyone.*settled up/i)).toBeTruthy();
+    expect(screen.getByText(/all settled up/i)).toBeTruthy();
   });
 
   it("current user's debt appears before debts not involving them", () => {

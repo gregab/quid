@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useActivityLogs } from "./useActivityLogs";
 import { ActivityFeed, type ActivityLog } from "./ActivityFeed";
 import { ExpensesList } from "./ExpensesList";
@@ -9,6 +10,7 @@ import { simplifyDebts } from "@/lib/balances/simplify";
 import { buildRawDebts } from "@/lib/balances/buildRawDebts";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
+import { Card } from "@/components/ui/Card";
 
 interface GroupInteractiveProps {
   groupId: string;
@@ -85,27 +87,76 @@ export function GroupInteractive({
     resolvedDebts.length > 0 &&
     !resolvedDebts.some((d) => d.fromId === currentUserId || d.toId === currentUserId);
 
+  // Net balance for summary line
+  const netBalance = useMemo(() => {
+    let total = 0;
+    for (const debt of resolvedDebts) {
+      if (debt.toId === currentUserId) total += debt.amountCents;
+      if (debt.fromId === currentUserId) total -= debt.amountCents;
+    }
+    return total;
+  }, [resolvedDebts, currentUserId]);
+
+  // Settlement celebration (#8)
+  const [celebration, setCelebration] = useState<string | null>(null);
+  const handleCelebration = useCallback((name: string) => {
+    setCelebration(name);
+    setTimeout(() => setCelebration(null), 3000);
+  }, []);
+
+  // Refresh button state (#9)
+  const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    router.refresh();
+    setTimeout(() => setRefreshing(false), 600);
+  }, [router]);
+
   return (
     <>
-      {/* Balances — compact text beneath member pills */}
-      <div className="text-sm -mt-3 sm:-mt-5">
-        {resolvedDebts.length === 0 ? (
-          <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Everyone&apos;s settled up!
-          </p>
-        ) : (
-          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5 text-stone-500 dark:text-stone-400">
-            {userIsSettledUp && (
-              <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                You&apos;re all settled up!
-              </span>
-            )}
+      {/* Settlement celebration banner */}
+      {celebration && (
+        <div className="settle-celebrate rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm font-medium text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300">
+          Settled up with {celebration}! ✨
+        </div>
+      )}
+
+      {/* Balance card */}
+      <Card className="px-4 py-3 -mt-2 sm:-mt-4">
+        {/* Net summary line */}
+        <div className="flex items-center gap-2 mb-1.5">
+          {resolvedDebts.length === 0 ? (
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              All settled up
+            </p>
+          ) : netBalance > 0 ? (
+            <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              You&apos;re owed {formatCents(netBalance)} total
+            </p>
+          ) : netBalance < 0 ? (
+            <p className="text-sm font-semibold text-rose-500 dark:text-rose-400">
+              You owe {formatCents(Math.abs(netBalance))} total
+            </p>
+          ) : userIsSettledUp ? (
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              You&apos;re all settled up
+            </p>
+          ) : (
+            <p className="text-sm font-semibold text-stone-500 dark:text-stone-400">
+              Balances
+            </p>
+          )}
+        </div>
+        {/* Individual debt lines */}
+        {resolvedDebts.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-x-3 gap-y-0.5 text-sm text-stone-500 dark:text-stone-400">
             {resolvedDebts.map((debt, i) => {
               const isCurrentUserOwing = debt.fromId === currentUserId;
               const isCurrentUserReceiving = debt.toId === currentUserId;
@@ -140,7 +191,7 @@ export function GroupInteractive({
             })}
           </div>
         )}
-      </div>
+      </Card>
 
       <ExpensesList
         groupId={groupId}
@@ -153,6 +204,9 @@ export function GroupInteractive({
         userOwesDebts={userOwesDebts}
         onOptimisticActivity={addOptimisticLog}
         onExpensesChange={handleExpensesChange}
+        onCelebration={handleCelebration}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
       />
       <ActivityFeed
         logs={logs}

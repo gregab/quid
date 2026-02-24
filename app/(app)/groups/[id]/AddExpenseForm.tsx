@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
+import { formatCents } from "@/lib/format";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
 import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 
@@ -404,22 +405,24 @@ export function AddExpenseForm({
                   autoFocus
                 />
               </div>
-              <div>
-                <label htmlFor="expenseAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                  Amount ($)
-                </label>
-                <Input
-                  id="expenseAmount"
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  placeholder="0.00"
-                  value={amount}
-                  hasError={amountError}
-                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
-                  onBlur={handleAmountBlur}
-                  onFocus={handleAmountFocus}
-                />
+              {/* Hero amount input */}
+              <div className="flex flex-col items-center py-2">
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-3xl font-bold text-stone-300 dark:text-stone-600 select-none">$</span>
+                  <input
+                    id="expenseAmount"
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    aria-label="Amount"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                    onBlur={handleAmountBlur}
+                    onFocus={handleAmountFocus}
+                    className={`w-32 bg-transparent text-center text-3xl font-bold tracking-tight text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none ${amountError ? "text-red-600 dark:text-red-400" : ""}`}
+                  />
+                </div>
                 {amountErrorMessage && (
                   <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                     <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -443,21 +446,48 @@ export function AddExpenseForm({
                 />
               </div>
               <div>
-                <label htmlFor="expensePaidBy" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
                   Paid by
                 </label>
-                <select
-                  id="expensePaidBy"
-                  value={paidByUserId}
-                  onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                >
-                  {members.map((m) => (
-                    <option key={m.userId} value={m.userId}>
-                      {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
-                    </option>
-                  ))}
-                </select>
+                {members.length <= 6 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {members.map((m) => {
+                      const selected = paidByUserId === m.userId;
+                      return (
+                        <button
+                          key={m.userId}
+                          type="button"
+                          onClick={() => setPaidByUserId(m.userId)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                            selected
+                              ? "ring-2 ring-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                              : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-700/60 dark:text-stone-300 dark:hover:bg-stone-700"
+                          }`}
+                        >
+                          {selected && (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                          {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <select
+                    id="expensePaidBy"
+                    value={paidByUserId}
+                    onChange={(e) => setPaidByUserId(e.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                  >
+                    {members.map((m) => (
+                      <option key={m.userId} value={m.userId}>
+                        {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <p className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Split between</p>
@@ -499,6 +529,15 @@ export function AddExpenseForm({
                         </button>
                       ))}
                     </div>
+                    {/* Equal split preview */}
+                    {splitType === "equal" && totalCentsValid && participantIds.size > 0 && (
+                      <p className="mt-2 text-xs text-stone-400 dark:text-stone-500 transition-opacity">
+                        = {formatCents(splitAmount(parsedTotalCents, participantIds.size)[0]!)} each
+                        {parsedTotalCents % participantIds.size !== 0 && (
+                          <span className="ml-1 text-stone-300 dark:text-stone-600">(penny rounded)</span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 )}
 
