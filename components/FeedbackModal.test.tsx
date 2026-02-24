@@ -74,6 +74,43 @@ describe("FeedbackModal — modal lifecycle", () => {
   });
 });
 
+// ─── Character counter ────────────────────────────────────────────────────────
+
+describe("FeedbackModal — character counter", () => {
+  it("shows 0/5000 initially", () => {
+    render(<FeedbackModal />);
+    openModal();
+    expect(screen.getByText("0/5000")).toBeTruthy();
+  });
+
+  it("updates counter as user types", () => {
+    render(<FeedbackModal />);
+    openModal();
+    fireEvent.change(getTextarea(), { target: { value: "Hello" } });
+    expect(screen.getByText("5/5000")).toBeTruthy();
+  });
+
+  it("enforces maxLength=5000 on the textarea", () => {
+    render(<FeedbackModal />);
+    openModal();
+    expect(getTextarea().maxLength).toBe(5000);
+  });
+
+  it("highlights counter in red when near the limit (>= 4800)", () => {
+    render(<FeedbackModal />);
+    openModal();
+    fireEvent.change(getTextarea(), { target: { value: "a".repeat(4800) } });
+    expect(screen.getByText("4800/5000").className).toContain("text-red-500");
+  });
+
+  it("counter is not red below 4800 chars", () => {
+    render(<FeedbackModal />);
+    openModal();
+    fireEvent.change(getTextarea(), { target: { value: "a".repeat(4799) } });
+    expect(screen.getByText("4799/5000").className).not.toContain("text-red-500");
+  });
+});
+
 // ─── Submission ───────────────────────────────────────────────────────────────
 
 describe("FeedbackModal — submission", () => {

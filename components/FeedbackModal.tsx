@@ -110,15 +110,21 @@ export function FeedbackModal() {
                     id="feedbackMessage"
                     rows={5}
                     required
+                    maxLength={5000}
                     placeholder="Bug, suggestion, or anything else…"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                     autoFocus
                   />
-                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                    Your browser info and current page will be included to help with debugging.
-                  </p>
+                  <div className="mt-1 flex justify-between items-start gap-2">
+                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                      Your browser info and current page will be included to help with debugging.
+                    </p>
+                    <p className={`text-xs shrink-0 ${message.length >= 4800 ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}`}>
+                      {message.length}/5000
+                    </p>
+                  </div>
                 </div>
 
                 {(state === "error") && errorMsg && (
