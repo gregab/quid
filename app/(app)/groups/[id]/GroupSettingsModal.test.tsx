@@ -30,16 +30,14 @@ vi.mock("@/lib/compressImage", () => ({
 
 const defaultProps = {
   groupId: "g1",
-  currentEmoji: null,
   currentBannerUrl: null,
-  defaultEmoji: "🐦",
   onClose: vi.fn(),
 };
 
 beforeEach(() => {
   vi.spyOn(global, "fetch").mockResolvedValue({
     ok: true,
-    json: async () => ({ data: { id: "g1", emoji: null, bannerUrl: null }, error: null }),
+    json: async () => ({ data: { id: "g1", bannerUrl: null }, error: null }),
   } as Response);
 });
 
@@ -51,55 +49,13 @@ afterEach(() => {
 });
 
 describe("GroupSettingsModal", () => {
-  it("renders emoji and banner sections", () => {
+  it("renders banner section", () => {
     render(<GroupSettingsModal {...defaultProps} />);
-    expect(screen.getByText("Group emoji")).toBeTruthy();
     expect(screen.getByText("Banner image")).toBeTruthy();
   });
 
-  it("shows default emoji in the preview when no custom emoji set", () => {
-    render(<GroupSettingsModal {...defaultProps} />);
-    // The preview tile shows the default emoji
-    expect(screen.getByText("🐦")).toBeTruthy();
-  });
-
-  it("shows current emoji in the input when one is set", () => {
-    render(<GroupSettingsModal {...defaultProps} currentEmoji="🦜" />);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    expect(input.value).toBe("🦜");
-  });
-
-  it("accepts a valid emoji", () => {
-    render(<GroupSettingsModal {...defaultProps} />);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "🦜" } });
-    expect(input.value).toBe("🦜");
-  });
-
-  it("rejects plain text characters", () => {
-    render(<GroupSettingsModal {...defaultProps} />);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "abc" } });
-    expect(input.value).toBe("");
-  });
-
-  it("trims to the first grapheme cluster when multiple emojis are pasted", () => {
-    render(<GroupSettingsModal {...defaultProps} />);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "🦜🐦🦅" } });
-    expect(input.value).toBe("🦜");
-  });
-
-  it("shows Reset button when emoji is set and clears it", () => {
-    render(<GroupSettingsModal {...defaultProps} currentEmoji="🦜" />);
-    const reset = screen.getByText("Reset");
-    fireEvent.click(reset);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    expect(input.value).toBe("");
-  });
-
   it("calls PUT /api/groups/g1/settings with correct payload on save", async () => {
-    render(<GroupSettingsModal {...defaultProps} currentEmoji="🦜" />);
+    render(<GroupSettingsModal {...defaultProps} />);
 
     await act(async () => {
       fireEvent.click(screen.getByText("Save"));
@@ -109,24 +65,7 @@ describe("GroupSettingsModal", () => {
       "/api/groups/g1/settings",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ emoji: "🦜", bannerUrl: null }),
-      })
-    );
-  });
-
-  it("sends null emoji when field is blank (revert to default)", async () => {
-    render(<GroupSettingsModal {...defaultProps} currentEmoji="🦜" />);
-    const input = screen.getByPlaceholderText("Default: 🐦") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "" } });
-
-    await act(async () => {
-      fireEvent.click(screen.getByText("Save"));
-    });
-
-    expect(global.fetch).toHaveBeenCalledWith(
-      "/api/groups/g1/settings",
-      expect.objectContaining({
-        body: JSON.stringify({ emoji: null, bannerUrl: null }),
+        body: JSON.stringify({ bannerUrl: null }),
       })
     );
   });

@@ -5,17 +5,13 @@ import { GroupSettingsModal } from "./GroupSettingsModal";
 
 interface Props {
   groupId: string;
-  currentEmoji: string | null;
   currentBannerUrl: string | null;
-  defaultEmoji: string;
   onBanner?: boolean;
 }
 
 export function GroupSettingsButton({
   groupId,
-  currentEmoji,
   currentBannerUrl,
-  defaultEmoji,
   onBanner = false,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -28,7 +24,7 @@ export function GroupSettingsButton({
         className={
           onBanner
             ? "rounded-lg p-1.5 text-white/80 hover:text-white hover:bg-black/30 transition-colors"
-            : "rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            : "rounded-lg p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
         }
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -50,9 +46,7 @@ export function GroupSettingsButton({
       {open && (
         <GroupSettingsModal
           groupId={groupId}
-          currentEmoji={currentEmoji}
           currentBannerUrl={currentBannerUrl}
-          defaultEmoji={defaultEmoji}
           onClose={() => setOpen(false)}
         />
       )}

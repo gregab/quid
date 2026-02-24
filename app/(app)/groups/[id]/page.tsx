@@ -77,10 +77,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
 
-  // Compute the hash-based fallback emoji (same algorithm as dashboard)
-  const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
-  const defaultGroupEmoji = GROUP_EMOJIS[id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GROUP_EMOJIS.length]!;
-
   // Fetch expenses with paidBy user, splits, and recurring template info
   const { data: expenses } = await supabase
     .from("Expense")
@@ -201,9 +197,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className="absolute top-2 right-2">
               <GroupSettingsButton
                 groupId={group.id}
-                currentEmoji={group.emoji ?? null}
                 currentBannerUrl={group.bannerUrl ?? null}
-                defaultEmoji={defaultGroupEmoji}
                 onBanner
               />
             </div>
@@ -218,9 +212,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             </h1>
             <GroupSettingsButton
               groupId={group.id}
-              currentEmoji={group.emoji ?? null}
               currentBannerUrl={group.bannerUrl ?? null}
-              defaultEmoji={defaultGroupEmoji}
             />
           </div>
         )}

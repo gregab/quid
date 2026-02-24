@@ -5,36 +5,18 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/compressImage";
 
-const segmenter = new Intl.Segmenter();
-
-/** Extract the first grapheme cluster from a string. */
-function firstGrapheme(str: string): string {
-  const [first] = segmenter.segment(str);
-  return first?.segment ?? "";
-}
-
-/** Returns true if the string contains an Extended_Pictographic character (emoji). */
-function isEmoji(str: string): boolean {
-  return /\p{Extended_Pictographic}/u.test(str);
-}
-
 interface Props {
   groupId: string;
-  currentEmoji: string | null;
   currentBannerUrl: string | null;
-  defaultEmoji: string;
   onClose: () => void;
 }
 
 export function GroupSettingsModal({
   groupId,
-  currentEmoji,
   currentBannerUrl,
-  defaultEmoji,
   onClose,
 }: Props) {
   const router = useRouter();
-  const [emoji, setEmoji] = useState(currentEmoji ?? "");
   const [bannerUrl, setBannerUrl] = useState<string | null>(currentBannerUrl);
   const [bannerPreview, setBannerPreview] = useState<string | null>(currentBannerUrl);
   const [isPending, startTransition] = useTransition();
@@ -225,7 +207,6 @@ export function GroupSettingsModal({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          emoji: emoji.trim() || null,
           bannerUrl: finalBannerUrl || null,
         }),
       });
@@ -247,13 +228,13 @@ export function GroupSettingsModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 shadow-xl overflow-hidden">
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-stone-900 shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">Group settings</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 dark:border-stone-800">
+          <h2 className="text-base font-semibold text-stone-900 dark:text-white">Group settings</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="rounded-lg p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,43 +244,9 @@ export function GroupSettingsModal({
         </div>
 
         <div className="px-5 py-5 space-y-6">
-          {/* Emoji */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-              Group emoji
-            </label>
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
-                {emoji || defaultEmoji}
-              </div>
-              <input
-                type="text"
-                value={emoji}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (!raw) { setEmoji(""); return; }
-                  const first = firstGrapheme(raw);
-                  if (isEmoji(first)) setEmoji(first);
-                }}
-                placeholder={`Default: ${defaultEmoji}`}
-                className="min-w-0 flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-lg text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
-              {emoji && (
-                <button
-                  type="button"
-                  onClick={() => setEmoji("")}
-                  className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 whitespace-nowrap"
-                >
-                  Reset
-                </button>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-gray-400">Paste or type one emoji</p>
-          </div>
-
           {/* Banner image */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-stone-700 dark:text-stone-300 mb-1.5">
               Banner image
             </label>
 
@@ -309,7 +256,7 @@ export function GroupSettingsModal({
                 <div
                   ref={containerRef}
                   data-testid="pan-container"
-                  className="relative rounded-xl overflow-hidden h-28 cursor-grab active:cursor-grabbing select-none touch-none bg-gray-100 dark:bg-gray-800"
+                  className="relative rounded-xl overflow-hidden h-28 cursor-grab active:cursor-grabbing select-none touch-none bg-stone-100 dark:bg-stone-800"
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
@@ -350,7 +297,7 @@ export function GroupSettingsModal({
                     type="button"
                     onClick={handleCancelCrop}
                     disabled={isBusy}
-                    className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-50"
+                    className="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -377,7 +324,7 @@ export function GroupSettingsModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 px-4 py-8 text-sm text-gray-400 hover:border-amber-300 hover:text-amber-600 dark:hover:border-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
+                className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-stone-200 dark:border-stone-700 px-4 py-8 text-sm text-stone-400 hover:border-amber-300 hover:text-amber-600 dark:hover:border-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
@@ -400,7 +347,7 @@ export function GroupSettingsModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="mt-2 text-xs text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
+                className="mt-2 text-xs text-stone-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors disabled:opacity-50"
               >
                 Change image
               </button>
@@ -415,11 +362,11 @@ export function GroupSettingsModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-stone-100 dark:border-stone-800">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             Cancel
           </button>

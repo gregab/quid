@@ -35,9 +35,7 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
-        currentEmoji={null}
         currentBannerUrl={null}
-        defaultEmoji="🐦"
       />
     );
     expect(screen.getByRole("button", { name: "Group settings" })).toBeTruthy();
@@ -47,9 +45,7 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
-        currentEmoji={null}
         currentBannerUrl={null}
-        defaultEmoji="🐦"
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Group settings" }));
@@ -60,15 +56,13 @@ describe("GroupSettingsButton", () => {
     render(
       <GroupSettingsButton
         groupId="g1"
-        currentEmoji={null}
         currentBannerUrl={null}
-        defaultEmoji="🐦"
       />
     );
     fireEvent.click(screen.getByRole("button", { name: "Group settings" }));
     expect(screen.getByText("Group settings")).toBeTruthy();
 
     fireEvent.click(screen.getByText("Cancel"));
-    expect(screen.queryByText("Group emoji")).toBeNull();
+    expect(screen.queryByText("Banner image")).toBeNull();
   });
 });

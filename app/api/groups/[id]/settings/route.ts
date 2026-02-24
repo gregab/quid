@@ -3,7 +3,6 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
 const updateSettingsSchema = z.object({
-  emoji: z.string().nullable().optional(),
   bannerUrl: z.string().url().nullable().optional(),
 });
 
@@ -43,15 +42,14 @@ export async function PUT(
     );
   }
 
-  const updates: { emoji?: string | null; bannerUrl?: string | null } = {};
-  if ("emoji" in parsed.data) updates.emoji = parsed.data.emoji ?? null;
+  const updates: { bannerUrl?: string | null } = {};
   if ("bannerUrl" in parsed.data) updates.bannerUrl = parsed.data.bannerUrl ?? null;
 
   const { data, error } = await supabase
     .from("Group")
     .update(updates)
     .eq("id", groupId)
-    .select("id, emoji, bannerUrl")
+    .select("id, bannerUrl")
     .single();
 
   if (error) {
