@@ -4,51 +4,6 @@ import CreateGroupButton from "./CreateGroupButton";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
 
-// Nature-inspired palettes — softer tints with a bold stripe accent.
-// Card backgrounds are gentle washes; the stripe provides the pop of color.
-const GROUP_PALETTES = [
-  { stripe: "#d97706", card: "#fefbf3", accent: "#b45309" },  // honeycomb
-  { stripe: "#0d9488", card: "#f3fdfb", accent: "#0f766e" },  // teal tanager
-  { stripe: "#7c3aed", card: "#f8f5ff", accent: "#6d28d9" },  // iris
-  { stripe: "#e11d48", card: "#fff5f6", accent: "#be123c" },  // rosefinch
-  { stripe: "#2563eb", card: "#f3f7ff", accent: "#1d4ed8" },  // jay blue
-  { stripe: "#059669", card: "#f2fdf8", accent: "#047857" },  // forest warbler
-  { stripe: "#ea580c", card: "#fef7f2", accent: "#c2410c" },  // terracotta
-  { stripe: "#9333ea", card: "#f9f5ff", accent: "#7c3aed" },  // plum starling
-  { stripe: "#0284c7", card: "#f2f9ff", accent: "#0369a1" },  // kingfisher
-  { stripe: "#ca8a04", card: "#fefdf3", accent: "#a16207" },  // ochre oriole
-  { stripe: "#4f46e5", card: "#f3f4ff", accent: "#4338ca" },  // indigo bunting
-  { stripe: "#dc2626", card: "#fef5f5", accent: "#b91c1c" },  // cardinal
-];
-
-function hashGroupId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
-}
-
-// Assign palettes to an ordered list of groups ensuring no two adjacent
-// groups share the same color. Each group's palette is deterministic (based
-// on its ID hash) but shifted if it would collide with its neighbor.
-function assignGroupPalettes(groupIds: string[]) {
-  const assignments = new Map<string, (typeof GROUP_PALETTES)[number]>();
-  let prevIndex = -1;
-
-  for (const id of groupIds) {
-    let idx = hashGroupId(id) % GROUP_PALETTES.length;
-    // If this would repeat the previous card's color, bump forward
-    if (idx === prevIndex) {
-      idx = (idx + 1) % GROUP_PALETTES.length;
-    }
-    assignments.set(id, GROUP_PALETTES[idx]!);
-    prevIndex = idx;
-  }
-
-  return assignments;
-}
-
 const BIRD_FACTS = [
   "A group of owls is called a parliament.",
   "A group of penguins is called a colony.",
@@ -164,40 +119,38 @@ export default async function DashboardPage() {
     user.email?.split("@")[0] ??
     "friend";
 
-  const paletteMap = assignGroupPalettes(groups.map((g) => g.id));
-
   // Overall balance across all groups (for summary display)
   const totalBalance = groups.reduce((sum, g) => sum + (balanceMap.get(g.id) ?? 0), 0);
   const hasAnyExpenses = groupsWithExpenses.size > 0;
 
   return (
     <div className="space-y-8 sm:space-y-10">
-      {/* Greeting + overall balance */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900 dark:text-white">
-          Hey {displayName}.
-        </h1>
-        {groups.length > 1 && hasAnyExpenses && (
-          <p className={`mt-1.5 text-base sm:text-lg font-semibold ${
-            totalBalance > 0
-              ? "text-emerald-600 dark:text-emerald-400"
-              : totalBalance < 0
-                ? "text-rose-600 dark:text-rose-400"
-                : "text-emerald-600 dark:text-emerald-400"
-          }`}>
-            {totalBalance > 0
-              ? `You're owed ${formatCents(totalBalance)} overall`
-              : totalBalance < 0
-                ? `You owe ${formatCents(Math.abs(totalBalance))} overall`
-                : "All settled up"
-            }
-          </p>
-        )}
+      {/* Hero */}
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
+        <img
+          src="/birds.jpg"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
+        <div className="relative z-10 px-6 sm:px-8 pt-16 sm:pt-24 pb-6 sm:pb-8">
+          <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md">
+            Hey {displayName}.
+          </h1>
+          {hasAnyExpenses && (
+            <p className="mt-1.5 text-base sm:text-lg font-medium text-white/90 drop-shadow-sm">
+              Right now, you {totalBalance >= 0 ? "are owed" : "owe"}{" "}
+              <span className={totalBalance > 0 ? "font-bold text-emerald-300" : "font-bold text-white"}>
+                {formatCents(Math.abs(totalBalance))}
+              </span>
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Groups section */}
       <div>
-        <div className="mb-5">
+        <div className="mb-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
             <CreateGroupButton userId={user.id} />
@@ -233,9 +186,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="divide-y divide-stone-150 dark:divide-stone-800">
             {groups.map((group, i) => {
-              const palette = paletteMap.get(group.id)!;
               const memberCount = memberCountMap.get(group.id) ?? 0;
               const balance = balanceMap.get(group.id) ?? 0;
               const hasExpenses = groupsWithExpenses.has(group.id);
@@ -245,30 +197,16 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group relative flex overflow-hidden rounded-2xl border border-stone-200/60 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-stone-800 dark:hover:shadow-black/20"
-                  style={{
-                    backgroundColor: palette.card,
-                    animationDelay: `${i * 80}ms`,
-                  }}
+                  className="group-card group flex items-center gap-3 py-4 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2 rounded-lg"
+                  style={{ animationDelay: `${i * 80}ms` }}
                 >
-                  {/* Color stripe */}
-                  <div
-                    className="self-stretch w-1.5 flex-shrink-0 rounded-l-2xl transition-all duration-300 group-hover:w-2"
-                    style={{ background: palette.stripe }}
-                  />
-
-                  <div className="flex-1 min-w-0 p-4 sm:p-5">
-                    {/* Group name */}
-                    <h3 className="truncate text-lg sm:text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
+                  {/* Left: group info */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base sm:text-[15px] font-semibold text-stone-900 dark:text-white">
                       {group.name}
-                    </h3>
-
-                    {/* Meta line */}
-                    <div className="mt-0.5 flex items-center gap-1.5 text-sm sm:text-[13px] text-stone-400 dark:text-stone-500">
-                      <svg className="h-3.5 w-3.5 flex-shrink-0 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>{memberCount}</span>
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-stone-400 dark:text-stone-500">
+                      <span>{memberCount} {memberCount === 1 ? "member" : "members"}</span>
                       <span className="text-stone-300 dark:text-stone-700">&middot;</span>
                       <span>
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
@@ -277,39 +215,43 @@ export default async function DashboardPage() {
                         })}
                       </span>
                     </div>
+                  </div>
 
-                    {/* Balance row */}
-                    <div className="mt-3.5 flex items-center justify-between gap-2">
-                      {balance !== 0 && (
-                        <span className={`text-[15px] font-semibold ${
+                  {/* Right: balance + chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {balance !== 0 && (
+                      <div className="text-right">
+                        <p className={`text-sm font-semibold ${
                           balance > 0
                             ? "text-emerald-600 dark:text-emerald-400"
                             : "text-rose-600 dark:text-rose-400"
                         }`}>
-                          {balance > 0 ? `owed ${formatCents(balance)}` : `owe ${formatCents(Math.abs(balance))}`}
-                        </span>
-                      )}
-                      {balance === 0 && hasExpenses && (
-                        <span className="flex items-center gap-1 text-[13px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                          settled up
-                        </span>
-                      )}
-                      {balance === 0 && !hasExpenses && (
-                        <span className="text-[13px] text-stone-300 dark:text-stone-600">no expenses yet</span>
-                      )}
-                      <svg
-                        className="h-5 w-5 flex-shrink-0 opacity-30 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-60"
-                        style={{ color: palette.stripe }}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
+                          {balance > 0 ? `+${formatCents(balance)}` : `-${formatCents(Math.abs(balance))}`}
+                        </p>
+                        <p className={`text-[11px] ${
+                          balance > 0
+                            ? "text-emerald-600/70 dark:text-emerald-400/70"
+                            : "text-rose-600/70 dark:text-rose-400/70"
+                        }`}>
+                          {balance > 0 ? "you are owed" : "you owe"}
+                        </p>
+                      </div>
+                    )}
+                    {balance === 0 && hasExpenses && (
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                          settled
+                        </p>
+                      </div>
+                    )}
+                    <svg
+                      className="h-4 w-4 text-stone-300 dark:text-stone-600 transition-transform duration-150 group-hover:translate-x-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </Link>
               );

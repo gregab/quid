@@ -76,13 +76,6 @@ body {
   animation: group-card-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Override inline palette background in dark mode */
-@media (prefers-color-scheme: dark) {
-  .group-card {
-    background-color: #1c1917 !important; /* stone-900 */
-  }
-}
-
 /* Settlement celebration banner */
 @keyframes settle-celebrate {
   0% { opacity: 0; transform: translateY(-8px); }
