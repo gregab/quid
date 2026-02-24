@@ -77,6 +77,22 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     data: { user },
   } = await supabase.auth.getUser();
 
+  // The invite page is outside the (app) layout, so we must ensure the User
+  // row exists here — the (app)/layout.tsx upsert doesn't run for this route.
+  // Without this, join_group_by_token fails with a FK constraint violation.
+  if (user) {
+    await supabase.from("User").upsert(
+      {
+        id: user.id,
+        email: user.email!,
+        displayName:
+          (user.user_metadata?.display_name as string | undefined) ??
+          user.email!.split("@")[0]!,
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+  }
+
   const { data, error } = await supabase.rpc("get_group_by_invite_token", { _token: token });
 
   if (error || !data) {
