@@ -126,7 +126,7 @@ export default async function DashboardPage() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your groups</h2>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               {groups.length === 0
-                ? "None yet — you're either incredibly generous or very new here."
+                ? "Start a group and have fun."
                 : groups.length === 1
                 ? "1 circle of trust (financially speaking)"
                 : `${groups.length} circles of trust (financially speaking)`}
@@ -136,12 +136,18 @@ export default async function DashboardPage() {
         </div>
 
         {groups.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/80 px-5 py-12 sm:px-6 sm:py-20 text-center dark:border-gray-600 dark:bg-gray-800/50">
-            <div className="mb-3 sm:mb-4 text-5xl sm:text-6xl">🪺</div>
-            <p className="mb-2 text-lg sm:text-xl font-bold text-gray-700 dark:text-gray-300">No groups yet</p>
-            <p className="mx-auto max-w-sm text-sm sm:text-base text-gray-500 dark:text-gray-400">
-              An empty nest. Start a group and get your birds in a row.
+          <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-amber-50/40 px-5 py-10 sm:px-8 sm:py-14 text-center shadow-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:via-stone-900/20 dark:to-amber-950/10">
+            <div className="mb-4 sm:mb-5 text-5xl sm:text-6xl">🕊️</div>
+            <p className="mb-1.5 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Welcome to the nest</p>
+            <p className="mx-auto mb-6 max-w-xs text-sm sm:text-base text-gray-500 dark:text-gray-400">
+              Start a group to split expenses with friends, roommates, or travel buddies.
             </p>
+            <div className="flex flex-col items-center gap-3">
+              <CreateGroupButton userId={user.id} variant="large" />
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Or ask a friend for an invite link to join theirs
+              </p>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
