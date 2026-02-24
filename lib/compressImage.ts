@@ -1,6 +1,6 @@
-/** Max output dimensions for banner images (2× retina at max-w-4xl container). */
-const MAX_WIDTH = 2400;
-const MAX_HEIGHT = 800;
+/** Default max output dimensions for banner images (2× retina at max-w-4xl container). */
+const DEFAULT_MAX_WIDTH = 2400;
+const DEFAULT_MAX_HEIGHT = 800;
 
 /** Storage bucket hard limit. We guarantee output stays under this. */
 export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -12,15 +12,17 @@ export const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 export const QUALITY_LADDER = [0.85, 0.7, 0.55, 0.4, 0.25];
 
 /**
- * Calculate output dimensions preserving aspect ratio, capped at MAX_WIDTH × MAX_HEIGHT.
+ * Calculate output dimensions preserving aspect ratio, capped at maxWidth × maxHeight.
  * Exported for testing.
  */
 export function calculateDimensions(
   srcWidth: number,
-  srcHeight: number
+  srcHeight: number,
+  maxWidth = DEFAULT_MAX_WIDTH,
+  maxHeight = DEFAULT_MAX_HEIGHT,
 ): { width: number; height: number } {
-  const widthRatio = MAX_WIDTH / srcWidth;
-  const heightRatio = MAX_HEIGHT / srcHeight;
+  const widthRatio = maxWidth / srcWidth;
+  const heightRatio = maxHeight / srcHeight;
   const ratio = Math.min(widthRatio, heightRatio, 1); // never upscale
   return {
     width: Math.round(srcWidth * ratio),
@@ -47,7 +49,10 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
  * the result is under MAX_FILE_BYTES (2 MB). Works for any input size.
  * Browser-only (requires canvas + FileReader).
  */
-export function compressImage(file: File): Promise<Blob> {
+export function compressImage(
+  file: File,
+  options?: { maxWidth?: number; maxHeight?: number },
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("Failed to read file"));
@@ -55,7 +60,10 @@ export function compressImage(file: File): Promise<Blob> {
       const img = new Image();
       img.onerror = () => reject(new Error("Failed to load image"));
       img.onload = async () => {
-        const { width, height } = calculateDimensions(img.naturalWidth, img.naturalHeight);
+        const { width, height } = calculateDimensions(
+          img.naturalWidth, img.naturalHeight,
+          options?.maxWidth, options?.maxHeight,
+        );
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = height;

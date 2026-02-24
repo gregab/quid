@@ -10,5 +10,20 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/login");
 
-  return <SettingsClient email={user.email ?? ""} />;
+  const { data: userData } = await supabase
+    .from("User")
+    .select("displayName, avatarUrl, profilePictureUrl, defaultEmoji")
+    .eq("id", user.id)
+    .single();
+
+  return (
+    <SettingsClient
+      email={user.email ?? ""}
+      userId={user.id}
+      displayName={userData?.displayName ?? user.email ?? ""}
+      profilePictureUrl={userData?.profilePictureUrl ?? null}
+      avatarUrl={userData?.avatarUrl ?? null}
+      defaultEmoji={userData?.defaultEmoji ?? "🦊"}
+    />
+  );
 }

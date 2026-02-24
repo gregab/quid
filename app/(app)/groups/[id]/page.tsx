@@ -11,13 +11,6 @@ import { getUserDebtCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
 import { ExportButton } from "./ExportButton";
 
-// None of these overlap with GROUP_EMOJIS in dashboard/page.tsx
-const MEMBER_EMOJIS = [
-  "🦊", "🐼", "🧙", "🦄", "🐬", "🦁", "🐙", "🐢", "🦝", "🐻",
-  "🐺", "🐲", "🦈", "🐸", "🦇", "🐿️", "🐨", "🐯", "🦦",
-  "🦥", "🦔", "🐵", "🦋", "🐱",
-];
-
 // Each member gets a unique color. Full class strings required for Tailwind JIT.
 const MEMBER_COLORS: MemberColor[] = [
   { bg: "bg-rose-100 dark:bg-rose-900/40", text: "text-rose-700 dark:text-rose-300" },
@@ -80,7 +73,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     (a, b) => a.joinedAt.localeCompare(b.joinedAt)
   );
 
-  const memberEmojiMap = assignMemberValues(groupMembers.map((m) => m.userId), id, MEMBER_EMOJIS);
   const memberColorMap = assignMemberValues(groupMembers.map((m) => m.userId), id, MEMBER_COLORS);
   const isMember = groupMembers.some((m) => m.userId === user.id);
   if (!isMember) redirect("/dashboard");
@@ -132,9 +124,9 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const members: Member[] = groupMembers.map((m) => ({
     userId: m.userId,
     displayName: m.User!.displayName,
-    emoji: memberEmojiMap.get(m.userId)!,
+    emoji: m.User!.defaultEmoji,
     color: memberColorMap.get(m.userId)!,
-    avatarUrl: m.User!.avatarUrl,
+    avatarUrl: m.User!.profilePictureUrl ?? m.User!.avatarUrl,
   }));
 
   const initialExpenses: ExpenseRow[] = (expenses ?? []).map((expense) => {
@@ -239,11 +231,11 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <MemberPill
               key={m.id}
               name={formatDisplayName(m.User!.displayName)}
-              emoji={memberEmojiMap.get(m.userId)}
+              emoji={m.User!.defaultEmoji}
               color={memberColorMap.get(m.userId)}
               suffix={m.userId === user.id ? "· you" : undefined}
               title={m.User?.email ?? undefined}
-              avatarUrl={m.User!.avatarUrl}
+              avatarUrl={m.User!.profilePictureUrl ?? m.User!.avatarUrl}
             />
           ))}
           <CopyInviteLinkButton inviteToken={group.inviteToken} />

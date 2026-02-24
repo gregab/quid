@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
+import { MEMBER_EMOJIS } from "@/lib/constants";
 
 export default async function AppLayout({
   children,
@@ -23,6 +24,8 @@ export default async function AppLayout({
     (user.user_metadata?.avatar_url as string | undefined) ??
     null;
 
+  const defaultEmoji = MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)]!;
+
   await supabase.from("User").upsert(
     {
       id: user.id,
@@ -31,6 +34,7 @@ export default async function AppLayout({
         (user.user_metadata?.display_name as string | undefined) ??
         user.email!.split("@")[0]!,
       avatarUrl,
+      defaultEmoji,
     },
     { onConflict: "id", ignoreDuplicates: true }
   );
@@ -43,9 +47,19 @@ export default async function AppLayout({
       .eq("id", user.id);
   }
 
+  // Fetch resolved avatar for the nav bar
+  const { data: userData } = await supabase
+    .from("User")
+    .select("profilePictureUrl, avatarUrl, defaultEmoji")
+    .eq("id", user.id)
+    .single();
+
+  const navAvatarUrl = userData?.profilePictureUrl ?? userData?.avatarUrl ?? null;
+  const navEmoji = userData?.defaultEmoji ?? "🦊";
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <Nav email={user.email ?? ""} />
+      <Nav email={user.email ?? ""} avatarUrl={navAvatarUrl} defaultEmoji={navEmoji} />
       <main className="max-w-4xl mx-auto px-4 py-5 sm:py-8">{children}</main>
     </div>
   );

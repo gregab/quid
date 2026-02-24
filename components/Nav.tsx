@@ -1,12 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FeedbackModal } from "@/components/FeedbackModal";
 
-export default function Nav({ email }: { email: string }) {
+interface NavProps {
+  email: string;
+  avatarUrl?: string | null;
+  defaultEmoji?: string;
+}
+
+export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
   const router = useRouter();
+  const [imgError, setImgError] = useState(false);
+  const showAvatar = avatarUrl && !imgError;
 
   async function handleLogout() {
     const supabase = createClient();
@@ -25,13 +34,22 @@ export default function Nav({ email }: { email: string }) {
           <span className="text-sm text-gray-500 hidden sm:block dark:text-gray-400">{email}</span>
           <Link
             href="/settings"
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors dark:text-gray-400 dark:hover:text-white"
+            className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden hover:ring-2 hover:ring-amber-400 transition-all"
             aria-label="Settings"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            {showAvatar ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={avatarUrl}
+                alt=""
+                className="w-7 h-7 rounded-full object-cover"
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-base dark:bg-amber-900/40">
+                {defaultEmoji ?? "🦊"}
+              </span>
+            )}
           </Link>
           <FeedbackModal />
           <button

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { MEMBER_EMOJIS } from "@/lib/constants";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -28,6 +29,8 @@ export async function GET(request: Request) {
         (user.user_metadata?.avatar_url as string | undefined) ??
         null;
 
+      const defaultEmoji = MEMBER_EMOJIS[Math.floor(Math.random() * MEMBER_EMOJIS.length)]!;
+
       await supabase.from("User").upsert(
         {
           id: user.id,
@@ -38,6 +41,7 @@ export async function GET(request: Request) {
             (user.user_metadata?.name as string | undefined) ??
             user.email!.split("@")[0]!,
           avatarUrl,
+          defaultEmoji,
         },
         { onConflict: "id", ignoreDuplicates: true }
       );

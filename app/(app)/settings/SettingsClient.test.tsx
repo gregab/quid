@@ -13,7 +13,14 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
 
-const BASE_PROPS = { email: "alice@example.com" };
+const BASE_PROPS = {
+  email: "alice@example.com",
+  userId: "user-1",
+  displayName: "Alice",
+  profilePictureUrl: null,
+  avatarUrl: null,
+  defaultEmoji: "🦊",
+};
 
 /** Mock GET /api/account to return the given balances */
 function mockBalanceFetch(
@@ -181,5 +188,89 @@ describe("SettingsClient", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
     expect(screen.queryByText("Delete your account?")).toBeNull();
+  });
+
+  // --- Profile picture tests ---
+
+  it("renders profile picture section", () => {
+    render(<SettingsClient {...BASE_PROPS} />);
+    expect(screen.getByText("Profile picture")).toBeDefined();
+    expect(screen.getByText("Upload photo")).toBeDefined();
+  });
+
+  it("shows default emoji when no avatar URL", () => {
+    render(<SettingsClient {...BASE_PROPS} />);
+    expect(screen.getByText("🦊")).toBeDefined();
+  });
+
+  it("shows avatar image when profilePictureUrl is provided", () => {
+    const { container } = render(
+      <SettingsClient {...BASE_PROPS} profilePictureUrl="https://example.com/pic.jpg" />
+    );
+    const imgs = container.querySelectorAll("img");
+    const avatarImg = Array.from(imgs).find((img) => img.getAttribute("src") === "https://example.com/pic.jpg");
+    expect(avatarImg).toBeDefined();
+  });
+
+  it("shows Google avatar when only avatarUrl is set", () => {
+    const { container } = render(
+      <SettingsClient {...BASE_PROPS} avatarUrl="https://example.com/google.jpg" />
+    );
+    const imgs = container.querySelectorAll("img");
+    const avatarImg = Array.from(imgs).find((img) => img.getAttribute("src") === "https://example.com/google.jpg");
+    expect(avatarImg).toBeDefined();
+  });
+
+  it("prefers profilePictureUrl over avatarUrl", () => {
+    const { container } = render(
+      <SettingsClient
+        {...BASE_PROPS}
+        profilePictureUrl="https://example.com/manual.jpg"
+        avatarUrl="https://example.com/google.jpg"
+      />
+    );
+    const imgs = container.querySelectorAll("img");
+    const manualImg = Array.from(imgs).find((img) => img.getAttribute("src") === "https://example.com/manual.jpg");
+    const googleImg = Array.from(imgs).find((img) => img.getAttribute("src") === "https://example.com/google.jpg");
+    expect(manualImg).toBeDefined();
+    expect(googleImg).toBeUndefined();
+  });
+
+  it("shows Change photo and Remove buttons when profilePictureUrl exists", () => {
+    render(<SettingsClient {...BASE_PROPS} profilePictureUrl="https://example.com/pic.jpg" />);
+    expect(screen.getByText("Change photo")).toBeDefined();
+    expect(screen.getByText("Remove")).toBeDefined();
+  });
+
+  it("shows Upload photo button when no profilePictureUrl", () => {
+    render(<SettingsClient {...BASE_PROPS} />);
+    expect(screen.getByText("Upload photo")).toBeDefined();
+    expect(screen.queryByText("Remove")).toBeNull();
+  });
+
+  it("calls remove API when Remove is clicked", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { profilePictureUrl: null }, error: null }),
+    } as Response);
+
+    render(<SettingsClient {...BASE_PROPS} profilePictureUrl="https://example.com/pic.jpg" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Remove"));
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "/api/account/profile-picture",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ profilePictureUrl: null }),
+      }),
+    );
+  });
+
+  it("displays user name under avatar", () => {
+    render(<SettingsClient {...BASE_PROPS} />);
+    expect(screen.getByText("Alice")).toBeDefined();
   });
 });

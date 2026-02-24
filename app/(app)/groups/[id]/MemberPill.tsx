@@ -25,18 +25,18 @@ export function MemberPill({ name, emoji, color, suffix, title, avatarUrl }: Mem
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${colorClass}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ${colorClass}`}
     >
       {showAvatar ? (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={avatarUrl}
           alt=""
-          className="w-4 h-4 rounded-full object-cover"
+          className="w-6 h-6 rounded-full object-cover"
           onError={() => setImgError(true)}
         />
       ) : (
-        emoji && <span className="text-sm leading-none">{emoji}</span>
+        emoji && <span className="text-base leading-none">{emoji}</span>
       )}
       <span>{name}</span>
       {suffix && <span className="opacity-50">{suffix}</span>}

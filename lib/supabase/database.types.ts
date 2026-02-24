@@ -374,23 +374,29 @@ export type Database = {
         Row: {
           avatarUrl: string | null
           createdAt: string
+          defaultEmoji: string
           displayName: string
           email: string
           id: string
+          profilePictureUrl: string | null
         }
         Insert: {
           avatarUrl?: string | null
           createdAt?: string
+          defaultEmoji?: string
           displayName: string
           email: string
           id?: string
+          profilePictureUrl?: string | null
         }
         Update: {
           avatarUrl?: string | null
           createdAt?: string
+          defaultEmoji?: string
           displayName?: string
           email?: string
           id?: string
+          profilePictureUrl?: string | null
         }
         Relationships: []
       }
