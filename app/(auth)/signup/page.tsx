@@ -180,7 +180,7 @@ function SignupForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-stone-800 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-stone-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-amber-700 disabled:opacity-50 active:scale-[0.98]"
             >
               {loading ? "Creating account..." : "Create account →"}
             </button>

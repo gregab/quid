@@ -25,7 +25,7 @@ export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
   }
 
   return (
-    <nav className="border-b border-gray-200 bg-white/80 shadow-sm backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+    <nav className="border-b border-stone-200 bg-white/80 shadow-sm backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950/80">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/dashboard" className="text-2xl text-stone-800 dark:text-stone-200 hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-serif-logo)" }}>
           Aviary
