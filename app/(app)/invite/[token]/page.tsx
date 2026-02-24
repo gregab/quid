@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
         openGraph: {
           title,
           description,
-          siteName: "Aviary — Friendly Expense Splitting",
+          siteName: "Friendly expense splitting",
         },
         twitter: {
           card: "summary",
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     openGraph: {
       title: "You've been invited — Aviary",
       description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
-      siteName: "Aviary — Friendly Expense Splitting",
+      siteName: "Friendly expense splitting",
     },
     twitter: {
       card: "summary",
