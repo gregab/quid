@@ -90,7 +90,7 @@ function DebtLines({ debts, currentUserId }: { debts: ResolvedDebt[]; currentUse
           <button
             type="button"
             onClick={() => setShowAll((prev) => !prev)}
-            className="mt-1 text-xs font-medium text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 transition-colors"
+            className="mt-1 text-xs font-medium text-stone-400 hover:text-amber-600 dark:text-stone-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
           >
             {showAll ? "Show less" : `Show all balances (${otherDebts.length} more)`}
           </button>
