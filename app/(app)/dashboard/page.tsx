@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
+import { GroupThumbnail } from "@/components/GroupThumbnail";
 
 const BIRD_FACTS = [
   "A group of owls is called a parliament.",
@@ -195,6 +196,9 @@ export default async function DashboardPage() {
                   className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < groups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
+                  {/* Thumbnail */}
+                  <GroupThumbnail groupId={group.id} bannerUrl={null} />
+
                   {/* Left: group info */}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-base sm:text-[15px] font-semibold text-stone-900 dark:text-white">
