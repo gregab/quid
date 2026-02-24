@@ -16,6 +16,13 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
       const title = `Join ${group.name} on Aviary`;
       const description = `You've been invited to join ${group.name}. Aviary is a friendly expense splitting app — track shared costs with ease.`;
 
+      const ogImage = {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Aviary — Friendly Expense Splitting",
+      };
+
       return {
         title,
         description,
@@ -23,17 +30,26 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
           title,
           description,
           siteName: "Friendly expense splitting",
+          images: [ogImage],
         },
         twitter: {
-          card: "summary",
+          card: "summary_large_image",
           title,
           description,
+          images: [{ url: "/og-image.jpg", alt: "Aviary — Friendly Expense Splitting" }],
         },
       };
     }
   } catch {
     // fall through to default
   }
+
+  const ogImage = {
+    url: "/og-image.jpg",
+    width: 1200,
+    height: 630,
+    alt: "Aviary — Friendly Expense Splitting",
+  };
 
   return {
     title: "You've been invited — Aviary",
@@ -42,11 +58,13 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
       title: "You've been invited — Aviary",
       description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
       siteName: "Friendly expense splitting",
+      images: [ogImage],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: "You've been invited — Aviary",
       description: "Aviary is a friendly expense splitting app. Join a group to start tracking shared costs.",
+      images: [{ url: "/og-image.jpg", alt: "Aviary — Friendly Expense Splitting" }],
     },
   };
 }
