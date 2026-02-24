@@ -135,6 +135,7 @@ export default async function DashboardPage() {
 
   // Fetch expenses with splits for balance computation
   const balanceMap = new Map<string, number>();
+  const groupsWithExpenses = new Set<string>();
   if (groups.length > 0) {
     const { data: expenses } = await supabase
       .from("Expense")
@@ -145,6 +146,7 @@ export default async function DashboardPage() {
       const byGroup = new Map<string, Array<{ paidById: string; splits: Array<{ userId: string; amountCents: number }> }>>();
       for (const e of expenses) {
         const gId = e.groupId;
+        groupsWithExpenses.add(gId);
         if (!byGroup.has(gId)) byGroup.set(gId, []);
         byGroup.get(gId)!.push({
           paidById: e.paidById,
@@ -268,7 +270,7 @@ export default async function DashboardPage() {
                           </span>
                         </>
                       )}
-                      {balance === 0 && (
+                      {balance === 0 && groupsWithExpenses.has(group.id) && (
                         <>
                           <span className="text-stone-300 dark:text-stone-600">&middot;</span>
                           <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">

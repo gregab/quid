@@ -301,6 +301,7 @@ export function ExpensesList({
           onOptimisticAdd={handleOptimisticAdd}
           onSettled={handleAddSettled}
           onOptimisticActivity={onOptimisticActivity}
+          onCelebration={onCelebration}
         />
         <AddExpenseForm
           groupId={groupId}
