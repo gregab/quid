@@ -194,7 +194,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                 {group.name}
               </h1>
             </div>
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-3 right-3">
               <GroupSettingsButton
                 groupId={group.id}
                 currentGroupName={group.name}
@@ -230,7 +230,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
                   {group.name}
                 </h1>
               </div>
-              <div className="absolute top-2 right-2">
+              <div className="absolute top-3 right-3">
                 <GroupSettingsButton
                   groupId={group.id}
                   currentGroupName={group.name}

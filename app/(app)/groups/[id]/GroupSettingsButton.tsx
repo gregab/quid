@@ -25,8 +25,8 @@ export function GroupSettingsButton({
         aria-label="Group settings"
         className={
           onBanner
-            ? "rounded-lg p-1.5 text-white/80 hover:text-white hover:bg-black/30 transition-colors"
-            : "rounded-lg p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+            ? "rounded-full p-2 bg-black/30 text-white hover:bg-black/50 backdrop-blur-sm transition-colors"
+            : "rounded-full p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
         }
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
