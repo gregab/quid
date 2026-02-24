@@ -48,7 +48,7 @@ export function InviteJoinForm({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-stone-950">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
       <div className="w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
         {/* Hero */}
         <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-10 text-white">
@@ -62,13 +62,13 @@ export function InviteJoinForm({
         </div>
 
         {/* Content */}
-        <div className="bg-white px-8 py-7 dark:bg-gray-900">
+        <div className="bg-white px-8 py-7 dark:bg-stone-900">
           <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500 mb-1">
               Group
             </p>
-            <p className="text-xl font-bold text-gray-900 dark:text-white">{groupName}</p>
-            <p className="text-sm text-gray-400 mt-0.5">
+            <p className="text-xl font-bold text-stone-900 dark:text-white">{groupName}</p>
+            <p className="text-sm text-stone-400 mt-0.5">
               {memberCount} {memberCount === 1 ? "member" : "members"}
             </p>
           </div>
@@ -93,7 +93,7 @@ export function InviteJoinForm({
               >
                 Sign in to join
               </Link>
-              <p className="text-center text-xs text-gray-400">
+              <p className="text-center text-xs text-stone-400">
                 No account?{" "}
                 <Link
                   href={`/signup?next=${encodeURIComponent(`/invite/${token}`)}`}

@@ -171,7 +171,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       <div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-amber-700 mb-3 transition-colors py-1"
+          className="inline-flex items-center gap-1.5 text-sm text-stone-400 hover:text-amber-700 mb-3 transition-colors py-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -207,7 +207,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         {/* Title row (no banner) */}
         {!group.bannerUrl && (
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-white">
               {group.name}
             </h1>
             <GroupSettingsButton

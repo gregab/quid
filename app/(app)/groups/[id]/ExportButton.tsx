@@ -38,7 +38,7 @@ export function ExportButton({ groupId }: { groupId: string }) {
     <button
       onClick={handleExport}
       disabled={loading}
-      className="inline-flex items-center gap-1.5 rounded-full bg-gray-50 border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 hover:border-gray-300 active:scale-[0.97] dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="inline-flex items-center gap-1.5 rounded-full bg-stone-50 border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-100 hover:border-stone-300 active:scale-[0.97] dark:bg-stone-800 dark:border-stone-600 dark:text-stone-300 dark:hover:bg-stone-700 dark:hover:border-stone-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
       aria-label="Export expenses to spreadsheet"
     >
       {/* Download/spreadsheet icon */}

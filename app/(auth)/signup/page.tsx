@@ -58,7 +58,7 @@ function SignupForm() {
 
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-stone-950">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
         <div className="w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
           <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-10 text-white">
             <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
@@ -71,11 +71,11 @@ function SignupForm() {
               </p>
             </div>
           </div>
-          <div className="bg-white px-8 py-7 dark:bg-gray-900">
-            <p className="text-sm text-gray-500">
+          <div className="bg-white px-8 py-7 dark:bg-stone-900">
+            <p className="text-sm text-stone-500">
               Click the link in your email to activate your account. It will not click itself.
             </p>
-            <p className="mt-5 text-center text-xs text-gray-400">
+            <p className="mt-5 text-center text-xs text-stone-400">
               Wrong address?{" "}
               <button
                 onClick={() => setEmailSent(false)}
@@ -91,7 +91,7 @@ function SignupForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-gray-950 dark:via-gray-900 dark:to-stone-950">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
       <div className="w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
 
         {/* Hero top */}
@@ -107,15 +107,15 @@ function SignupForm() {
         </div>
 
         {/* Form */}
-        <div className="bg-white px-8 py-7 dark:bg-gray-900">
+        <div className="bg-white px-8 py-7 dark:bg-stone-900">
           <GoogleSignInButton next={next} />
 
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+              <div className="w-full border-t border-stone-200 dark:border-stone-700" />
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="bg-white px-3 text-gray-400 dark:bg-gray-900 dark:text-gray-500">
+              <span className="bg-white px-3 text-stone-400 dark:bg-stone-900 dark:text-stone-500">
                 or
               </span>
             </div>
@@ -125,7 +125,7 @@ function SignupForm() {
             <div>
               <label
                 htmlFor="displayName"
-                className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+                className="block text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1.5 dark:text-stone-400"
               >
                 Display name
               </label>
@@ -137,13 +137,13 @@ function SignupForm() {
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={30}
                 placeholder="What should people call you?"
-                className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-base sm:text-sm text-stone-900 placeholder-stone-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100 dark:placeholder-stone-500"
               />
             </div>
             <div>
               <label
                 htmlFor="email"
-                className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+                className="block text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1.5 dark:text-stone-400"
               >
                 Email
               </label>
@@ -154,13 +154,13 @@ function SignupForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-base sm:text-sm text-stone-900 placeholder-stone-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100 dark:placeholder-stone-500"
               />
             </div>
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 dark:text-gray-400"
+                className="block text-xs font-semibold uppercase tracking-wide text-stone-500 mb-1.5 dark:text-stone-400"
               >
                 Password
               </label>
@@ -171,7 +171,7 @@ function SignupForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-base sm:text-sm text-gray-900 placeholder-gray-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-base sm:text-sm text-stone-900 placeholder-stone-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100 dark:placeholder-stone-500"
               />
             </div>
             {error && (
@@ -185,7 +185,7 @@ function SignupForm() {
               {loading ? "Creating account..." : "Create account →"}
             </button>
           </form>
-          <p className="mt-5 text-center text-xs text-gray-400">
+          <p className="mt-5 text-center text-xs text-stone-400">
             Already have an account?{" "}
             <Link
               href="/login"

@@ -234,21 +234,21 @@ export function RecordPaymentForm({
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
 
             {/* ── Step 1: Pick who to pay ── */}
             {step.type === "pick" && (
               <>
                 <div className="flex items-center justify-between mb-5">
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">Settle up</h2>
+                    <h2 className="text-lg font-bold text-stone-900 dark:text-white">Settle up</h2>
                     {userOwesDebts.length > 0 && (
-                      <p className="text-sm text-gray-400 mt-0.5">Select who you want to pay.</p>
+                      <p className="text-sm text-stone-400 mt-0.5">Select who you want to pay.</p>
                     )}
                   </div>
                   <button
                     onClick={handleClose}
-                    className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors"
+                    className="rounded-lg p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-700 dark:hover:text-stone-300 transition-colors"
                     aria-label="Close"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,13 +263,13 @@ export function RecordPaymentForm({
                       <button
                         key={debt.toId}
                         onClick={() => handleSelectDebt(debt)}
-                        className="w-full flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-[0.99] dark:border-gray-700 dark:bg-white/[0.03] dark:hover:border-emerald-600 dark:hover:bg-emerald-900/20 group cursor-pointer"
+                        className="w-full flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-left transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-[0.99] dark:border-stone-700 dark:bg-white/[0.03] dark:hover:border-emerald-600 dark:hover:bg-emerald-900/20 group cursor-pointer"
                       >
                         <div className="flex flex-col">
-                          <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                          <span className="font-semibold text-stone-900 dark:text-white text-sm">
                             {debt.toName}
                           </span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                          <span className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">
                             you owe
                           </span>
                         </div>
@@ -278,7 +278,7 @@ export function RecordPaymentForm({
                             {formatCents(debt.amountCents)}
                           </span>
                           <svg
-                            className="h-4 w-4 text-gray-300 group-hover:text-emerald-500 dark:text-gray-600 dark:group-hover:text-emerald-400 transition-colors"
+                            className="h-4 w-4 text-stone-300 group-hover:text-emerald-500 dark:text-stone-600 dark:group-hover:text-emerald-400 transition-colors"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -298,10 +298,10 @@ export function RecordPaymentForm({
                   </div>
                 )}
 
-                <div className={`${userOwesDebts.length > 0 ? "border-t border-gray-100 dark:border-gray-700 pt-4" : ""}`}>
+                <div className={`${userOwesDebts.length > 0 ? "border-t border-stone-100 dark:border-stone-700 pt-4" : ""}`}>
                   <button
                     onClick={handleRecordOther}
-                    className="text-sm text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                    className="text-sm text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 transition-colors cursor-pointer"
                   >
                     Record other payment →
                   </button>
@@ -315,7 +315,7 @@ export function RecordPaymentForm({
                 <div className="flex items-start gap-2 mb-5">
                   <button
                     onClick={handleBack}
-                    className="mt-0.5 rounded-lg p-1 -ml-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors shrink-0"
+                    className="mt-0.5 rounded-lg p-1 -ml-1 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-700 dark:hover:text-stone-300 transition-colors shrink-0"
                     aria-label="Back"
                   >
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,11 +323,11 @@ export function RecordPaymentForm({
                     </svg>
                   </button>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    <h2 className="text-lg font-bold text-stone-900 dark:text-white">
                       {presetToName ? `Pay ${presetToName}` : "Record a payment"}
                     </h2>
                     {!isPreset && (
-                      <p className="text-sm text-gray-400 mt-0.5">Record money sent outside the app.</p>
+                      <p className="text-sm text-stone-400 mt-0.5">Record money sent outside the app.</p>
                     )}
                   </div>
                 </div>
@@ -337,22 +337,22 @@ export function RecordPaymentForm({
                   <div>
                     {isPreset ? (
                       <>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">From</label>
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-white/[0.03] dark:border-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">From</label>
+                        <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 dark:bg-white/[0.03] dark:border-stone-700 dark:text-stone-300">
                           {currentUserDisplayName}{" "}
-                          <span className="text-gray-400 dark:text-gray-500">(you)</span>
+                          <span className="text-stone-400 dark:text-stone-500">(you)</span>
                         </div>
                       </>
                     ) : (
                       <>
-                        <label htmlFor="paymentFrom" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                        <label htmlFor="paymentFrom" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                           From (who sent money)
                         </label>
                         <select
                           id="paymentFrom"
                           value={fromUserId}
                           onChange={(e) => handleFromChange(e.target.value)}
-                          className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                          className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                         >
                           {members.map((m) => (
                             <option key={m.userId} value={m.userId}>
@@ -368,21 +368,21 @@ export function RecordPaymentForm({
                   <div>
                     {isPreset ? (
                       <>
-                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">To</label>
-                        <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 dark:bg-white/[0.03] dark:border-gray-700 dark:text-gray-300">
+                        <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">To</label>
+                        <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 dark:bg-white/[0.03] dark:border-stone-700 dark:text-stone-300">
                           {presetToName}
                         </div>
                       </>
                     ) : (
                       <>
-                        <label htmlFor="paymentTo" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                        <label htmlFor="paymentTo" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                           To (who received money)
                         </label>
                         <select
                           id="paymentTo"
                           value={toUserId}
                           onChange={(e) => setToUserId(e.target.value)}
-                          className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                          className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                         >
                           {toOptions.map((m) => (
                             <option key={m.userId} value={m.userId}>
@@ -396,7 +396,7 @@ export function RecordPaymentForm({
 
                   {/* Amount */}
                   <div>
-                    <label htmlFor="paymentAmount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                    <label htmlFor="paymentAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                       Amount ($)
                     </label>
                     <Input
@@ -421,7 +421,7 @@ export function RecordPaymentForm({
                       </p>
                     )}
                     {isPreset && !amountErrorMessage && (
-                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
                         Full balance owed — you can pay a partial amount too.
                       </p>
                     )}

@@ -492,16 +492,16 @@ export function ExpenseDetailModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
+      <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
         {/* ── VIEW MODE ── */}
         {mode === "view" && (
           <>
             <div className="flex items-start justify-between mb-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500 mb-0.5">
                   {expense.isPayment ? "Payment" : "Expense"}
                 </p>
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-bold text-stone-900 dark:text-white">
                   {expense.isPayment
                     ? `${payerName} → ${recipientName}`
                     : expense.description}
@@ -509,7 +509,7 @@ export function ExpenseDetailModal({
               </div>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mt-1 -mr-1 rounded-lg transition-colors"
+                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 p-1 -mt-1 -mr-1 rounded-lg transition-colors"
                 aria-label="Close"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -521,16 +521,16 @@ export function ExpenseDetailModal({
             {expense.isPayment ? (
               /* Payment: amount + date, names already in title */
               <div className="flex items-baseline gap-1.5 mb-5">
-                <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                <span className="text-2xl font-bold text-stone-900 dark:text-white">
                   {formatCents(expense.amountCents)}
                 </span>
-                <span className="text-sm text-gray-400 dark:text-gray-500">
+                <span className="text-sm text-stone-400 dark:text-stone-500">
                   · {formatDisplayDate(expense.date)}
                 </span>
               </div>
             ) : (
               /* Expense: just the date — amount lives in "Paid by" */
-              <p className="text-sm text-gray-400 dark:text-gray-500 -mt-1 mb-4">
+              <p className="text-sm text-stone-400 dark:text-stone-500 -mt-1 mb-4">
                 {formatDisplayDate(expense.date)}
               </p>
             )}
@@ -540,11 +540,11 @@ export function ExpenseDetailModal({
               <div className="mb-5 space-y-4">
                 {/* Paid by */}
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1.5">
                     Paid by
                   </p>
                   <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl px-3 py-2.5">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="text-sm font-semibold text-stone-900 dark:text-stone-100">
                       {payerName}{expense.paidById === currentUserId ? " (you)" : ""}
                     </span>
                     <span className="text-sm font-bold text-amber-700 dark:text-amber-400 tabular-nums">
@@ -555,7 +555,7 @@ export function ExpenseDetailModal({
 
                 {/* Per-person split with proportion bars */}
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1.5">
                     Split{expense.splitType === "custom" ? " · custom" : ""}
                   </p>
                   <div className="space-y-2.5">
@@ -571,7 +571,7 @@ export function ExpenseDetailModal({
                         <div key={id}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                              <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
                                 {name}{isYou ? " (you)" : ""}
                               </span>
                               {isPayer && (
@@ -580,13 +580,13 @@ export function ExpenseDetailModal({
                                 </span>
                               )}
                             </div>
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 ml-3 shrink-0 tabular-nums">
+                            <span className="text-sm font-semibold text-stone-900 dark:text-stone-100 ml-3 shrink-0 tabular-nums">
                               {formatCents(share)}
                             </span>
                           </div>
-                          <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div className="h-1.5 bg-stone-100 dark:bg-stone-700 rounded-full overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-indigo-400 dark:bg-indigo-500"
+                              className="h-full rounded-full bg-amber-400 dark:bg-amber-500"
                               style={{ width: `${widthPct}%` }}
                             />
                           </div>
@@ -601,7 +601,7 @@ export function ExpenseDetailModal({
             {(createdByName || expense.createdAt || expense.updatedAt) && (
               <div className="space-y-0.5 mb-4">
                 {(createdByName || expense.createdAt) && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
                     {expense.isPayment ? "Recorded by" : "Added by"}{" "}
                     <span className="font-medium">{createdByName ?? "unknown"}</span>
                     {expense.createdAt && (
@@ -610,7 +610,7 @@ export function ExpenseDetailModal({
                   </p>
                 )}
                 {expense.updatedAt && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
+                  <p className="text-xs text-stone-400 dark:text-stone-500">
                     Last edited · {formatDateTime(expense.updatedAt)}
                   </p>
                 )}
@@ -619,11 +619,11 @@ export function ExpenseDetailModal({
 
             {/* Recurring metadata + stop button */}
             {expense.recurringExpense && (
-              <div className="mb-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 overflow-hidden">
+              <div className="mb-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <svg
-                    className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0"
+                    className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -636,7 +636,7 @@ export function ExpenseDetailModal({
                     <path d="M7 23l-4-4 4-4" />
                     <path d="M21 13v2a4 4 0 0 1-4 4H3" />
                   </svg>
-                  <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                  <span className="text-sm font-medium text-amber-700 dark:text-amber-300">
                     Recurring · {expense.recurringExpense.frequency}
                   </span>
                 </div>
@@ -657,7 +657,7 @@ export function ExpenseDetailModal({
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-2 pt-3 border-t border-stone-100 dark:border-stone-700">
               {expense.canDelete ? (
                 <Button
                   type="button"
@@ -694,12 +694,12 @@ export function ExpenseDetailModal({
         {mode === "edit" && (
           <>
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit expense</h2>
-              <p className="text-sm text-gray-400 mt-0.5">Update the details below.</p>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Edit expense</h2>
+              <p className="text-sm text-stone-400 mt-0.5">Update the details below.</p>
             </div>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Description
                 </label>
                 <Input
@@ -713,7 +713,7 @@ export function ExpenseDetailModal({
                 />
               </div>
               <div>
-                <label htmlFor="editAmount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Amount ($)
                 </label>
                 <Input
@@ -728,7 +728,7 @@ export function ExpenseDetailModal({
                 />
               </div>
               <div>
-                <label htmlFor="editDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Date
                 </label>
                 <Input
@@ -741,14 +741,14 @@ export function ExpenseDetailModal({
                 />
               </div>
               <div>
-                <label htmlFor="editPaidBy" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editPaidBy" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Paid by
                 </label>
                 <select
                   id="editPaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -758,7 +758,7 @@ export function ExpenseDetailModal({
                 </select>
               </div>
               <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Split between</p>
+                <p className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Split between</p>
                 <div className="space-y-1.5">
                   {members.map((m) => (
                     <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
@@ -766,17 +766,17 @@ export function ExpenseDetailModal({
                         type="checkbox"
                         checked={participantIds.has(m.userId)}
                         onChange={() => toggleParticipant(m.userId)}
-                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{m.displayName}</span>
+                      <span className="text-sm text-stone-700 dark:text-stone-300">{m.displayName}</span>
                     </label>
                   ))}
                 </div>
 
                 {/* Split type toggle */}
                 {participantIds.size > 0 && (
-                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60">
-                    <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700/60 p-0.5 text-xs font-medium">
+                  <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-700/60">
+                    <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
                       {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
                         <button
                           key={type}
@@ -784,8 +784,8 @@ export function ExpenseDetailModal({
                           onClick={() => handleEditSplitTypeChange(type)}
                           className={`px-3.5 py-1.5 rounded-full transition-all ${
                             editSplitType === type
-                              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                              ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
+                              : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                           }`}
                         >
                           {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
@@ -797,21 +797,21 @@ export function ExpenseDetailModal({
 
                 {/* Percentage inputs for edit mode */}
                 {editSplitType === "percentage" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
                     {orderedEditParticipants.map((m, idx) => (
                       <div
                         key={m.userId}
                         className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
                         }`}
                       >
-                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-24 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
+                        <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -824,15 +824,15 @@ export function ExpenseDetailModal({
                                 new Map(prev).set(m.userId, val)
                               );
                             }}
-                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
+                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
                           />
-                          <span className="pr-2 text-sm text-gray-400 dark:text-gray-500 select-none">%</span>
+                          <span className="pr-2 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
                         </div>
                       </div>
                     ))}
                     {editPercentageRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             Math.abs(editPercentageRemaining) < 0.005
@@ -853,22 +853,22 @@ export function ExpenseDetailModal({
 
                 {/* Custom amount inputs for edit mode */}
                 {editSplitType === "custom" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
                     {orderedEditParticipants.map((m, idx) => (
                       <div
                         key={m.userId}
                         className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
                         }`}
                       >
-                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-28 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
-                          <span className="pl-2.5 text-sm text-gray-400 dark:text-gray-500 select-none">$</span>
+                        <div className="w-28 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                          <span className="pl-2.5 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -881,15 +881,15 @@ export function ExpenseDetailModal({
                                 new Map(prev).set(m.userId, val)
                               );
                             }}
-                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
+                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
                           />
                         </div>
                       </div>
                     ))}
                     {/* Running total indicator */}
                     {totalCentsValid && editCustomRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             editCustomRemaining === 0
@@ -924,10 +924,10 @@ export function ExpenseDetailModal({
         {/* ── DELETE CONFIRM MODE ── */}
         {mode === "delete-confirm" && (
           <>
-            <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">
+            <h2 className="text-lg font-bold text-stone-900 mb-1 dark:text-white">
               {expense.isPayment ? "Delete payment?" : "Delete expense?"}
             </h2>
-            <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
+            <p className="text-sm text-stone-500 mb-5 dark:text-stone-400">
               {expense.isPayment
                 ? "This payment will be permanently deleted and balances will be recalculated."
                 : `"${expense.description}" will be permanently deleted.`}

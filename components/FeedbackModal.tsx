@@ -61,7 +61,7 @@ export function FeedbackModal() {
       <button
         onClick={handleOpen}
         aria-label="Send feedback"
-        className="text-sm text-gray-500 hover:text-gray-900 transition-colors dark:text-gray-400 dark:hover:text-white"
+        className="text-sm text-stone-500 hover:text-stone-900 transition-colors dark:text-stone-400 dark:hover:text-white"
       >
         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -78,12 +78,12 @@ export function FeedbackModal() {
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-stone-800">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Send feedback</h2>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Send feedback</h2>
               <button
                 onClick={handleClose}
-                className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors"
+                className="rounded-lg p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 dark:hover:bg-stone-700 dark:hover:text-stone-300 transition-colors"
                 aria-label="Close"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@ export function FeedbackModal() {
             {state === "success" ? (
               <div className="py-4 text-center">
                 <p className="text-emerald-700 dark:text-emerald-400 font-medium mb-1">Thanks for your feedback!</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">It&apos;s been sent.</p>
+                <p className="text-sm text-stone-500 dark:text-stone-400">It&apos;s been sent.</p>
                 <div className="mt-4 flex justify-center">
                   <Button type="button" variant="ghost" onClick={handleClose}>Close</Button>
                 </div>
@@ -103,7 +103,7 @@ export function FeedbackModal() {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="feedbackMessage" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                  <label htmlFor="feedbackMessage" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                     What&apos;s on your mind?
                   </label>
                   <textarea
@@ -114,14 +114,14 @@ export function FeedbackModal() {
                     placeholder="Bug, suggestion, or anything else…"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 resize-none transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100 dark:placeholder-stone-500"
                     autoFocus
                   />
                   <div className="mt-1 flex justify-between items-start gap-2">
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                    <p className="text-xs text-stone-400 dark:text-stone-500">
                       Your browser info and current page will be included to help with debugging.
                     </p>
-                    <p className={`text-xs shrink-0 ${message.length >= 4800 ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-gray-500"}`}>
+                    <p className={`text-xs shrink-0 ${message.length >= 4800 ? "text-red-500 dark:text-red-400" : "text-stone-400 dark:text-stone-500"}`}>
                       {message.length}/5000
                     </p>
                   </div>

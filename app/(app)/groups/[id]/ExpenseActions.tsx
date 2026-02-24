@@ -277,7 +277,7 @@ export function ExpenseActions({
           <button
             onClick={() => setEditOpen(true)}
             disabled={isPending || editLoading}
-            className="text-gray-300 hover:text-indigo-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="text-stone-300 hover:text-amber-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Edit expense"
           >
             <svg
@@ -299,7 +299,7 @@ export function ExpenseActions({
           <button
             onClick={() => setDeleteConfirm(true)}
             disabled={isPending}
-            className="text-gray-300 hover:text-red-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
+            className="text-stone-300 hover:text-red-500 p-2.5 sm:p-1.5 rounded-lg transition-colors disabled:opacity-40"
             aria-label="Delete expense"
           >
             <svg
@@ -325,14 +325,14 @@ export function ExpenseActions({
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleEditClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit expense</h2>
-              <p className="text-sm text-gray-400 mt-0.5">Update the details below.</p>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Edit expense</h2>
+              <p className="text-sm text-stone-400 mt-0.5">Update the details below.</p>
             </div>
             <form onSubmit={handleEdit} className="space-y-4">
               <div>
-                <label htmlFor="editDescription" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Description
                 </label>
                 <Input
@@ -346,7 +346,7 @@ export function ExpenseActions({
                 />
               </div>
               <div>
-                <label htmlFor="editAmount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Amount ($)
                 </label>
                 <Input
@@ -371,7 +371,7 @@ export function ExpenseActions({
                 )}
               </div>
               <div>
-                <label htmlFor="editDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Date
                 </label>
                 <Input
@@ -384,14 +384,14 @@ export function ExpenseActions({
                 />
               </div>
               <div>
-                <label htmlFor="editPaidBy" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="editPaidBy" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Paid by
                 </label>
                 <select
                   id="editPaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -401,7 +401,7 @@ export function ExpenseActions({
                 </select>
               </div>
               <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Split between</p>
+                <p className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Split between</p>
                 <div className="space-y-1.5">
                   {members.map((m) => (
                     <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
@@ -409,9 +409,9 @@ export function ExpenseActions({
                         type="checkbox"
                         checked={participantIds.has(m.userId)}
                         onChange={() => toggleParticipant(m.userId)}
-                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{m.displayName}</span>
+                      <span className="text-sm text-stone-700 dark:text-stone-300">{m.displayName}</span>
                     </label>
                   ))}
                 </div>
@@ -436,11 +436,11 @@ export function ExpenseActions({
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(false); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 mb-1 dark:text-white">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
+            <h2 className="text-lg font-bold text-stone-900 mb-1 dark:text-white">
               {expense.isPayment ? "Delete payment?" : "Delete expense?"}
             </h2>
-            <p className="text-sm text-gray-500 mb-5 dark:text-gray-400">
+            <p className="text-sm text-stone-500 mb-5 dark:text-stone-400">
               {expense.isPayment
                 ? "This payment will be permanently deleted and balances will be recalculated."
                 : `"${expense.description}" will be permanently deleted.`}

@@ -8,23 +8,23 @@ export const metadata: Metadata = {
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
         <Link
           href="/dashboard"
-          className="mb-8 inline-flex items-center gap-1 text-sm text-gray-400 transition-colors hover:text-amber-700 dark:hover:text-amber-400"
+          className="mb-8 inline-flex items-center gap-1 text-sm text-stone-400 transition-colors hover:text-amber-700 dark:hover:text-amber-400"
         >
           &larr; Back to Aviary
         </Link>
 
-        <h1 className="mb-2 text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mb-2 text-3xl font-black tracking-tight text-stone-900 dark:text-white">
           Terms of Service
         </h1>
-        <p className="mb-8 text-sm text-gray-400">
+        <p className="mb-8 text-sm text-stone-400">
           Last updated: February 22, 2026
         </p>
 
-        <div className="prose prose-sm prose-gray max-w-none dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-a:text-amber-700 dark:prose-a:text-amber-400">
+        <div className="prose prose-sm prose-stone max-w-none dark:prose-invert prose-headings:font-bold prose-headings:tracking-tight prose-a:text-amber-700 dark:prose-a:text-amber-400">
           <h2>1. Acceptance of Terms</h2>
           <p>
             By accessing or using Aviary (the &quot;Service&quot;), operated by Greg Bigelow
@@ -387,8 +387,8 @@ export default function TermsOfServicePage() {
           </p>
         </div>
 
-        <div className="mt-12 border-t border-gray-200 pt-6 dark:border-gray-800">
-          <p className="text-xs text-gray-400">
+        <div className="mt-12 border-t border-stone-200 pt-6 dark:border-stone-800">
+          <p className="text-xs text-stone-400">
             <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400">
               Privacy Policy
             </Link>

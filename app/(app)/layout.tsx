@@ -58,7 +58,7 @@ export default async function AppLayout({
   const navEmoji = userData?.defaultEmoji ?? "🦊";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       <Nav email={user.email ?? ""} avatarUrl={navAvatarUrl} defaultEmoji={navEmoji} />
       <main className="max-w-4xl mx-auto px-4 py-5 sm:py-8">{children}</main>
     </div>

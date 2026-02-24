@@ -159,8 +159,8 @@ export default async function DashboardPage() {
       <div>
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">Your groups</h2>
-            <p className="mt-0.5 text-[13px] text-gray-400 dark:text-gray-500">
+            <h2 className="text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
+            <p className="mt-0.5 text-[13px] text-stone-400 dark:text-stone-500">
               {groups.length === 0
                 ? "Start a group and have fun."
                 : groups.length === 1
@@ -182,13 +182,13 @@ export default async function DashboardPage() {
               >
                 <span className="text-2xl text-white" style={{ fontFamily: "var(--font-serif-logo)" }}>A</span>
               </div>
-              <p className="mb-1.5 text-lg font-bold text-gray-800 dark:text-gray-200">Welcome to the nest</p>
-              <p className="mx-auto mb-7 max-w-xs text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+              <p className="mb-1.5 text-lg font-bold text-stone-800 dark:text-stone-200">Welcome to the nest</p>
+              <p className="mx-auto mb-7 max-w-xs text-sm leading-relaxed text-stone-500 dark:text-stone-400">
                 Start a group to split expenses with friends, roommates, or travel buddies.
               </p>
               <div className="flex flex-col items-center gap-3">
                 <CreateGroupButton userId={user.id} variant="large" />
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p className="text-xs text-stone-400 dark:text-stone-500">
                   Or ask a friend for an invite link to join theirs
                 </p>
               </div>
@@ -219,15 +219,15 @@ export default async function DashboardPage() {
 
                   {/* Content */}
                   <div className="min-w-0 flex-1 py-4">
-                    <p className="truncate text-[17px] font-bold tracking-tight text-gray-900 dark:text-white">
+                    <p className="truncate text-[17px] font-bold tracking-tight text-stone-900 dark:text-white">
                       {group.name}
                     </p>
                     <div className="mt-1 flex items-center gap-2 text-[13px]">
                       <span className="font-medium" style={{ color: palette.accent }}>
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <span className="text-gray-300 dark:text-gray-600">&middot;</span>
-                      <span className="text-gray-400 dark:text-gray-500">
+                      <span className="text-stone-300 dark:text-stone-600">&middot;</span>
+                      <span className="text-stone-400 dark:text-stone-500">
                         {new Date(group.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           year: "numeric",
@@ -260,20 +260,20 @@ export default async function DashboardPage() {
         <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/60 dark:text-amber-400/50">
           Bird fact
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400" style={{ fontFamily: "var(--font-serif-logo)" }}>
+        <p className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400" style={{ fontFamily: "var(--font-serif-logo)" }}>
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>
 
       {/* Footer quip — only when there are groups */}
       {groups.length > 0 && (
-        <p className="pb-2 text-center text-xs italic text-gray-400 dark:text-gray-500">
+        <p className="pb-2 text-center text-xs italic text-stone-400 dark:text-stone-500">
           Maybe the real financial independence is the friends we meticulously tracked along the way.
         </p>
       )}
 
       {/* Support + Legal links */}
-      <div className="pb-4 text-center text-xs text-gray-400 dark:text-gray-500 space-y-1">
+      <div className="pb-4 text-center text-xs text-stone-400 dark:text-stone-500 space-y-1">
         <p>
           <a
             href="https://buymeacoffee.com/gregbigelow"
@@ -286,7 +286,7 @@ export default async function DashboardPage() {
         </p>
         <p>
           <Link href="/privacy" className="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Privacy Policy</Link>
-          <span className="mx-2 text-gray-300 dark:text-gray-700">&middot;</span>
+          <span className="mx-2 text-stone-300 dark:text-stone-700">&middot;</span>
           <Link href="/terms" className="hover:text-amber-700 dark:hover:text-amber-400 transition-colors">Terms of Service</Link>
         </p>
       </div>

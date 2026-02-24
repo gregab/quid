@@ -112,18 +112,18 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-gray-800">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-stone-800">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500 mb-0.5">
               Activity
             </p>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h2>
+            <h2 className="text-lg font-bold text-stone-900 dark:text-white">{title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 -mt-1 -mr-1 rounded-lg transition-colors"
+            className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 p-1 -mt-1 -mr-1 rounded-lg transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -137,52 +137,52 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
           <div className="space-y-3 mb-5">
             {payload.description && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Expense
                 </p>
-                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                <p className="text-base font-semibold text-stone-900 dark:text-white">
                   {payload.description}
                 </p>
               </div>
             )}
             {typeof payload.amountCents === "number" && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Amount
                 </p>
-                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                <p className="text-base font-semibold text-stone-900 dark:text-white">
                   {formatCents(payload.amountCents)}
                 </p>
               </div>
             )}
             {payload.date && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Date
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatExpenseDate(payload.date)}
                 </p>
               </div>
             )}
             {payload.paidByDisplayName && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Paid by
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatDisplayName(payload.paidByDisplayName)}
                 </p>
               </div>
             )}
             {payload.splits && payload.splits.length > 0 ? (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
                 </p>
                 <div className="space-y-0.5">
                   {payload.splits.map((s, i) => (
-                    <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                    <p key={i} className="text-sm text-stone-700 dark:text-stone-300">
                       {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
                     </p>
                   ))}
@@ -190,10 +190,10 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
               </div>
             ) : payload.participantDisplayNames && payload.participantDisplayNames.length > 0 ? (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Split between
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatNameList(payload.participantDisplayNames.map(formatDisplayName))}
                 </p>
               </div>
@@ -207,10 +207,10 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
             {/* Current expense name (always shown for context) */}
             {payload.description && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Expense
                 </p>
-                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                <p className="text-base font-semibold text-stone-900 dark:text-white">
                   {payload.description}
                 </p>
               </div>
@@ -219,10 +219,10 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
             {/* Date as context — only shown when the date didn't change (otherwise it's in Changes) */}
             {payload.date && !payload.changes?.date && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Date
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatExpenseDate(payload.date)}
                 </p>
               </div>
@@ -231,36 +231,36 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
             {/* If there's a rich changes object, show the diff */}
             {hasChanges && payload.changes && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1.5">
                   Changes
                 </p>
                 <div className="space-y-1.5">
                   {payload.changes.description && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Renamed:</span>{" "}
                       {payload.changes.description.from} → {payload.changes.description.to}
                     </p>
                   )}
                   {payload.changes.amount && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Amount:</span>{" "}
                       {formatCents(payload.changes.amount.from)} → {formatCents(payload.changes.amount.to)}
                     </p>
                   )}
                   {payload.changes.date && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Date:</span>{" "}
                       {formatExpenseDate(payload.changes.date.from)} → {formatExpenseDate(payload.changes.date.to)}
                     </p>
                   )}
                   {payload.changes.paidBy && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Payer:</span>{" "}
                       {formatDisplayName(payload.changes.paidBy.from)} → {formatDisplayName(payload.changes.paidBy.to)}
                     </p>
                   )}
                   {(payload.changes.participants?.added ?? []).length > 0 && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Added:</span>{" "}
                       {formatNameList(
                         (payload.changes.participants!.added ?? []).map(formatDisplayName)
@@ -268,7 +268,7 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                     </p>
                   )}
                   {(payload.changes.participants?.removed ?? []).length > 0 && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Removed:</span>{" "}
                       {formatNameList(
                         (payload.changes.participants!.removed ?? []).map(formatDisplayName)
@@ -276,7 +276,7 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                     </p>
                   )}
                   {payload.changes.splitType && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       <span className="font-medium">Split type:</span>{" "}
                       {payload.changes.splitType.from === "custom" ? "Custom" : "Equal"}{" → "}
                       {payload.changes.splitType.to === "custom" ? "Custom" : "Equal"}
@@ -291,10 +291,10 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
               <>
                 {typeof payload.amountCents === "number" && (
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                       Amount
                     </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       {typeof payload.previousAmountCents === "number" &&
                       payload.previousAmountCents !== payload.amountCents
                         ? `${formatCents(payload.previousAmountCents)} → ${formatCents(payload.amountCents)}`
@@ -304,10 +304,10 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
                 )}
                 {payload.paidByDisplayName && (
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                       Paid by
                     </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                    <p className="text-sm text-stone-700 dark:text-stone-300">
                       {formatDisplayName(payload.paidByDisplayName)}
                     </p>
                   </div>
@@ -318,25 +318,25 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
             {/* Splits before/after snapshot */}
             {payload.splitsBefore && payload.splits ? (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1.5">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1.5">
                   Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
                 </p>
                 <div className="space-y-2">
                   <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Before</p>
+                    <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-0.5">Before</p>
                     <div className="space-y-0.5">
                       {payload.splitsBefore.map((s, i) => (
-                        <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                        <p key={i} className="text-sm text-stone-700 dark:text-stone-300">
                           {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
                         </p>
                       ))}
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">After</p>
+                    <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-0.5">After</p>
                     <div className="space-y-0.5">
                       {payload.splits.map((s, i) => (
-                        <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                        <p key={i} className="text-sm text-stone-700 dark:text-stone-300">
                           {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
                         </p>
                       ))}
@@ -346,12 +346,12 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
               </div>
             ) : payload.splits ? (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Split{payload.splitType ? ` (${payload.splitType === "custom" ? "Custom" : "Equal"})` : ""}
                 </p>
                 <div className="space-y-0.5">
                   {payload.splits.map((s, i) => (
-                    <p key={i} className="text-sm text-gray-700 dark:text-gray-300">
+                    <p key={i} className="text-sm text-stone-700 dark:text-stone-300">
                       {formatDisplayName(s.displayName)} · {formatCents(s.amountCents)}
                     </p>
                   ))}
@@ -366,40 +366,40 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
           <div className="space-y-3 mb-5">
             {typeof payload.amountCents === "number" && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Amount
                 </p>
-                <p className="text-base font-semibold text-gray-900 dark:text-white">
+                <p className="text-base font-semibold text-stone-900 dark:text-white">
                   {formatCents(payload.amountCents)}
                 </p>
               </div>
             )}
             {payload.date && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   Date
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatExpenseDate(payload.date)}
                 </p>
               </div>
             )}
             {payload.fromDisplayName && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   From
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatDisplayName(payload.fromDisplayName)}
                 </p>
               </div>
             )}
             {payload.toDisplayName && (
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-1">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500 mb-1">
                   To
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <p className="text-sm text-stone-700 dark:text-stone-300">
                   {formatDisplayName(payload.toDisplayName)}
                 </p>
               </div>
@@ -408,8 +408,8 @@ function ActivityLogModal({ log, onClose }: { log: ActivityLog; onClose: () => v
         )}
 
         {/* Footer */}
-        <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+        <div className="pt-3 border-t border-stone-100 dark:border-stone-700 flex items-center justify-between gap-3">
+          <p className="text-xs text-stone-400 dark:text-stone-500">
             By {formatDisplayName(log.actor.displayName)} · {formatRelativeTime(log.createdAt)}
           </p>
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -444,28 +444,28 @@ export function ActivityFeed({
         <ActivityLogModal log={selectedLog} onClose={() => setSelectedLog(null)} />
       )}
       <section>
-        <h2 className="text-lg font-bold text-gray-900 mb-3 dark:text-white">Activity</h2>
+        <h2 className="text-lg font-bold text-stone-900 mb-3 dark:text-white">Activity</h2>
         {logs.length === 0 ? (
-          <p className="text-sm text-gray-400">No activity yet.</p>
+          <p className="text-sm text-stone-400">No activity yet.</p>
         ) : (
-          <Card className="divide-y divide-gray-100 dark:divide-gray-700">
+          <Card className="divide-y divide-stone-100 dark:divide-stone-700">
             {logs.map((log) => {
               const payload = log.payload as Payload;
               const clickable = isClickable(log);
-              const rowClass = `flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}${clickable ? " cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" : ""}`;
+              const rowClass = `flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}${clickable ? " cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700/50 transition-colors" : ""}`;
               const handleClick = clickable ? () => setSelectedLog(log) : undefined;
 
               if (log.action === "expense_edited") {
                 return (
                   <div key={log.id} className={rowClass} onClick={handleClick}>
-                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">
                       <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                       {" "}edited
                       {payload.description && (
                         <>{" "}<span className="font-medium">{payload.description}</span></>
                       )}
                     </p>
-                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    <span className="text-xs text-stone-400 shrink-0 mt-0.5">
                       {formatRelativeTime(log.createdAt)}
                     </span>
                   </div>
@@ -480,15 +480,15 @@ export function ActivityFeed({
                     <div key={log.id} className={rowClass} onClick={handleClick}>
                       <p className="text-sm leading-snug">
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.fromDisplayName)}</span>
-                        <span className="text-gray-700 dark:text-gray-300">{" "}settled up with{" "}</span>
+                        <span className="text-stone-700 dark:text-stone-300">{" "}settled up with{" "}</span>
                         <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatDisplayName(payload.toDisplayName)}</span>
-                        <span className="text-gray-700 dark:text-gray-300">!</span>
+                        <span className="text-stone-700 dark:text-stone-300">!</span>
                         {typeof payload.amountCents === "number" && (
-                          <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
+                          <span className="text-stone-500 dark:text-stone-400"> ({formatCents(payload.amountCents)})</span>
                         )}
                         <span className="ml-1">✨</span>
                       </p>
-                      <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                      <span className="text-xs text-stone-400 shrink-0 mt-0.5">
                         {formatRelativeTime(log.createdAt)}
                       </span>
                     </div>
@@ -498,7 +498,7 @@ export function ActivityFeed({
                 const verb = log.action === "payment_recorded" ? "recorded a payment" : "deleted a payment";
                 return (
                   <div key={log.id} className={rowClass} onClick={handleClick}>
-                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">
                       <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                       {" "}{verb}
                       {payload.fromDisplayName && payload.toDisplayName && (
@@ -510,10 +510,10 @@ export function ActivityFeed({
                         </>
                       )}
                       {typeof payload.amountCents === "number" && (
-                        <span className="text-gray-500 dark:text-gray-400"> ({formatCents(payload.amountCents)})</span>
+                        <span className="text-stone-500 dark:text-stone-400"> ({formatCents(payload.amountCents)})</span>
                       )}
                     </p>
-                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    <span className="text-xs text-stone-400 shrink-0 mt-0.5">
                       {formatRelativeTime(log.createdAt)}
                     </span>
                   </div>
@@ -523,11 +523,11 @@ export function ActivityFeed({
               if (log.action === "member_left") {
                 return (
                   <div key={log.id} className={rowClass}>
-                    <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                    <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">
                       <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                       {" "}left the group
                     </p>
-                    <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                    <span className="text-xs text-stone-400 shrink-0 mt-0.5">
                       {formatRelativeTime(log.createdAt)}
                     </span>
                   </div>
@@ -542,19 +542,19 @@ export function ActivityFeed({
 
               return (
                 <div key={log.id} className={rowClass} onClick={handleClick}>
-                  <p className="text-sm text-gray-700 leading-snug dark:text-gray-300">
+                  <p className="text-sm text-stone-700 leading-snug dark:text-stone-300">
                     <span className="font-semibold">{formatDisplayName(log.actor.displayName)}</span>
                     {" "}{verb}{" "}
                     {payload.description && (
                       <span className="font-medium">{payload.description}</span>
                     )}
                     {hasAmount && (
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-stone-500 dark:text-stone-400">
                         {" "}({formatCents(payload.amountCents!)})
                       </span>
                     )}
                   </p>
-                  <span className="text-xs text-gray-400 shrink-0 mt-0.5">
+                  <span className="text-xs text-stone-400 shrink-0 mt-0.5">
                     {formatRelativeTime(log.createdAt)}
                   </span>
                 </div>
@@ -566,7 +566,7 @@ export function ActivityFeed({
                   type="button"
                   onClick={onLoadMore}
                   disabled={isLoadingMore}
-                  className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 disabled:opacity-50 font-medium transition-colors"
+                  className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 disabled:opacity-50 font-medium transition-colors"
                 >
                   {isLoadingMore ? "Loading…" : "Load more"}
                 </button>

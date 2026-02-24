@@ -31,7 +31,7 @@ export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
           Aviary
         </Link>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500 hidden sm:block dark:text-gray-400">{email}</span>
+          <span className="text-sm text-stone-500 hidden sm:block dark:text-stone-400">{email}</span>
           <Link
             href="/settings"
             className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden hover:ring-2 hover:ring-amber-400 transition-all"
@@ -54,7 +54,7 @@ export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
           <FeedbackModal />
           <button
             onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors cursor-pointer dark:text-gray-400 dark:hover:text-white"
+            className="text-sm text-stone-500 hover:text-stone-900 transition-colors cursor-pointer dark:text-stone-400 dark:hover:text-white"
           >
             Log out
           </button>

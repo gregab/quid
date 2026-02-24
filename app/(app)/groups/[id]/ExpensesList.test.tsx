@@ -389,12 +389,12 @@ describe("ExpensesList — payment card rendering", () => {
     expect(list?.textContent).toContain("→");
   });
 
-  it("renders amount in indigo for payments", () => {
+  it("renders amount in amber for payments", () => {
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />
     );
-    const amountEl = container.querySelector(".text-indigo-700.font-bold");
-    expect(amountEl, "amount should have indigo color class").not.toBeNull();
+    const amountEl = container.querySelector(".text-amber-700.font-bold");
+    expect(amountEl, "amount should have amber color class").not.toBeNull();
     expect(amountEl!.textContent).toContain("$50.00");
   });
 
@@ -502,12 +502,12 @@ describe("ExpensesList — settled-up payment card rendering", () => {
     expect(list?.textContent).toContain("✨");
   });
 
-  it("renders amount in indigo for settled-up payments", () => {
+  it("renders amount in amber for settled-up payments", () => {
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />
     );
-    const amountEl = container.querySelector(".text-indigo-700.font-bold");
-    expect(amountEl, "amount should have indigo color class").not.toBeNull();
+    const amountEl = container.querySelector(".text-amber-700.font-bold");
+    expect(amountEl, "amount should have amber color class").not.toBeNull();
     expect(amountEl!.textContent).toContain("$50.00");
   });
 

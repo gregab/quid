@@ -297,23 +297,23 @@ export function SettingsClient({
       <div>
         <button
           onClick={() => router.back()}
-          className="mb-4 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          className="mb-4 flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
             <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
           </svg>
           Back
         </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Settings</h1>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           Manage your account
         </p>
       </div>
 
       {/* Profile picture */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Profile picture</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-700 dark:bg-stone-800">
+        <h2 className="text-lg font-semibold text-stone-900 dark:text-white">Profile picture</h2>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           This is how you appear to other group members.
         </p>
 
@@ -334,7 +334,7 @@ export function SettingsClient({
                   <span className="text-4xl">{defaultEmoji}</span>
                 )}
               </div>
-              <p className="mt-2 text-center text-xs text-gray-400">{displayName}</p>
+              <p className="mt-2 text-center text-xs text-stone-400">{displayName}</p>
             </div>
           )}
 
@@ -344,7 +344,7 @@ export function SettingsClient({
               <div
                 ref={containerRef}
                 data-testid="pan-container"
-                className="relative w-40 h-40 rounded-full overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none bg-gray-100 dark:bg-gray-800 mx-auto"
+                className="relative w-40 h-40 rounded-full overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none bg-stone-100 dark:bg-stone-800 mx-auto"
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
@@ -385,7 +385,7 @@ export function SettingsClient({
                   type="button"
                   onClick={handleCancelCrop}
                   disabled={isBusy}
-                  className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  className="rounded-lg px-3 py-1.5 text-sm text-stone-500 hover:text-stone-700 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -405,7 +405,7 @@ export function SettingsClient({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isBusy}
-                className="rounded-lg border border-gray-200 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                className="rounded-lg border border-stone-200 dark:border-stone-600 px-4 py-2 text-sm font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors disabled:opacity-50"
               >
                 {currentProfilePic ? "Change photo" : "Upload photo"}
               </button>
@@ -414,7 +414,7 @@ export function SettingsClient({
                   type="button"
                   onClick={handleRemoveProfilePic}
                   disabled={isBusy}
-                  className="text-sm text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                  className="text-sm text-stone-400 hover:text-red-500 transition-colors disabled:opacity-50"
                 >
                   Remove
                 </button>
@@ -439,17 +439,17 @@ export function SettingsClient({
       </div>
 
       {/* Account info */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Account</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Signed in as <span className="font-medium text-gray-900 dark:text-white">{email}</span>
+      <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm dark:border-stone-700 dark:bg-stone-800">
+        <h2 className="text-lg font-semibold text-stone-900 dark:text-white">Account</h2>
+        <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
+          Signed in as <span className="font-medium text-stone-800 dark:text-white">{email}</span>
         </p>
       </div>
 
       {/* Danger zone */}
-      <div className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm dark:border-red-900/50 dark:bg-gray-800">
+      <div className="rounded-2xl border border-red-200 bg-white p-6 shadow-sm dark:border-red-900/50 dark:bg-stone-800">
         <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">Danger zone</h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
           Permanently delete your account and all associated data. This action cannot be undone.
         </p>
         <div className="mt-4">
@@ -465,14 +465,14 @@ export function SettingsClient({
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget && !loading) setConfirmOpen(false); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-gray-800">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Delete your account?</h2>
-            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl dark:bg-stone-800">
+            <h2 className="text-lg font-bold text-stone-900 dark:text-white">Delete your account?</h2>
+            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
               This will permanently delete your account, remove you from all groups, and erase your data. This cannot be undone.
             </p>
 
             {loadingBalances ? (
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-4 flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
                 <svg className="animate-spin size-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -512,7 +512,7 @@ export function SettingsClient({
             ) : (
               <>
                 <div className="mt-4">
-                  <label htmlFor="confirmDelete" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label htmlFor="confirmDelete" className="block text-sm font-medium text-stone-700 dark:text-stone-300">
                     Type <span className="font-bold">FAREWELL</span> to confirm
                   </label>
                   <input
@@ -520,7 +520,7 @@ export function SettingsClient({
                     type="text"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
-                    className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-red-500 focus:ring-red-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2 text-sm shadow-sm focus:border-red-500 focus:ring-red-500 dark:border-stone-600 dark:bg-stone-700 dark:text-white"
                     placeholder="FAREWELL"
                     disabled={loading}
                     autoComplete="off"

@@ -384,14 +384,14 @@ export function AddExpenseForm({
           className="modal-backdrop fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-[15vh] sm:pt-4 overflow-y-auto backdrop-blur-sm"
           onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
         >
-          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-gray-800">
+          <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl overflow-hidden dark:bg-stone-800">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Add an expense</h2>
-              <p className="text-sm text-gray-400 mt-0.5">Who paid for what?</p>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Add an expense</h2>
+              <p className="text-sm text-stone-400 mt-0.5">Who paid for what?</p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="expenseDescription" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="expenseDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Description
                 </label>
                 <Input
@@ -405,7 +405,7 @@ export function AddExpenseForm({
                 />
               </div>
               <div>
-                <label htmlFor="expenseAmount" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="expenseAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Amount ($)
                 </label>
                 <Input
@@ -430,7 +430,7 @@ export function AddExpenseForm({
                 )}
               </div>
               <div>
-                <label htmlFor="expenseDate" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="expenseDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Date
                 </label>
                 <Input
@@ -443,14 +443,14 @@ export function AddExpenseForm({
                 />
               </div>
               <div>
-                <label htmlFor="expensePaidBy" className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-300">
+                <label htmlFor="expensePaidBy" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                   Paid by
                 </label>
                 <select
                   id="expensePaidBy"
                   value={paidByUserId}
                   onChange={(e) => setPaidByUserId(e.target.value)}
-                  className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                 >
                   {members.map((m) => (
                     <option key={m.userId} value={m.userId}>
@@ -460,7 +460,7 @@ export function AddExpenseForm({
                 </select>
               </div>
               <div>
-                <p className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Split between</p>
+                <p className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Split between</p>
                 <div className="space-y-1.5">
                   {members.map((m) => (
                     <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
@@ -468,12 +468,12 @@ export function AddExpenseForm({
                         type="checkbox"
                         checked={participantIds.has(m.userId)}
                         onChange={() => toggleParticipant(m.userId)}
-                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="text-sm text-stone-700 dark:text-stone-300">
                         {m.displayName}
                         {m.userId === currentUserId && (
-                          <span className="ml-1 text-xs text-gray-400">(you)</span>
+                          <span className="ml-1 text-xs text-stone-400">(you)</span>
                         )}
                       </span>
                     </label>
@@ -482,8 +482,8 @@ export function AddExpenseForm({
 
                 {/* Split type toggle */}
                 {participantIds.size > 0 && (
-                  <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60">
-                    <div className="inline-flex rounded-full bg-gray-100 dark:bg-gray-700/60 p-0.5 text-xs font-medium">
+                  <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-700/60">
+                    <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
                       {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
                         <button
                           key={type}
@@ -491,8 +491,8 @@ export function AddExpenseForm({
                           onClick={() => handleSplitTypeChange(type)}
                           className={`px-3.5 py-1.5 rounded-full transition-all ${
                             splitType === type
-                              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm"
-                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                              ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
+                              : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                           }`}
                         >
                           {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
@@ -504,21 +504,21 @@ export function AddExpenseForm({
 
                 {/* Percentage inputs */}
                 {splitType === "percentage" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
                     {orderedParticipants.map((m, idx) => (
                       <div
                         key={m.userId}
                         className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
                         }`}
                       >
-                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-24 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
+                        <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -529,16 +529,16 @@ export function AddExpenseForm({
                               const val = filterDecimalInput(e.target.value);
                               setPercentages((prev) => new Map(prev).set(m.userId, val));
                             }}
-                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
+                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
                           />
-                          <span className="pr-2 text-sm text-gray-400 dark:text-gray-500 select-none">%</span>
+                          <span className="pr-2 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
                         </div>
                       </div>
                     ))}
                     {/* Running total indicator for percentages */}
                     {percentageRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             Math.abs(percentageRemaining) < 0.005
@@ -559,22 +559,22 @@ export function AddExpenseForm({
 
                 {/* Custom amount inputs */}
                 {splitType === "custom" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-gray-100 dark:border-gray-700/60 overflow-hidden">
+                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
                     {orderedParticipants.map((m, idx) => (
                       <div
                         key={m.userId}
                         className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-gray-50/60 dark:bg-gray-750/30" : ""
+                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
                         }`}
                       >
-                        <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-gray-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400">(you)</span>
                           )}
                         </span>
-                        <div className="w-28 flex items-center rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-gray-900">
-                          <span className="pl-2.5 text-sm text-gray-400 dark:text-gray-500 select-none">$</span>
+                        <div className="w-28 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                          <span className="pl-2.5 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
                           <input
                             type="text"
                             inputMode="decimal"
@@ -585,15 +585,15 @@ export function AddExpenseForm({
                               const val = filterDecimalInput(e.target.value);
                               setCustomAmounts((prev) => new Map(prev).set(m.userId, val));
                             }}
-                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-gray-100"
+                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
                           />
                         </div>
                       </div>
                     ))}
                     {/* Running total indicator */}
                     {totalCentsValid && customRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50/40 dark:bg-gray-750/20">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">Total</span>
+                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
+                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             customRemaining === 0
@@ -619,16 +619,16 @@ export function AddExpenseForm({
                     type="checkbox"
                     checked={recurring}
                     onChange={(e) => setRecurring(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                   />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat</span>
+                  <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
                 </label>
                 {recurring && (
                   <div className="mt-2 ml-6">
                     <select
                       value={recurringFrequency}
                       onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                      className="w-full min-w-0 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                      className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
                     >
                       <option value="weekly">Weekly</option>
                       <option value="monthly">Monthly</option>

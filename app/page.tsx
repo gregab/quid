@@ -8,7 +8,7 @@ export default async function LandingPage() {
   } = await supabase.auth.getUser();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 dark:from-gray-950 dark:via-gray-900 dark:to-stone-950">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
       {/* Main content */}
       <main className="flex flex-1 items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
@@ -30,7 +30,7 @@ export default async function LandingPage() {
               </div>
             </div>
 
-            <div className="bg-white px-8 py-8 dark:bg-gray-900">
+            <div className="bg-white px-8 py-8 dark:bg-stone-900">
               {user ? (
                 <Link
                   href="/dashboard"
@@ -48,7 +48,7 @@ export default async function LandingPage() {
                   </Link>
                   <Link
                     href="/signup"
-                    className="block w-full rounded-xl border border-gray-200 py-2.5 text-center text-sm font-bold text-stone-700 shadow-sm transition-all duration-150 hover:bg-stone-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                    className="block w-full rounded-xl border border-stone-200 py-2.5 text-center text-sm font-bold text-stone-700 shadow-sm transition-all duration-150 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
                   >
                     Sign up
                   </Link>
@@ -60,17 +60,17 @@ export default async function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-6 text-center text-xs text-gray-400 dark:text-gray-500">
+      <footer className="py-6 text-center text-xs text-stone-400 dark:text-stone-500">
         <Link
           href="/privacy"
-          className="transition-colors hover:text-stone-600 dark:hover:text-gray-300"
+          className="transition-colors hover:text-stone-600 dark:hover:text-stone-300"
         >
           Privacy Policy
         </Link>
         <span className="mx-2">&middot;</span>
         <Link
           href="/terms"
-          className="transition-colors hover:text-stone-600 dark:hover:text-gray-300"
+          className="transition-colors hover:text-stone-600 dark:hover:text-stone-300"
         >
           Terms of Service
         </Link>

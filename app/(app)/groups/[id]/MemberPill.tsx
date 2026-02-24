@@ -20,7 +20,7 @@ export function MemberPill({ name, emoji, color, suffix, title, avatarUrl }: Mem
   const [imgError, setImgError] = useState(false);
   const colorClass = color
     ? `${color.bg} ${color.text}`
-    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400";
+    : "bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400";
   const showAvatar = avatarUrl && !imgError;
   return (
     <span

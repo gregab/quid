@@ -238,7 +238,7 @@ export function ExpensesList({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Expenses</h2>
+        <h2 className="text-lg font-bold text-stone-900 dark:text-white">Expenses</h2>
         {/* Desktop: buttons in header */}
         <div className="hidden sm:flex items-center gap-2">
           <RecordPaymentForm
@@ -287,7 +287,7 @@ export function ExpensesList({
       </div>
 
       {expenses.length === 0 ? (
-        <p className="text-gray-400 text-sm">No expenses yet. Add one to get started.</p>
+        <p className="text-stone-400 text-sm">No expenses yet. Add one to get started.</p>
       ) : (
         <ul className="space-y-2">
           {expenses.slice(0, displayCount).map((expense) => {
@@ -305,18 +305,18 @@ export function ExpensesList({
 
             // Left accent bar color
             const accentColor = expense.isPayment
-              ? "border-l-gray-200 dark:border-l-gray-700"
+              ? "border-l-stone-200 dark:border-l-stone-700"
               : personalContext?.positive
                 ? "border-l-emerald-500"
                 : personalContext
                   ? "border-l-rose-400"
-                  : "border-l-gray-200 dark:border-l-gray-700";
+                  : "border-l-stone-200 dark:border-l-stone-700";
 
             // Payment row background tint
             const paymentBg = isSettledUp
               ? "bg-emerald-50/40 dark:bg-emerald-950/20"
               : expense.isPayment
-                ? "bg-indigo-50/40 dark:bg-indigo-950/20"
+                ? "bg-amber-50/40 dark:bg-amber-950/20"
                 : "";
 
             return (
@@ -326,29 +326,29 @@ export function ExpensesList({
               >
                 <button
                   type="button"
-                  className="w-full text-left rounded-xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  className="w-full text-left rounded-xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                   onClick={() => setOpenDetailExpenseId(expense.id)}
                 >
                   <Card
-                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors`}
+                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
                   >
                     <div className="flex items-center gap-3">
                       {/* Date block */}
                       <div className="flex flex-col items-center w-9 shrink-0 text-center">
-                        <span className="text-[9px] font-bold tracking-wider text-gray-400 dark:text-gray-500 leading-none">
+                        <span className="text-[9px] font-bold tracking-wider text-stone-400 dark:text-stone-500 leading-none">
                           {dateParts.month}
                         </span>
-                        <span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight mt-px">
+                        <span className="text-sm font-bold text-stone-600 dark:text-stone-300 leading-tight mt-px">
                           {dateParts.day}
                         </span>
                       </div>
 
                       {/* Vertical divider */}
-                      <div className="w-px h-7 bg-gray-200 dark:bg-gray-700 shrink-0" />
+                      <div className="w-px h-7 bg-stone-200 dark:bg-stone-700 shrink-0" />
 
                       {/* Info: title + subtitle */}
                       <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-gray-900 dark:text-gray-100"}`}>
+                        <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-stone-900 dark:text-stone-100"}`}>
                           {isSettledUp ? (
                             <>{getSettledUpTitle(expense, members, allUserNames)} ✨</>
                           ) : expense.isPayment ? (
@@ -358,7 +358,7 @@ export function ExpensesList({
                               {expense.description}
                               {expense.recurringExpense && (
                                 <svg
-                                  className="inline w-3.5 h-3.5 shrink-0 text-indigo-400 dark:text-indigo-500"
+                                  className="inline w-3.5 h-3.5 shrink-0 text-amber-400 dark:text-amber-500"
                                   viewBox="0 0 24 24"
                                   fill="none"
                                   stroke="currentColor"
@@ -376,7 +376,7 @@ export function ExpensesList({
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+                        <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5 truncate">
                           {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
                         </p>
                       </div>
@@ -384,7 +384,7 @@ export function ExpensesList({
                       {/* Right: personal stake (expenses) or amount (payments) + chevron */}
                       <div className="flex items-center gap-1.5 shrink-0">
                         {expense.isPayment ? (
-                          <span className="text-base font-bold whitespace-nowrap text-indigo-700 dark:text-indigo-400">
+                          <span className="text-base font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
                             {formatCents(expense.amountCents)}
                           </span>
                         ) : personalContext ? (
@@ -406,7 +406,7 @@ export function ExpensesList({
                           </div>
                         ) : null}
                         <svg
-                          className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0"
+                          className="w-4 h-4 text-stone-300 dark:text-stone-600 shrink-0"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -431,7 +431,7 @@ export function ExpensesList({
           <button
             type="button"
             onClick={() => setDisplayCount((c) => c + 30)}
-            className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition-colors"
+            className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors"
           >
             Show {Math.min(expenses.length - displayCount, 30)} more
           </button>
