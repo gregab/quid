@@ -765,44 +765,46 @@ export function AddExpenseForm({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 px-4 pt-5 pb-6">
-          <div className="space-y-4 flex-1">
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col flex-1 px-4 pt-5 pb-6">
+          <div className="space-y-5 flex-1">
             {/* Description - large input */}
             <div>
-              <label htmlFor="mobileDescription" className="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-                What was it for?
+              <label htmlFor="mobileDescription" className="block text-base font-medium text-stone-600 dark:text-stone-400 mb-1.5">
+                Description
               </label>
               <input
                 id="mobileDescription"
                 type="text"
                 required
+                autoComplete="off"
                 placeholder="e.g. Birdseed, Field Guide"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 autoFocus
-                className="w-full text-lg px-0 py-2 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
+                className="w-full text-xl px-0 py-2.5 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
               />
             </div>
 
             {/* Amount - large prominent input */}
             <div>
-              <label htmlFor="mobileAmount" className="block text-sm font-medium text-stone-500 dark:text-stone-400 mb-1.5">
-                How much?
+              <label htmlFor="mobileAmount" className="block text-base font-medium text-stone-600 dark:text-stone-400 mb-1.5">
+                Amount
               </label>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold text-stone-300 dark:text-stone-600 select-none">$</span>
+                <span className="text-3xl font-bold text-stone-300 dark:text-stone-600 select-none">$</span>
                 <input
                   id="mobileAmount"
                   type="text"
                   inputMode="decimal"
                   required
+                  autoComplete="off"
                   aria-label="Amount"
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
                   onBlur={handleAmountBlur}
                   onFocus={handleAmountFocus}
-                  className="flex-1 text-2xl font-bold px-0 py-2 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
+                  className="flex-1 text-3xl font-bold px-0 py-2.5 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
                 />
               </div>
               {amountErrorMessage && (
@@ -830,6 +832,8 @@ export function AddExpenseForm({
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
+                  autoComplete="off"
+                  tabIndex={-1}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>

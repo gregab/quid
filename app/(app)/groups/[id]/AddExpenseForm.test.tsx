@@ -225,7 +225,7 @@ describe("AddExpenseForm", () => {
       const closeBtn = header.querySelector("button")!;
       fireEvent.click(closeBtn);
 
-      expect(screen.queryByText("What was it for?")).toBeNull();
+      expect(screen.queryByTestId("split-summary-pill")).toBeNull();
     });
   });
 
