@@ -2,8 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 
-const GROUP_EMOJIS = ["🐦", "🦅", "🕊️", "🦉", "🦆", "🐧", "🦜", "🦢", "🦩", "🐓", "🦚", "🪶", "🐤", "🐣", "🌞"];
-
 const BIRD_FACTS = [
   "A group of owls is called a parliament.",
   "A group of penguins is called a colony.",
@@ -56,21 +54,33 @@ const BIRD_FACTS = [
   "A group of goldfinches is called a charm. It's also just charming to watch them.",
 ];
 
-// Hash-based emoji assignment: each group gets a unique emoji derived from its ID.
-// Sorted by hash before assigning so collision resolution is stable regardless of input order.
-function assignGroupEmojis(groupIds: string[]): Map<string, string> {
-  const hash = (id: string) =>
-    id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const sorted = [...groupIds].sort((a, b) => hash(a) - hash(b));
-  const used = new Set<number>();
-  const result = new Map<string, string>();
-  for (const id of sorted) {
-    let idx = hash(id) % GROUP_EMOJIS.length;
-    while (used.has(idx)) idx = (idx + 1) % GROUP_EMOJIS.length;
-    used.add(idx);
-    result.set(id, GROUP_EMOJIS[idx]!);
+// Curated palette of 12 distinct, vibrant color pairs (bg gradient + text accent).
+// Each group gets a deterministic color based on its ID hash.
+const GROUP_PALETTES = [
+  { from: "#f97316", to: "#ea580c" }, // orange
+  { from: "#8b5cf6", to: "#7c3aed" }, // violet
+  { from: "#06b6d4", to: "#0891b2" }, // cyan
+  { from: "#ec4899", to: "#db2777" }, // pink
+  { from: "#10b981", to: "#059669" }, // emerald
+  { from: "#f59e0b", to: "#d97706" }, // amber
+  { from: "#6366f1", to: "#4f46e5" }, // indigo
+  { from: "#ef4444", to: "#dc2626" }, // red
+  { from: "#14b8a6", to: "#0d9488" }, // teal
+  { from: "#a855f7", to: "#9333ea" }, // purple
+  { from: "#3b82f6", to: "#2563eb" }, // blue
+  { from: "#84cc16", to: "#65a30d" }, // lime
+];
+
+function hashGroupId(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) {
+    h = ((h << 5) - h + id.charCodeAt(i)) | 0;
   }
-  return result;
+  return Math.abs(h);
+}
+
+function getGroupPalette(id: string) {
+  return GROUP_PALETTES[hashGroupId(id) % GROUP_PALETTES.length]!;
 }
 
 export default async function DashboardPage() {
@@ -92,12 +102,22 @@ export default async function DashboardPage() {
     .map((m) => m.Group!)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  // Fetch member counts per group
+  const memberCountMap = new Map<string, number>();
+  if (groups.length > 0) {
+    const { data: allMembers } = await supabase
+      .from("GroupMember")
+      .select("groupId")
+      .in("groupId", groups.map((g) => g.id));
+    for (const m of allMembers ?? []) {
+      memberCountMap.set(m.groupId, (memberCountMap.get(m.groupId) ?? 0) + 1);
+    }
+  }
+
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "friend";
-
-  const emojiMap = assignGroupEmojis(groups.map((g) => g.id));
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -137,7 +157,13 @@ export default async function DashboardPage() {
 
         {groups.length === 0 ? (
           <div className="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-stone-50/60 to-amber-50/40 px-5 py-10 sm:px-8 sm:py-14 text-center shadow-sm dark:border-amber-900/40 dark:from-amber-950/30 dark:via-stone-900/20 dark:to-amber-950/10">
-            <div className="mb-4 sm:mb-5 text-5xl sm:text-6xl">🕊️</div>
+            <div className="mb-4 sm:mb-5">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg">
+                <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                </svg>
+              </div>
+            </div>
             <p className="mb-1.5 text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Welcome to the nest</p>
             <p className="mx-auto mb-6 max-w-xs text-sm sm:text-base text-gray-500 dark:text-gray-400">
               Start a group to split expenses with friends, roommates, or travel buddies.
@@ -150,37 +176,65 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {groups.map((group) => (
-              <Link
-                key={group.id}
-                href={`/groups/${group.id}`}
-                prefetch={false}
-                className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-amber-500"
-              >
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-stone-100 text-2xl shadow-inner dark:from-amber-900 dark:to-stone-800">
-                  {group.emoji ?? emojiMap.get(group.id)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-gray-900 dark:text-white">{group.name}</p>
-                  <p className="mt-0.5 text-xs text-gray-400">
-                    since{" "}
-                    {new Date(group.createdAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-                <svg
-                  className="h-4 w-4 flex-shrink-0 text-gray-300 transition-colors group-hover:text-amber-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
+            {groups.map((group) => {
+              const palette = getGroupPalette(group.id);
+              const initial = group.name.charAt(0).toUpperCase();
+              const memberCount = memberCountMap.get(group.id) ?? 0;
+              return (
+                <Link
+                  key={group.id}
+                  href={`/groups/${group.id}`}
+                  prefetch={false}
+                  className="group relative flex items-center gap-4 rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg dark:bg-gray-800/80 dark:border-gray-700/60 dark:hover:border-gray-600"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
-            ))}
+                  {/* Colored left accent bar */}
+                  <div
+                    className="absolute left-0 top-3 bottom-3 w-1 rounded-full transition-all duration-200 group-hover:top-2 group-hover:bottom-2"
+                    style={{ background: `linear-gradient(to bottom, ${palette.from}, ${palette.to})` }}
+                  />
+
+                  {/* Monogram avatar */}
+                  <div
+                    className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white shadow-md transition-transform duration-200 group-hover:scale-105"
+                    style={{ background: `linear-gradient(135deg, ${palette.from}, ${palette.to})` }}
+                  >
+                    {initial}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-white">{group.name}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-1.053M18 10.5a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zM12.75 6.75a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {memberCount} {memberCount === 1 ? "member" : "members"}
+                      </span>
+                      <span className="hidden sm:inline">&middot;</span>
+                      <span className="hidden sm:inline">
+                        {new Date(group.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Arrow — picks up the group's color on hover */}
+                  <div className="flex-shrink-0 text-gray-300 transition-all duration-200 group-hover:translate-x-0.5 dark:text-gray-600">
+                    <svg
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

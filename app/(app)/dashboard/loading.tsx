@@ -21,16 +21,17 @@ export default function DashboardLoading() {
           <div className="h-10 w-28 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse" />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4">
           {[0, 1, 2].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white px-5 py-4 shadow-sm dark:bg-gray-800 dark:border-gray-700"
+              className="relative flex items-center gap-4 rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm dark:bg-gray-800/80 dark:border-gray-700/60"
             >
+              <div className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse" />
               <div className="h-12 w-12 flex-shrink-0 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse" />
               <div className="min-w-0 flex-1 space-y-2">
                 <div className="h-5 w-36 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                <div className="h-3 w-20 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                <div className="h-3 w-24 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse" />
               </div>
               <div className="h-4 w-4 flex-shrink-0 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
             </div>
