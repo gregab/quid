@@ -7,7 +7,7 @@ import { GroupInteractive } from "./GroupInteractive";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { MemberPill, type MemberColor } from "./MemberPill";
-import { getUserDebtCents } from "@/lib/balances/getUserDebt";
+import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
 import { ExportButton } from "./ExportButton";
 
@@ -156,14 +156,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     };
   });
 
-  // Compute how much the current user owes on net (uses simplified debts)
-  const userOwedCents = getUserDebtCents(
+  // Compute the user's outstanding balance (absolute value — block leaving if nonzero)
+  const userOutstandingCents = Math.abs(getUserBalanceCents(
     initialExpenses.map((e) => ({
       paidById: e.paidById,
       splits: e.splits,
     })),
     user.id
-  );
+  ));
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -248,7 +248,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       />
 
       <div className="flex items-center justify-between pt-4">
-        <LeaveGroupButton groupId={group.id} userOwedCents={userOwedCents} />
+        <LeaveGroupButton groupId={group.id} userOutstandingCents={userOutstandingCents} />
         <ExportButton groupId={group.id} />
       </div>
     </div>

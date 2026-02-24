@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 
-export function LeaveGroupButton({ groupId, userOwedCents }: { groupId: string; userOwedCents: number }) {
+export function LeaveGroupButton({ groupId, userOutstandingCents }: { groupId: string; userOutstandingCents: number }) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const blocked = userOwedCents > 0;
+  const blocked = userOutstandingCents > 0;
 
   async function handleLeave() {
     setLoading(true);
@@ -50,7 +50,7 @@ export function LeaveGroupButton({ groupId, userOwedCents }: { groupId: string; 
             <h2 className="text-lg font-bold text-stone-900 mb-1 dark:text-white">Leave group?</h2>
             {blocked ? (
               <p className="text-sm text-red-600 mb-5 dark:text-red-400">
-                You owe ${(userOwedCents / 100).toFixed(2)} in this group. Please settle up before leaving.
+                You have an outstanding balance of ${(userOutstandingCents / 100).toFixed(2)} in this group. Please settle up before leaving.
               </p>
             ) : (
               <p className="text-sm text-stone-500 mb-5 dark:text-stone-400">

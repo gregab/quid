@@ -24,12 +24,12 @@ afterEach(() => {
 
 describe("LeaveGroupButton", () => {
   it("renders the leave group trigger", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     expect(screen.getByText("Leave group")).toBeDefined();
   });
 
   it("opens confirmation dialog on click", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
     expect(screen.getByText("Leave group?")).toBeDefined();
     expect(screen.getByText("Leave")).toBeDefined();
@@ -37,14 +37,14 @@ describe("LeaveGroupButton", () => {
   });
 
   it("closes dialog when Cancel is clicked", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
     fireEvent.click(screen.getByText("Cancel"));
     expect(screen.queryByText("Leave group?")).toBeNull();
   });
 
   it("calls DELETE and redirects to dashboard on success", async () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     await act(async () => {
@@ -64,7 +64,7 @@ describe("LeaveGroupButton", () => {
       json: async () => ({ data: null, error: "Cannot leave group: you owe $15. Please settle up first." }),
     } as Response);
 
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     await act(async () => {
@@ -75,38 +75,38 @@ describe("LeaveGroupButton", () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it("shows warning and disables Leave button when user owes any amount", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={50} />);
+  it("shows warning and disables Leave button when user has outstanding balance", () => {
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={50} />);
     fireEvent.click(screen.getByText("Leave group"));
 
-    expect(screen.getByText("You owe $0.50 in this group. Please settle up before leaving.")).toBeDefined();
+    expect(screen.getByText("You have an outstanding balance of $0.50 in this group. Please settle up before leaving.")).toBeDefined();
     const leaveBtn = screen.getByText("Leave");
     expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
   });
 
-  it("allows leaving when user owes nothing", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+  it("allows leaving when user has zero balance", () => {
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
-    expect(screen.queryByText(/You owe/)).toBeNull();
+    expect(screen.queryByText(/outstanding balance/)).toBeNull();
     const leaveBtn = screen.getByText("Leave");
     expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(false);
   });
 
-  it("allows leaving when user is owed money (positive creditor balance)", () => {
-    // userOwedCents=0 means the user doesn't OWE anything (they might be owed)
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+  it("blocks leaving when user is owed money (positive creditor balance)", () => {
+    // userOutstandingCents is the absolute value of the balance — nonzero means blocked
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={500} />);
     fireEvent.click(screen.getByText("Leave group"));
 
-    expect(screen.queryByText(/You owe/)).toBeNull();
+    expect(screen.getByText(/outstanding balance/)).toBeDefined();
     const leaveBtn = screen.getByText("Leave");
-    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(false);
+    expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
   });
 
-  it("shows correct dollar amount formatting in the owed warning", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={12350} />);
+  it("shows correct dollar amount formatting in the balance warning", () => {
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={12350} />);
     fireEvent.click(screen.getByText("Leave group"));
-    expect(screen.getByText("You owe $123.50 in this group. Please settle up before leaving.")).toBeDefined();
+    expect(screen.getByText("You have an outstanding balance of $123.50 in this group. Please settle up before leaving.")).toBeDefined();
   });
 
   it("shows 'Leaving...' text while the API call is in progress", async () => {
@@ -121,7 +121,7 @@ describe("LeaveGroupButton", () => {
       })
     );
 
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     await act(async () => {
@@ -140,25 +140,25 @@ describe("LeaveGroupButton", () => {
 // ─── Balance computation for leave eligibility ──────────────────────────────
 
 describe("LeaveGroupButton — balance-based eligibility scenarios", () => {
-  it("blocks leaving with even a 1-cent debt", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={1} />);
+  it("blocks leaving with even a 1-cent outstanding balance", () => {
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={1} />);
     fireEvent.click(screen.getByText("Leave group"));
 
-    expect(screen.getByText("You owe $0.01 in this group. Please settle up before leaving.")).toBeDefined();
+    expect(screen.getByText("You have an outstanding balance of $0.01 in this group. Please settle up before leaving.")).toBeDefined();
     const leaveBtn = screen.getByText("Leave");
     expect(leaveBtn.closest("button")!.hasAttribute("disabled")).toBe(true);
   });
 
   it("shows the normal confirmation message when user has zero balance", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     expect(screen.getByText(/no longer see this group/)).toBeDefined();
-    expect(screen.queryByText(/You owe/)).toBeNull();
+    expect(screen.queryByText(/outstanding balance/)).toBeNull();
   });
 
   it("warns about group deletion when user might be the last member", () => {
-    render(<LeaveGroupButton groupId="g1" userOwedCents={0} />);
+    render(<LeaveGroupButton groupId="g1" userOutstandingCents={0} />);
     fireEvent.click(screen.getByText("Leave group"));
 
     // The warning message mentions the group will be deleted if last member

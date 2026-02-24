@@ -181,7 +181,7 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="divide-y divide-stone-150 dark:divide-stone-800">
+          <div>
             {groups.map((group, i) => {
               const memberCount = memberCountMap.get(group.id) ?? 0;
               const balance = balanceMap.get(group.id) ?? 0;
@@ -192,7 +192,7 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className="group-card group flex items-center gap-3 py-4 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2 rounded-lg"
+                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < groups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {/* Left: group info */}
@@ -257,9 +257,6 @@ export default async function DashboardPage() {
 
       {/* Bird fact — subtle editorial aside */}
       <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">
-        <div className="absolute top-3 right-4 text-[11px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-stone-300 dark:text-stone-700">
-          Aviary
-        </div>
         <p className="text-[11px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70">
           Bird fact
         </p>
