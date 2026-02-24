@@ -40,7 +40,8 @@ Cypress.Commands.add("login", (email?: string, password?: string) => {
       // {log: false} keeps the password out of Cypress logs
       cy.get("#password").type(p, { log: false });
       cy.contains("Sign in →").click();
-      cy.url().should("include", "/dashboard");
+      // Supabase auth is a network call — give it extra time before asserting redirect
+      cy.url({ timeout: 20000 }).should("include", "/dashboard");
     },
     {
       validate: () => {
