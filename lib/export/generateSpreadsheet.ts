@@ -89,13 +89,13 @@ function buildYourBalanceSheet(workbook: ExcelJS.Workbook, data: GroupExportData
     styleHeader(oweHeaderRow);
     currentRow++;
 
-    const firstDataRow = currentRow + 1;
+    const firstDataRow = currentRow;
     for (const row of data.youOwe) {
       const r = ws.addRow([row.date, row.description, row.paidBy, centsToNum(row.yourShareCents)]);
       formatDollarCell(r.getCell(4));
       currentRow++;
     }
-    const lastDataRow = currentRow;
+    const lastDataRow = currentRow - 1;
 
     // SUM formula
     const sumRow = ws.addRow(["", "", "Total you owe:", { formula: `SUM(D${firstDataRow}:D${lastDataRow})` }]);
@@ -124,13 +124,13 @@ function buildYourBalanceSheet(workbook: ExcelJS.Workbook, data: GroupExportData
     styleHeader(owedHeaderRow);
     currentRow++;
 
-    const firstDataRow = currentRow + 1;
+    const firstDataRow = currentRow;
     for (const row of data.owedToYou) {
       const r = ws.addRow([row.date, row.description, row.who, centsToNum(row.theirShareCents)]);
       formatDollarCell(r.getCell(4));
       currentRow++;
     }
-    const lastDataRow = currentRow;
+    const lastDataRow = currentRow - 1;
 
     const sumRow = ws.addRow(["", "", "Total owed to you:", { formula: `SUM(D${firstDataRow}:D${lastDataRow})` }]);
     styleTotalRow(sumRow, 3, 4);
@@ -158,13 +158,13 @@ function buildYourBalanceSheet(workbook: ExcelJS.Workbook, data: GroupExportData
     styleHeader(pmHeaderRow);
     currentRow++;
 
-    const firstDataRow = currentRow + 1;
+    const firstDataRow = currentRow;
     for (const row of data.paymentsMade) {
       const r = ws.addRow([row.date, row.otherParty, "", centsToNum(row.amountCents)]);
       formatDollarCell(r.getCell(4));
       currentRow++;
     }
-    const lastDataRow = currentRow;
+    const lastDataRow = currentRow - 1;
 
     const sumRow = ws.addRow(["", "", "Total payments made:", { formula: `SUM(D${firstDataRow}:D${lastDataRow})` }]);
     styleTotalRow(sumRow, 3, 4);
@@ -192,13 +192,13 @@ function buildYourBalanceSheet(workbook: ExcelJS.Workbook, data: GroupExportData
     styleHeader(prHeaderRow);
     currentRow++;
 
-    const firstDataRow = currentRow + 1;
+    const firstDataRow = currentRow;
     for (const row of data.paymentsReceived) {
       const r = ws.addRow([row.date, row.otherParty, "", centsToNum(row.amountCents)]);
       formatDollarCell(r.getCell(4));
       currentRow++;
     }
-    const lastDataRow = currentRow;
+    const lastDataRow = currentRow - 1;
 
     const sumRow = ws.addRow(["", "", "Total payments received:", { formula: `SUM(D${firstDataRow}:D${lastDataRow})` }]);
     styleTotalRow(sumRow, 3, 4);

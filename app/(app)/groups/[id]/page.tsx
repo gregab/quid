@@ -245,7 +245,6 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             />
           ))}
           <CopyInviteLinkButton inviteToken={group.inviteToken} />
-          <ExportButton groupId={group.id} />
         </div>
       </div>
 
@@ -262,8 +261,9 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         allUserNames={allUserNames}
       />
 
-      <div className="pt-4">
+      <div className="flex items-center justify-between pt-4">
         <LeaveGroupButton groupId={group.id} userOwedCents={userOwedCents} />
+        <ExportButton groupId={group.id} />
       </div>
     </div>
   );
