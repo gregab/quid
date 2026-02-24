@@ -11,9 +11,14 @@
  * already in the past and process_due_recurring_expenses picks it up immediately.
  */
 
-// A date far enough in the past that nextDueDate (firstDate + 1 month) is
-// clearly before today regardless of when the tests run.
-const BACKDATED_FIRST_DATE = "2025-11-01";
+// firstDate for backdated monthly recurring expenses.
+// Must satisfy two constraints:
+//   1. firstDate + 1 month <= today  →  cron picks it up on the first run
+//   2. firstDate + 2 months > today  →  after one cron advance, nextDueDate is
+//      in the future so later tests' cron calls don't re-process it
+// With today = 2026-02-23, "2026-01-15" works: nextDueDate = 2026-02-15 (due),
+// after one advance → 2026-03-15 (future).
+const BACKDATED_FIRST_DATE = "2026-01-15";
 
 describe("recurring expenses", () => {
   let groupId: string;
@@ -41,8 +46,9 @@ describe("recurring expenses", () => {
 
     // Check the "Repeat" checkbox to enable recurring
     cy.contains("Repeat").click();
-    // Frequency select should appear defaulting to Monthly
-    cy.get("select").filter(":visible").should("have.value", "monthly");
+    // Frequency select should appear defaulting to Monthly — target it specifically
+    // by its unique options to avoid matching the "paid by" select (which has UUID values).
+    cy.get("select").filter(':has(option[value="weekly"])').should("have.value", "monthly");
 
     cy.contains("Add expense", { matchCase: true })
       .filter("button[type='submit']")

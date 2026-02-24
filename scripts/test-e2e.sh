@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# Run the invite E2E tests.
-# Starts the dev server if one isn't already running, runs the spec, then
+# Run Cypress E2E tests.
+# Starts the dev server if one isn't already running, runs the spec(s), then
 # shuts down the server if we started it.
+#
+# Usage:
+#   ./scripts/test-e2e.sh                        # run all specs
+#   ./scripts/test-e2e.sh invite                 # run cypress/e2e/invite.cy.ts
+#   ./scripts/test-e2e.sh recurring-expenses     # run cypress/e2e/recurring-expenses.cy.ts
 
 set -e
 
 PORT=3000
-SPEC="cypress/e2e/invite.cy.ts"
 DEV_PID=""
+
+# Build the --spec flag if a name was provided
+if [ -n "$1" ]; then
+  SPEC_FLAG="--spec cypress/e2e/${1}.cy.ts"
+else
+  SPEC_FLAG=""
+fi
 
 # Check if a dev server is already listening on the port
 if lsof -ti:$PORT &>/dev/null; then
@@ -30,7 +41,7 @@ else
 fi
 
 # Run Cypress — exit code is preserved for the caller
-npx cypress run --spec "$SPEC"
+npx cypress run $SPEC_FLAG
 EXIT=$?
 
 # Shut down the server if we started it
