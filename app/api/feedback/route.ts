@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { MAX_FEEDBACK_MESSAGE } from "@/lib/constants";
-
-const feedbackSchema = z.object({
-  message: z.string().min(1, "Message is required").max(MAX_FEEDBACK_MESSAGE, "Message is too long"),
-  metadata: z.object({
-    url: z.string().optional(),
-    userAgent: z.string().optional(),
-    screenWidth: z.number().optional(),
-    screenHeight: z.number().optional(),
-  }).optional(),
-});
+import { feedbackSchema } from "@aviary/shared";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();

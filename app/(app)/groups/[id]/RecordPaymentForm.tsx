@@ -8,11 +8,9 @@ import type { ActivityLog } from "./ActivityFeed";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting, filterAmountInput } from "@/lib/amount";
 import { formatCents } from "@/lib/format";
 
-export interface UserOwesDebt {
-  toId: string;
-  toName: string;
-  amountCents: number;
-}
+import type { UserOwesDebt } from "@aviary/shared";
+
+export type { UserOwesDebt };
 
 interface RecordPaymentFormProps {
   groupId: string;

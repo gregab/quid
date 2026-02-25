@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { MAX_EMAIL } from "@/lib/constants";
-
-const addMemberSchema = z.object({
-  email: z.string().email("Invalid email address").max(MAX_EMAIL),
-});
+import { addMemberSchema } from "@aviary/shared";
 
 export async function POST(
   request: NextRequest,

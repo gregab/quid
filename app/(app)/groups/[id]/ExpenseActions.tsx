@@ -7,6 +7,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting, filterAmountInput } from "@/lib/amount";
 import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
+import { computeExpenseChanges } from "@aviary/shared";
 
 interface ExpenseActionsProps {
   groupId: string;
@@ -138,31 +139,30 @@ export function ExpenseActions({
     const paidByDisplayName = paidByMember?.displayName ?? expense.paidByDisplayName;
 
     // Compute what changed for the optimistic activity log
-    const changes: Record<string, unknown> = {};
-    if (expense.amountCents !== amountCents) {
-      changes.amount = { from: expense.amountCents, to: amountCents };
-    }
-    if (expense.description !== description) {
-      changes.description = { from: expense.description, to: description };
-    }
-    if (expense.date !== date) {
-      changes.date = { from: expense.date, to: date };
-    }
-    if (expense.paidById !== paidByUserId) {
-      const oldPayer = members.find((m) => m.userId === expense.paidById)?.displayName ?? expense.paidByDisplayName;
-      changes.paidBy = { from: oldPayer, to: paidByDisplayName };
-    }
-    const oldEffectiveIds = new Set(
-      expense.participantIds.length > 0 ? expense.participantIds : members.map((m) => m.userId)
+    const oldEffectiveIds = expense.participantIds.length > 0
+      ? expense.participantIds
+      : members.map((m) => m.userId);
+    const changes = computeExpenseChanges(
+      {
+        amountCents: expense.amountCents,
+        description: expense.description,
+        date: expense.date,
+        paidById: expense.paidById,
+        paidByDisplayName: members.find((m) => m.userId === expense.paidById)?.displayName ?? expense.paidByDisplayName,
+        splitType: expense.splitType,
+      },
+      {
+        amountCents,
+        description,
+        date,
+        paidById: paidByUserId,
+        paidByDisplayName,
+        splitType: expense.splitType, // ExpenseActions doesn't change split type
+      },
+      oldEffectiveIds,
+      [...participantIds],
+      (id) => members.find((m) => m.userId === id)?.displayName ?? id,
     );
-    const addedIds = [...participantIds].filter((id) => !oldEffectiveIds.has(id));
-    const removedIds = [...oldEffectiveIds].filter((id) => !participantIds.has(id));
-    if (addedIds.length > 0 || removedIds.length > 0) {
-      changes.participants = {
-        added: addedIds.map((id) => members.find((m) => m.userId === id)?.displayName ?? id),
-        removed: removedIds.map((id) => members.find((m) => m.userId === id)?.displayName ?? id),
-      };
-    }
 
     // Optimistically update expense and activity log
     setEditOpen(false);

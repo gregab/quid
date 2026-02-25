@@ -1,19 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { MAX_AMOUNT_CENTS } from "@/lib/amount";
-
-const createPaymentSchema = z.object({
-  amountCents: z
-    .number()
-    .int()
-    .positive("Amount must be greater than zero")
-    .max(MAX_AMOUNT_CENTS, "Amount cannot exceed $1,000,000"),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
-  paidById: z.string().uuid().optional(),
-  recipientId: z.string().uuid(),
-  settledUp: z.boolean().optional(),
-});
+import { createPaymentSchema } from "@aviary/shared";
 
 export async function POST(
   request: NextRequest,

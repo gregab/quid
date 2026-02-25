@@ -6,14 +6,9 @@ import { Button } from "@/components/ui/Button";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 
-export type ActivityLog = {
-  id: string;
-  action: string;
-  payload: unknown;
-  createdAt: Date | string;
-  actor: { displayName: string };
-  isPending?: boolean;
-};
+import type { ActivityLog, SplitEntry } from "@aviary/shared";
+
+export type { ActivityLog };
 
 type Changes = {
   amount?: { from: number; to: number };
@@ -23,8 +18,6 @@ type Changes = {
   participants?: { added: string[]; removed: string[] };
   splitType?: { from: string; to: string };
 };
-
-type SplitEntry = { displayName: string; amountCents: number };
 
 type Payload = {
   description?: string;

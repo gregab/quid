@@ -12,6 +12,9 @@ import type { ActivityLog } from "./ActivityFeed";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 import type { MemberColor } from "./MemberPill";
+import type { ExpenseRow } from "@aviary/shared";
+
+export type { ExpenseRow };
 
 export interface Member {
   userId: string;
@@ -19,27 +22,6 @@ export interface Member {
   emoji?: string;
   color?: MemberColor;
   avatarUrl?: string | null;
-}
-
-export interface ExpenseRow {
-  id: string;
-  description: string;
-  amountCents: number;
-  date: string; // YYYY-MM-DD
-  paidById: string;
-  paidByDisplayName: string;
-  participantIds: string[];
-  splits: Array<{ userId: string; amountCents: number }>;
-  splitType: "equal" | "custom";
-  canEdit: boolean;
-  canDelete: boolean;
-  isPending?: boolean;
-  isPayment?: boolean;
-  settledUp?: boolean;
-  createdById?: string;
-  createdAt?: string;
-  updatedAt?: string | null;
-  recurringExpense?: { id: string; frequency: "weekly" | "monthly" | "yearly" } | null;
 }
 
 interface ExpensesListProps {

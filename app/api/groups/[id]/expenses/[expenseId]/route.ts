@@ -1,24 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { MAX_AMOUNT_CENTS } from "@/lib/amount";
-import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
-
-const updateExpenseSchema = z.object({
-  description: z.string().min(1).max(MAX_EXPENSE_DESCRIPTION),
-  amountCents: z
-    .number()
-    .int()
-    .positive("Amount must be greater than zero")
-    .max(MAX_AMOUNT_CENTS, "Amount cannot exceed $1,000,000"),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
-  paidById: z.string().uuid().optional(),
-  participantIds: z.array(z.string().uuid()).min(1).optional(),
-  splitType: z.enum(["equal", "custom"]).optional(),
-  customSplits: z
-    .array(z.object({ userId: z.string().uuid(), amountCents: z.number().int().min(0) }))
-    .optional(),
-});
+import { updateExpenseSchema, computeExpenseChanges } from "@aviary/shared";
 
 export async function PUT(
   request: NextRequest,
@@ -111,42 +93,43 @@ export async function PUT(
     participants = allMembers.filter((m) => rawParticipantIds.includes(m.userId));
   }
 
-  // Detect what changed for the activity log
-  const changes: {
-    amount?: { from: number; to: number };
-    date?: { from: string; to: string };
-    description?: { from: string; to: string };
-    paidBy?: { from: string; to: string };
-    participants?: { added: string[]; removed: string[] };
-  } = {};
-
-  if (expense.amountCents !== amountCents) {
-    changes.amount = { from: expense.amountCents, to: amountCents };
-  }
-  if (expense.description !== description) {
-    changes.description = { from: expense.description, to: description };
-  }
   // Supabase returns dates as ISO strings — extract YYYY-MM-DD
   const oldDateStr = expense.date.split("T")[0];
-  if (oldDateStr !== date) {
-    changes.date = { from: oldDateStr, to: date };
-  }
-  if (expense.paidById !== newPaidById) {
-    changes.paidBy = { from: expense.User!.displayName, to: newPaidByMember.User!.displayName };
-  }
-  const oldParticipantIds = new Set((splits ?? []).map((s) => s.userId));
-  const newParticipantIds = new Set(participants.map((m) => m.userId));
-  const addedParticipants = participants
-    .filter((m) => !oldParticipantIds.has(m.userId))
-    .map((m) => m.User!.displayName);
-  const removedParticipants = (splits ?? [])
-    .filter((s) => !newParticipantIds.has(s.userId))
-    .map((s) => s.User!.displayName);
-  if (addedParticipants.length > 0 || removedParticipants.length > 0) {
-    changes.participants = { added: addedParticipants, removed: removedParticipants };
-  }
 
   const participantIds = participants.map((m) => m.userId);
+  const oldParticipantIds = (splits ?? []).map((s) => s.userId);
+
+  // Build display name resolver from members + old splits
+  const displayNameMap = new Map<string, string>();
+  for (const m of allMembers) displayNameMap.set(m.userId, m.User!.displayName);
+  for (const s of splits ?? []) {
+    if (!displayNameMap.has(s.userId)) {
+      displayNameMap.set(s.userId, (s.User as { id: string; displayName: string } | null)?.displayName ?? "Unknown");
+    }
+  }
+
+  // Detect what changed for the activity log
+  const changes = computeExpenseChanges(
+    {
+      amountCents: expense.amountCents,
+      description: expense.description,
+      date: oldDateStr,
+      paidById: expense.paidById,
+      paidByDisplayName: expense.User!.displayName,
+      splitType: expense.splitType,
+    },
+    {
+      amountCents,
+      description,
+      date,
+      paidById: newPaidById,
+      paidByDisplayName: newPaidByMember.User!.displayName,
+      splitType: splitType ?? "equal",
+    },
+    oldParticipantIds,
+    participantIds,
+    (id) => displayNameMap.get(id) ?? "Unknown",
+  );
 
   // Validate custom splits
   let splitAmounts: number[] | null = null;
@@ -173,14 +156,6 @@ export async function PUT(
       const s = customSplits.find((cs) => cs.userId === id);
       return s?.amountCents ?? 0;
     });
-
-    // Record split type change in activity log changes
-    if (expense.splitType !== "custom") {
-      (changes as Record<string, unknown>).splitType = { from: expense.splitType, to: "custom" };
-    }
-  } else if (expense.splitType === "custom") {
-    // Switching back to equal
-    (changes as Record<string, unknown>).splitType = { from: "custom", to: "equal" };
   }
 
   // Build splitsBefore snapshot from existing splits
@@ -215,7 +190,7 @@ export async function PUT(
     _paid_by_id: newPaidById,
     _participant_ids: participantIds,
     _paid_by_display_name: newPaidByMember.User!.displayName,
-    _changes: changes,
+    _changes: JSON.parse(JSON.stringify(changes)),
     _split_type: effectiveSplitType,
     _split_amounts: splitAmounts ?? undefined,
     _splits_before: splitsBefore,
