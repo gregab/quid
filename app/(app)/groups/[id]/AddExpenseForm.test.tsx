@@ -72,17 +72,21 @@ describe("AddExpenseForm", () => {
   });
 
   describe("Desktop modal", () => {
-    it("renders all form fields when opened", () => {
+    it("renders collapsed form with summary pill when opened", () => {
       renderForm();
       openModal();
 
       expect(screen.getByText("Add an expense")).toBeDefined();
       expect(screen.getByLabelText("Description")).toBeDefined();
       expect(screen.getByLabelText("Amount")).toBeDefined();
-      expect(screen.getByText("Date")).toBeDefined();
-      expect(screen.getByText("Paid by")).toBeDefined();
-      expect(screen.getByText("Split between")).toBeDefined();
-      expect(screen.getByText("Repeat")).toBeDefined();
+      // Date is shown as a compact pill (e.g. "Today"), not a labeled field
+      expect(screen.getByText("Today")).toBeDefined();
+      // Split summary pill is visible with default text
+      expect(screen.getByText("Paid by you, split equally")).toBeDefined();
+      // Split options section is collapsed (has debt-expand class but NOT open)
+      const expandSection = document.querySelector(".debt-expand") as HTMLElement;
+      expect(expandSection).toBeDefined();
+      expect(expandSection.classList.contains("open")).toBe(false);
     });
 
     it("closes when Cancel is clicked", () => {
@@ -125,11 +129,21 @@ describe("AddExpenseForm", () => {
       expect(screen.getByText("Please enter a valid amount greater than zero.")).toBeDefined();
     });
 
-    it("does not show mobile summary pill on desktop", () => {
+    it("expands split options when summary pill is clicked", () => {
       renderForm();
       openModal();
 
-      expect(screen.queryByTestId("split-summary-pill")).toBeNull();
+      // Split section is collapsed by default
+      const expandSection = document.querySelector(".debt-expand") as HTMLElement;
+      expect(expandSection.classList.contains("open")).toBe(false);
+
+      // Click summary pill to expand
+      fireEvent.click(screen.getByText("Paid by you, split equally"));
+      expect(expandSection.classList.contains("open")).toBe(true);
+
+      // Click again to collapse
+      fireEvent.click(screen.getByText("Paid by you, split equally"));
+      expect(expandSection.classList.contains("open")).toBe(false);
     });
   });
 

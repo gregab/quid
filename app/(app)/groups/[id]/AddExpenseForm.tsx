@@ -186,6 +186,9 @@ export function AddExpenseForm({
   const [screen, setScreen] = useState<MobileScreen>("quick-entry");
   const [slideDirection, setSlideDirection] = useState<"forward" | "back">("forward");
 
+  // Desktop progressive disclosure — split section collapsed by default
+  const [splitExpanded, setSplitExpanded] = useState(false);
+
   const parsedTotalCents = Math.round(parseFloat(stripAmountFormatting(amount)) * 100);
   const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0 && parsedTotalCents <= MAX_AMOUNT_CENTS;
 
@@ -495,6 +498,7 @@ export function AddExpenseForm({
     setAmountError(false);
     setAmountErrorMessage(null);
     setShowAmountRequired(false);
+    setSplitExpanded(false);
     setScreen("quick-entry");
     setSlideDirection("forward");
   }
@@ -706,6 +710,7 @@ export function AddExpenseForm({
           </div>
 
           <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+            {/* Description */}
             <div>
               <label htmlFor="expenseDescription" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                 Description
@@ -720,6 +725,8 @@ export function AddExpenseForm({
                 autoFocus
               />
             </div>
+
+            {/* Amount */}
             <div>
               <label htmlFor="expenseAmount" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
                 Amount
@@ -753,61 +760,103 @@ export function AddExpenseForm({
                 </p>
               )}
             </div>
-            <div>
-              <label htmlFor="expenseDate" className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                Date
-              </label>
-              <Input
+
+            {/* Date pill — compact, click to change */}
+            <div className="flex items-center gap-2">
+              <input
                 id="expenseDate"
                 type="date"
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="appearance-none"
+                className="sr-only"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
-                Paid by
-              </label>
-              <select
-                id="expensePaidBy"
-                value={paidByUserId}
-                onChange={(e) => setPaidByUserId(e.target.value)}
-                className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-              >
-                {members.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {renderSplitSection()}
-
-            {/* Repeat toggle */}
-            <div className="flex items-center gap-2.5">
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <div className="relative">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-700/60 text-sm font-medium text-stone-700 dark:text-stone-300 cursor-pointer hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                  <svg className="w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                  </svg>
+                  {formatDatePill(date)}
+                </span>
                 <input
-                  type="checkbox"
-                  checked={recurring}
-                  onChange={(e) => setRecurring(e.target.checked)}
-                  className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  tabIndex={-1}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
-                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
-              </label>
-              {recurring && (
-                <select
-                  value={recurringFrequency}
-                  onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                  className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              )}
+              </div>
+            </div>
+
+            {/* Split summary pill — click to expand/collapse split options */}
+            <button
+              type="button"
+              onClick={() => setSplitExpanded((prev) => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-stone-50 dark:bg-stone-700/40 border border-stone-150 dark:border-stone-700 text-left transition-colors hover:bg-stone-100 dark:hover:bg-stone-700/60 active:scale-[0.99]"
+            >
+              <span className="text-sm text-stone-600 dark:text-stone-300">{summaryText}</span>
+              <svg
+                className={`w-4 h-4 text-stone-400 dark:text-stone-500 shrink-0 ml-2 transition-transform duration-200 ${splitExpanded ? "rotate-90" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </button>
+
+            {/* Expandable split options section */}
+            <div className={`debt-expand ${splitExpanded ? "open" : ""}`}>
+              <div>
+                <div className="space-y-4">
+                  {/* Paid by dropdown */}
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1 dark:text-stone-300">
+                      Paid by
+                    </label>
+                    <select
+                      id="expensePaidBy"
+                      value={paidByUserId}
+                      onChange={(e) => setPaidByUserId(e.target.value)}
+                      className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                    >
+                      {members.map((m) => (
+                        <option key={m.userId} value={m.userId}>
+                          {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Split type toggle + member checkboxes */}
+                  {renderSplitSection()}
+
+                  {/* Repeat toggle */}
+                  <div className="flex items-center gap-2.5">
+                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={recurring}
+                        onChange={(e) => setRecurring(e.target.checked)}
+                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
+                    </label>
+                    {recurring && (
+                      <select
+                        value={recurringFrequency}
+                        onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                        className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                      >
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
