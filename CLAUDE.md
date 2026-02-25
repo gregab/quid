@@ -2,7 +2,7 @@
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 
-**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. Deployed on Vercel at `https://aviary.gregbigelow.com`.
+**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. React Native mobile app (Expo SDK 52, Expo Router v4, NativeWind v4, TanStack Query v5). Monorepo with `@aviary/shared` for cross-platform business logic. Deployed on Vercel at `https://aviary.gregbigelow.com`.
 
 ## Design Philosophy
 
@@ -28,12 +28,21 @@ For any change: understand the code first, make changes, write tests, run tests,
 
 ## Commands
 ```bash
+# Web app
 npm run dev                             # Dev server (localhost:3000)
 npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
 npm run db:types                        # Regenerate Supabase types → lib/supabase/database.types.ts
 git push origin main                    # Deploy to production
+
+# Mobile app
+cd mobile && npx expo start            # Start Expo dev server
+cd mobile && npm test                  # Run mobile tests
+cd mobile && npm run typecheck         # Type-check mobile code
+
+# Shared package
+# No build step — consumed as raw TS via transpilePackages (web) and Metro (mobile)
 
 # Database migrations
 npx supabase db push                    # Apply migrations in supabase/migrations/
@@ -67,10 +76,19 @@ npm run cy:run                          # Cypress headless
 | **Auth middleware** (route protection) | `proxy.ts` (**not** `middleware.ts` — Next.js 16 convention) |
 | **Styling / dark mode** | Tailwind `dark:` variants; globals in `app/globals.css` |
 | **E2E tests** | `cypress/e2e/` — specs; `cypress/support/commands.ts` — `cy.login()` |
+| **Shared business logic** | `packages/shared/src/` — source of truth; `lib/` files are re-export barrels for web |
+| **Mobile app screens** | `mobile/app/` — Expo Router file-based routing (same convention as Next.js) |
+| **Mobile data layer** | `mobile/lib/queries/` — TanStack Query hooks, direct-to-Supabase |
+| **Mobile auth** | `mobile/lib/auth.tsx` (AuthProvider), `mobile/lib/supabase.ts` (SecureStore client) |
+| **Mobile UI components** | `mobile/components/ui/` — Button, Card, Input, Avatar, MemberPill, etc. |
+| **Mobile tests** | Co-located `*.test.tsx` files; see `mobile/TESTING.md` for patterns and mocks |
 
 ## DRY: Don't Duplicate Business Logic
-- **Balance/debt calculations** live in `lib/balances/` and are the single source of truth. **Never re-derive balances with a manual loop.** Use the pipeline: `buildRawDebts()` → `simplifyDebts()`. Convenience wrappers: `getUserDebtCents()` (how much a user owes), `getUserBalanceCents()` (signed net: positive=owed, negative=owes).
-- **Money formatting** lives in `lib/format.ts` — `formatCents()`. Don't define local `formatCents` functions.
+- **All pure business logic lives in `@aviary/shared`** (`packages/shared/src/`). Web `lib/` files are thin re-export barrels. Mobile imports via `mobile/lib/queries/shared.ts`. Never put new pure logic directly in `lib/` or `mobile/lib/` — add it to the shared package.
+- **Balance/debt calculations**: `buildRawDebts()` → `simplifyDebts()`. Convenience wrappers: `getUserDebtCents()`, `getUserBalanceCents()`. **Never re-derive balances with a manual loop.**
+- **Money formatting**: `formatCents()` from `@aviary/shared`. Don't define local `formatCents` functions.
+- **Validation schemas**: Zod schemas in `@aviary/shared/validation.ts`. Both web API routes and mobile use the same schemas.
+- **RPC param builders**: `buildCreateExpenseParams()`, etc. in `@aviary/shared/rpcParams.ts`. Mobile must use these to construct RPC payloads — never build RPC params inline.
 - **Unknown user fallback** is `"Unknown"` everywhere. Don't use `"Deleted User"` or other variants.
 - When the same rule exists in both JS and an RPC function (e.g., "user can't leave with outstanding debt"), keep them in sync. The JS utility is the client-side source of truth; the RPC is the server-side safety net.
 
@@ -86,6 +104,13 @@ npm run cy:run                          # Cypress headless
 8. **RLS is enabled on all 6 tables.** The `is_group_member()` helper checks membership via `auth.uid()`.
 9. **RPC function migrations must DROP then CREATE** — `CREATE OR REPLACE` only works if the parameter signature is identical. Changing params without dropping first creates stale overloads.
 10. **Views must set `security_invoker = true`** — Postgres defaults views to SECURITY DEFINER (runs as view owner, bypassing RLS). Always add `WITH (security_invoker = true)` when creating views, or they silently expose data to anyone with SELECT access.
+
+### Mobile-Specific Gotchas
+11. **Mobile calls Supabase directly** — no API intermediary. Mutations use `supabase.rpc()` with shared RPC param builders. Queries use the Supabase JS client with RLS.
+12. **Mobile auth uses SecureStore** — session tokens stored in encrypted on-device storage via `expo-secure-store`. `detectSessionInUrl: false` in the Supabase client config.
+13. **`MemberColor` is platform-specific** — web uses `{ bg: string; text: string }` (Tailwind classes), mobile uses string union `"rose" | "sky" | ...`. The `Member` type is also platform-specific. Don't move these to `@aviary/shared`.
+14. **Mobile tests run separately** — `cd mobile && npm test`. Root vitest config excludes `mobile/**`. See `mobile/TESTING.md` for mock architecture and patterns.
+15. **`add_member_by_email` RPC** — mobile uses this instead of the web's `POST /api/groups/[id]/members` route. Atomic: auth check → user lookup → duplicate check → insert.
 
 ## Security Rules
 - All API routes verify Supabase session server-side
@@ -105,7 +130,7 @@ npm run cy:run                          # Cypress headless
 
 Cypress requires `npm run dev` running. Credentials in `cypress.env.json` (gitignored).
 
-See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress details.
+See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress details. For mobile testing, see **mobile/TESTING.md**.
 
 **Testing gotchas (happy-dom):**
 - `fireEvent.submit(form)` not `fireEvent.click(button)` for form submissions

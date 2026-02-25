@@ -50,3 +50,5 @@ next-env.d.ts
 /app/generated/prisma
 .env*.local
 .env.local.example
+
+mobile/.env.example

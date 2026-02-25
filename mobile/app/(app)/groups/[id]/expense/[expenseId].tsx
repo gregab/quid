@@ -137,6 +137,7 @@ export default function ExpenseDetailScreen() {
     try {
       await updateExpense.mutateAsync({
         expenseId: expense.id,
+        groupId: id!,
         description: desc,
         amountCents,
         date: expense.date,
@@ -147,8 +148,8 @@ export default function ExpenseDetailScreen() {
         splitAmounts:
           expense.splitType === "custom" ? newSplitAmounts : undefined,
         changes,
-        beforeSplits,
-        afterSplits,
+        splitsBefore: beforeSplits,
+        splitsAfter: afterSplits,
       });
       void Haptics.notificationAsync(
         Haptics.NotificationFeedbackType.Success,
@@ -176,10 +177,11 @@ export default function ExpenseDetailScreen() {
                 expenseId: expense.id,
                 description: expense.description,
                 amountCents: expense.amountCents,
+                paidByDisplayName: expense.paidByDisplayName,
+                date: expense.date,
                 participantDisplayNames: expense.participantIds.map(
                   getMemberName,
                 ),
-                isPayment: expense.isPayment ?? false,
               });
               void Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,

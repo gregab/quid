@@ -1,28 +1,23 @@
 /**
- * Re-exports of shared business logic.
+ * Re-exports of shared business logic from @aviary/shared.
  *
- * Once @aviary/shared is built (Task #1), these should be replaced with
- * direct imports from @aviary/shared. For now, we import from the web
- * app's lib/ directory since the monorepo workspace makes them accessible.
- *
- * This file acts as a single seam — only this file needs updating when
- * the shared package is ready.
+ * This file acts as a single seam — only this file needs updating
+ * if the shared package structure changes.
  */
 
 // Balance computation
-export { buildRawDebts } from "@aviary/shared/balances/buildRawDebts";
-export type { ExpenseForDebt } from "@aviary/shared/balances/buildRawDebts";
-export { simplifyDebts } from "@aviary/shared/balances/simplify";
-export type { Debt } from "@aviary/shared/balances/simplify";
 export {
+  buildRawDebts,
+  simplifyDebts,
   getUserDebtCents,
   getUserBalanceCents,
-} from "@aviary/shared/balances/getUserDebt";
-export { splitAmount } from "@aviary/shared/balances/splitAmount";
+  splitAmount,
+  type ExpenseForDebt,
+  type Debt,
+} from "@aviary/shared";
 
 // Formatting
-export { formatCents, UNKNOWN_USER } from "@aviary/shared/format";
-export { formatDisplayName } from "@aviary/shared/formatDisplayName";
+export { formatCents, UNKNOWN_USER, formatDisplayName } from "@aviary/shared";
 
 // Constants
 export {
@@ -31,7 +26,7 @@ export {
   MAX_DISPLAY_NAME,
   MAX_EMAIL,
   MEMBER_EMOJIS,
-} from "@aviary/shared/constants";
+} from "@aviary/shared";
 
 // Amount utilities
 export {
@@ -41,13 +36,10 @@ export {
   formatAmountDisplay,
   filterAmountInput,
   filterDecimalInput,
-} from "@aviary/shared/amount";
+} from "@aviary/shared";
 
 // Percentage splits
-export {
-  percentagesToCents,
-  centsToPercentages,
-} from "@aviary/shared/percentageSplit";
+export { percentagesToCents, centsToPercentages } from "@aviary/shared";
 
-// Bird facts (shared between web dashboard and mobile dashboard)
-export { BIRD_FACTS } from "@aviary/shared/birdFacts";
+// Bird facts
+export { BIRD_FACTS } from "@aviary/shared";

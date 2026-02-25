@@ -96,9 +96,11 @@ export function useGroups() {
 
 /** Fetch full group detail including members. */
 export function useGroupDetail(groupId: string) {
+  const { user } = useAuth();
+
   return useQuery({
     queryKey: groupKeys.detail(groupId),
-    enabled: !!groupId,
+    enabled: !!groupId && !!user,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("Group")
@@ -118,7 +120,7 @@ export function useGroupExpenses(groupId: string) {
 
   return useQuery({
     queryKey: groupKeys.expenses(groupId),
-    enabled: !!groupId,
+    enabled: !!groupId && !!user,
     queryFn: async (): Promise<ExpenseRow[]> => {
       const { data, error } = await supabase
         .from("Expense")

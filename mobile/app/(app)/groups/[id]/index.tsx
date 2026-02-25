@@ -271,7 +271,7 @@ function ActivityItem({ log }: { log: ActivityLog }) {
         )}
       </View>
       <Text className="text-[11px] text-stone-400 dark:text-stone-500">
-        {formatRelativeTime(log.createdAt)}
+        {formatRelativeTime(String(log.createdAt))}
       </Text>
     </View>
   );

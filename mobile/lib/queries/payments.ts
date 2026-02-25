@@ -4,6 +4,7 @@ import { useAuth } from "../auth";
 import { groupKeys } from "./keys";
 import type { ExpenseRow, Member } from "../types";
 import { UNKNOWN_USER } from "./shared";
+import { buildCreatePaymentParams } from "@aviary/shared";
 
 interface CreatePaymentInput {
   groupId: string;
@@ -22,22 +23,16 @@ export function useCreatePayment(groupId: string) {
 
   return useMutation({
     mutationFn: async (input: CreatePaymentInput) => {
-      const fromName =
-        input.members.find((m) => m.userId === input.paidById)?.displayName ??
-        UNKNOWN_USER;
-      const toName =
-        input.members.find((m) => m.userId === input.recipientId)
-          ?.displayName ?? UNKNOWN_USER;
-
-      const { data, error } = await supabase.rpc("create_payment", {
-        _group_id: input.groupId,
-        _amount_cents: input.amountCents,
-        _date: input.date,
-        _paid_by_id: input.paidById,
-        _recipient_id: input.recipientId,
-        _from_display_name: fromName,
-        _to_display_name: toName,
+      const params = buildCreatePaymentParams({
+        groupId: input.groupId,
+        amountCents: input.amountCents,
+        date: input.date,
+        paidById: input.paidById,
+        recipientId: input.recipientId,
+        members: input.members,
+        settledUp: input.settledUp,
       });
+      const { data, error } = await supabase.rpc("create_payment", params);
       if (error) throw error;
       return data as string;
     },

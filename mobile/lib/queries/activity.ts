@@ -46,11 +46,11 @@ export function useActivityLogs(groupId: string) {
         };
       });
     },
-    getNextPageParam: (lastPage, _allPages, lastPageParam) => {
+    getNextPageParam: (lastPage, _allPages, lastPageParam): string | undefined => {
       const expectedSize = lastPageParam ? PAGE_SIZE : INITIAL_PAGE_SIZE;
       if (lastPage.length < expectedSize) return undefined;
       const last = lastPage[lastPage.length - 1];
-      return last?.createdAt;
+      return last?.createdAt as string | undefined;
     },
   });
 }

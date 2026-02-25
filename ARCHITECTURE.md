@@ -16,10 +16,64 @@ Both expenses and payments can be edited and deleted, which immediately affects 
 
 ## Project Structure
 
-No `src/` directory — all code at repo root.
+Monorepo with npm workspaces: root = Next.js web app, `packages/shared/` = shared business logic, `mobile/` = React Native (Expo) app.
 
 ```
-app/
+packages/shared/                         # @aviary/shared — pure TS business logic (no React/DOM/Node deps)
+  package.json                           # "main": "src/index.ts" — no build step, consumed as raw TS
+  tsconfig.json                          # lib: ["esnext"] only (no dom) — enforces platform-agnostic code
+  src/
+    index.ts                             # Barrel re-export of everything below
+    balances/                            # buildRawDebts, simplifyDebts, getUserDebt, splitAmount
+    format.ts, formatDisplayName.ts      # Money + name formatting
+    constants.ts                         # Character limits, emoji palette
+    amount.ts                            # Amount input filtering, MAX_AMOUNT_CENTS
+    percentageSplit.ts                   # Percentage ↔ cents conversion
+    groupPattern.ts                      # Deterministic SVG pattern generation
+    birdFacts.ts                         # Bird fact strings (shared between web + mobile dashboards)
+    types.ts                             # Platform-agnostic types: ExpenseRow, ActivityLog, etc.
+    validation.ts                        # Zod schemas extracted from API routes
+    activityDiff.ts                      # computeExpenseChanges(), buildSplitSnapshot()
+    rpcParams.ts                         # RPC parameter builders for Supabase .rpc() calls
+
+mobile/                                  # React Native app (Expo SDK 52, Expo Router v4)
+  package.json                           # Depends on @aviary/shared via workspace
+  app/
+    _layout.tsx                          # Root: fonts, providers (QueryClient, Auth, BottomSheet)
+    (auth)/                              # Login + signup screens
+      _layout.tsx                        # Redirects to (app) if already authenticated
+      login.tsx, signup.tsx
+    (app)/                               # Auth-protected screens
+      _layout.tsx                        # Auth guard — redirects to (auth)/login if no session
+      (dashboard)/
+        _layout.tsx                      # Dashboard tab layout
+        index.tsx                        # Group list with balances + bird fact
+        create-group.tsx                 # Create group modal screen
+      groups/[id]/
+        index.tsx                        # Group detail: expenses, balances, members
+        add-expense.tsx                  # Add expense form
+        record-payment.tsx               # Record payment form
+        add-member.tsx                   # Add member by email
+        expense/[expenseId].tsx          # Expense detail/edit
+        settings.tsx                     # Group settings (rename, banner)
+      invite/[token].tsx                 # Join group via invite link
+      settings/index.tsx                 # User settings (profile, logout, delete account)
+  lib/
+    supabase.ts                          # Supabase client with SecureStore for session persistence
+    auth.tsx                             # AuthProvider context (session, user, loading, signOut)
+    queryClient.ts                       # TanStack Query client instance
+    types.ts                             # Re-exports shared types + platform-specific MemberColor, Member
+    queries/                             # TanStack Query hooks (direct-to-Supabase, no API intermediary)
+      keys.ts                            # Query key factory (groupKeys, userKeys, inviteKeys)
+      shared.ts                          # Re-exports from @aviary/shared for mobile consumption
+      groups.ts, expenses.ts, payments.ts, members.ts, activity.ts, user.ts, invite.ts
+  components/
+    ErrorBoundary.tsx                    # App-level error boundary
+    ui/                                  # Mobile UI primitives (NativeWind-styled)
+      Avatar.tsx, Button.tsx, Card.tsx, Input.tsx, LoadingSpinner.tsx,
+      MemberPill.tsx, BottomSheet.tsx
+
+app/                                     # Next.js web app (below)
   layout.tsx                             # Root layout: Geist fonts, metadata, dark mode class
   page.tsx                               # Root redirect: authed → /dashboard, else → /login
   globals.css                            # Tailwind base + custom animations (fade-in, slide-up, etc.)
@@ -113,17 +167,14 @@ lib/
   supabase/server.ts                     # Server Supabase client (cookie-aware, for RSC + route handlers)
   supabase/admin.ts                      # Server-only admin client (service role key, bypasses RLS)
   supabase/database.types.ts             # Auto-generated types from Supabase schema (run npm run db:types)
-  balances/simplify.ts                   # Debt simplification: greedy algorithm, zero framework deps
-  balances/buildRawDebts.ts              # Converts expenses+splits → raw Debt[] pairs
-  balances/getUserDebt.ts                # getUserDebtCents() + getUserBalanceCents() — convenience wrappers
-  balances/splitAmount.ts                # Equal-split math: integer division + remainder distribution
-  format.ts                              # formatCents() — single source of truth for "$X.XX" display
-  formatDisplayName.ts                   # "First Last" → "First L." abbreviation
-  constants.ts                           # Shared character-length limits, emoji palette
-  amount.ts                              # Amount input filtering, formatting, MAX_AMOUNT_CENTS
-  percentageSplit.ts                     # Percentage ↔ cents conversion for custom splits
-  groupPattern.ts                        # Deterministic SVG pattern generator for group thumbnails/banners
-  compressImage.ts                       # Client-side image compression (Canvas API)
+  balances/*.ts                          # Re-export barrels → @aviary/shared (source lives in packages/shared/)
+  format.ts                              # Re-export barrel → @aviary/shared
+  formatDisplayName.ts                   # Re-export barrel → @aviary/shared
+  constants.ts                           # Re-export barrel → @aviary/shared
+  amount.ts                              # Re-export barrel → @aviary/shared
+  percentageSplit.ts                     # Re-export barrel → @aviary/shared
+  groupPattern.ts                        # Re-export barrel → @aviary/shared
+  compressImage.ts                       # Client-side image compression (Canvas API, web-only)
   export/buildExportData.ts              # Transform expense data for spreadsheet export
   export/generateSpreadsheet.ts          # Generate .xlsx file using exceljs
 
@@ -282,6 +333,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
 | `create_payment(...)` | Creates payment expense + single split for recipient + activity log | `POST /api/groups/[id]/payments` |
+| `add_member_by_email(_group_id, _email)` | Looks up user by email, adds as group member. Atomic: auth check → user lookup → duplicate check → insert. Returns `{ userId, displayName, groupId, joinedAt }` | Mobile `add-member.tsx` (direct RPC) |
 
 Split computation (integer division + remainder distribution) is replicated in PL/pgSQL to match the JS logic exactly.
 
@@ -712,26 +764,76 @@ These features extend the core expense-splitting functionality:
 | **Google Sign-In** | `GoogleSignInButton.tsx`, login/signup pages | OAuth via Supabase |
 | **Split modes** | `AddExpenseForm.tsx`, `lib/percentageSplit.ts` | Equal, custom dollar amounts, or percentage |
 
-## Shared Pure Logic (`lib/`)
+## Shared Pure Logic (`@aviary/shared`)
 
-These files contain **zero framework dependencies** — pure TypeScript functions that are candidates for cross-platform sharing (web + mobile). They all have co-located tests.
+All pure business logic lives in `packages/shared/src/` and is published as the `@aviary/shared` workspace package. **Zero framework dependencies** — no React, no DOM, no Node.js APIs. Both the web app and mobile app consume this package.
 
-| File | Exports | Test coverage |
+**Web app access:** Existing `lib/` files are re-export barrels that forward to `@aviary/shared`. This means `import { formatCents } from "@/lib/format"` still works — but the source of truth is in `packages/shared/`.
+
+**Mobile app access:** Imports via `@aviary/shared` (through `mobile/lib/queries/shared.ts` re-export layer).
+
+**Adding to the shared package:** Add your file to `packages/shared/src/`, export from `packages/shared/src/index.ts`, and create a re-export barrel in `lib/` if web code needs the old import path.
+
+| File (in `packages/shared/src/`) | Exports | Test coverage |
 |------|---------|---------------|
-| `lib/balances/simplify.ts` | `simplifyDebts(debts)` — greedy debt simplification | 150+ tests |
-| `lib/balances/buildRawDebts.ts` | `buildRawDebts(expenses)` — expenses→debt pairs | Thorough |
-| `lib/balances/getUserDebt.ts` | `getUserDebtCents()`, `getUserBalanceCents()` | Thorough |
-| `lib/balances/splitAmount.ts` | `splitAmount(cents, n)` — equal split with remainder | Thorough |
-| `lib/format.ts` | `formatCents(cents)` → `"$X.XX"`, `UNKNOWN_USER` | Simple |
-| `lib/formatDisplayName.ts` | `formatDisplayName(name)` → abbreviated | Thorough |
-| `lib/constants.ts` | `MAX_GROUP_NAME`, `MAX_EXPENSE_DESCRIPTION`, `MEMBER_EMOJIS`, etc. | Thorough |
-| `lib/amount.ts` | `filterAmountInput()`, `formatAmountDisplay()`, `MAX_AMOUNT_CENTS` | Thorough |
-| `lib/percentageSplit.ts` | `percentagesToCents()`, `centsToPercentages()` | Thorough |
-| `lib/groupPattern.ts` | `generateGroupPattern()`, `generateGroupBanner()` | Thorough |
+| `balances/simplify.ts` | `simplifyDebts(debts)` — greedy debt simplification | 150+ tests |
+| `balances/buildRawDebts.ts` | `buildRawDebts(expenses)` — expenses→debt pairs | Thorough |
+| `balances/getUserDebt.ts` | `getUserDebtCents()`, `getUserBalanceCents()` | Thorough |
+| `balances/splitAmount.ts` | `splitAmount(cents, n)` — equal split with remainder | Thorough |
+| `format.ts` | `formatCents(cents)` → `"$X.XX"`, `UNKNOWN_USER` | Simple |
+| `formatDisplayName.ts` | `formatDisplayName(name)` → abbreviated | Thorough |
+| `constants.ts` | `MAX_GROUP_NAME`, `MAX_EXPENSE_DESCRIPTION`, `MEMBER_EMOJIS`, etc. | Thorough |
+| `amount.ts` | `filterAmountInput()`, `formatAmountDisplay()`, `MAX_AMOUNT_CENTS` | Thorough |
+| `percentageSplit.ts` | `percentagesToCents()`, `centsToPercentages()` | Thorough |
+| `groupPattern.ts` | `generateGroupPattern()`, `generateGroupBanner()` | Thorough |
+| `birdFacts.ts` | `BIRD_FACTS` — array of bird fact strings | — |
+| `types.ts` | `ExpenseRow`, `ActivityLog`, `UserOwesDebt`, `SplitEntry`, `ResolvedDebt`, `GroupSummary` | — |
+| `validation.ts` | Zod schemas: `createExpenseSchema`, `updateExpenseSchema`, `createPaymentSchema`, `createGroupSchema`, `updateSettingsSchema`, `addMemberSchema`, `feedbackSchema` | — |
+| `activityDiff.ts` | `computeExpenseChanges()`, `buildSplitSnapshot()` — activity log change detection | — |
+| `rpcParams.ts` | `buildCreateExpenseParams()`, `buildUpdateExpenseParams()`, `buildCreatePaymentParams()`, `buildDeleteExpenseParams()`, `buildCreateRecurringExpenseParams()` | — |
+
+## Mobile App Architecture
+
+The mobile app is a React Native app built with Expo SDK 52, Expo Router v4, NativeWind v4 (Tailwind for RN), and TanStack Query v5.
+
+### Key difference from web: Direct-to-Supabase
+
+The web app routes mutations through Next.js API routes (`fetch('/api/groups/...')`). The mobile app calls Supabase **directly** — queries via the JS client and mutations via `supabase.rpc()`. There is no API intermediary. This works because:
+- RLS policies enforce authorization at the database layer
+- RPC functions (`SECURITY DEFINER`) handle atomic multi-table operations
+- Zod validation schemas from `@aviary/shared` validate input before RPC calls
+
+### Mobile auth flow
+
+1. Supabase client configured with `expo-secure-store` for session persistence (encrypted on-device storage)
+2. `AuthProvider` (`mobile/lib/auth.tsx`) restores session on mount via `getSession()`, then listens for changes via `onAuthStateChange`
+3. `(app)/_layout.tsx` checks `session` — redirects to `(auth)/login` if null
+4. `(auth)/_layout.tsx` checks `session` — redirects to `(app)` if authenticated
+5. `detectSessionInUrl: false` — mobile doesn't handle URL-based auth callbacks
+
+### Mobile data layer
+
+All data fetching uses TanStack Query hooks in `mobile/lib/queries/`:
+- **Query key factory** (`keys.ts`): Centralized keys like `groupKeys.all`, `groupKeys.expenses(id)` for consistent cache invalidation
+- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, etc.
+- **Mutations** invalidate relevant query keys on success (e.g., creating an expense invalidates `groupKeys.expenses(id)` and `groupKeys.all`)
+- **Shared imports**: `mobile/lib/queries/shared.ts` re-exports from `@aviary/shared` — single seam for all shared logic imports
+
+### Platform-specific types
+
+`MemberColor` is platform-specific: web uses `{ bg: string; text: string }` (Tailwind class objects), mobile uses a string union (`"rose" | "sky" | ...`). The `Member` type includes `MemberColor`, so it's also kept per-platform. All other types (`ExpenseRow`, `ActivityLog`, etc.) are shared via `@aviary/shared`.
+
+### Mobile testing
+
+See `mobile/TESTING.md` for the full testing guide. Key points:
+- Same stack as web: Vitest 4 + `@testing-library/react` + happy-dom
+- React Native components mocked to HTML elements (`View` → `<div>`, `Text` → `<span>`, `Pressable` → `<button>`)
+- Expo modules mocked globally in `vitest.setup.ts`
+- Mobile tests run separately: `cd mobile && npm test`
+- Root vitest config excludes `mobile/**` to prevent cross-contamination
 
 ## Open Questions
 
 - **Dashboard balance cost**: Per-group net balance requires joining expenses+splits for each group. Fine for <50 groups/user, may need materialized balances later.
 - **Expense categories**: Small predefined enum with "Other"? Or free-text tags?
 - **Notifications**: Start with in-app toasts. Email notifications are a separate effort.
-- **Mobile app**: React Native (Expo) app planned — see `PLAN-react-native.md` for full architecture. Will share pure logic from `lib/` via `@aviary/shared` workspace package.

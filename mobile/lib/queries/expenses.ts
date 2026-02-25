@@ -4,6 +4,13 @@ import { useAuth } from "../auth";
 import { groupKeys } from "./keys";
 import type { ExpenseRow, Member } from "../types";
 import { UNKNOWN_USER, splitAmount } from "./shared";
+import {
+  buildCreateExpenseParams,
+  buildCreateRecurringExpenseParams,
+  buildUpdateExpenseParams,
+  buildDeleteExpenseParams,
+  type ExpenseChanges,
+} from "@aviary/shared";
 
 interface CreateExpenseInput {
   groupId: string;
@@ -34,47 +41,44 @@ export function useCreateExpense(groupId: string) {
           UNKNOWN_USER,
       );
 
+      const normalizedSplitType =
+        input.splitType === "percentage" ? "custom" : input.splitType;
+
       if (input.recurringFrequency) {
-        // Create recurring expense template + first instance
+        const params = buildCreateRecurringExpenseParams({
+          groupId: input.groupId,
+          description: input.description,
+          amountCents: input.amountCents,
+          date: input.date,
+          paidById: input.paidById,
+          participantIds: input.participantIds,
+          members: input.members,
+          splitType: normalizedSplitType,
+          splitAmounts: input.splitAmounts ?? null,
+          participantDisplayNames: participantNames,
+          frequency: input.recurringFrequency,
+        });
         const { data, error } = await supabase.rpc(
           "create_recurring_expense",
-          {
-            _group_id: input.groupId,
-            _description: input.description,
-            _amount_cents: input.amountCents,
-            _paid_by_id: input.paidById,
-            _participant_ids: input.participantIds,
-            _split_type: input.splitType === "percentage" ? "custom" : input.splitType,
-            _custom_splits: input.splitAmounts
-              ? JSON.stringify(
-                  input.participantIds.map((id, i) => ({
-                    userId: id,
-                    amountCents: input.splitAmounts![i],
-                  })),
-                )
-              : null,
-            _frequency: input.recurringFrequency,
-            _first_date: input.date,
-            _paid_by_display_name: paidByName,
-            _participant_display_names: participantNames,
-          },
+          params,
         );
         if (error) throw error;
         return data as string;
       }
 
-      const { data, error } = await supabase.rpc("create_expense", {
-        _group_id: input.groupId,
-        _description: input.description,
-        _amount_cents: input.amountCents,
-        _date: input.date,
-        _paid_by_id: input.paidById,
-        _participant_ids: input.participantIds,
-        _paid_by_display_name: paidByName,
-        _split_type: input.splitType === "percentage" ? "custom" : input.splitType,
-        _split_amounts: input.splitAmounts ?? null,
-        _participant_display_names: participantNames,
+      const params = buildCreateExpenseParams({
+        groupId: input.groupId,
+        description: input.description,
+        amountCents: input.amountCents,
+        date: input.date,
+        paidById: input.paidById,
+        participantIds: input.participantIds,
+        members: input.members,
+        splitType: normalizedSplitType,
+        splitAmounts: input.splitAmounts ?? null,
+        participantDisplayNames: participantNames,
       });
+      const { data, error } = await supabase.rpc("create_expense", params);
       if (error) throw error;
       return data as string;
     },
@@ -150,6 +154,7 @@ export function useCreateExpense(groupId: string) {
 
 interface UpdateExpenseInput {
   expenseId: string;
+  groupId: string;
   description: string;
   amountCents: number;
   date: string;
@@ -158,9 +163,9 @@ interface UpdateExpenseInput {
   members: Member[];
   splitType: "equal" | "custom" | "percentage";
   splitAmounts?: number[];
-  changes: Record<string, unknown>;
-  beforeSplits: Array<{ displayName: string; amountCents: number }>;
-  afterSplits: Array<{ displayName: string; amountCents: number }>;
+  changes: ExpenseChanges;
+  splitsBefore: Array<{ displayName: string; amountCents: number }>;
+  splitsAfter: Array<{ displayName: string; amountCents: number }>;
 }
 
 /** Update an existing expense. */
@@ -169,30 +174,22 @@ export function useUpdateExpense(groupId: string) {
 
   return useMutation({
     mutationFn: async (input: UpdateExpenseInput) => {
-      const paidByName =
-        input.members.find((m) => m.userId === input.paidById)?.displayName ??
-        UNKNOWN_USER;
-      const participantNames = input.participantIds.map(
-        (id) =>
-          input.members.find((m) => m.userId === id)?.displayName ??
-          UNKNOWN_USER,
-      );
-
-      const { error } = await supabase.rpc("update_expense", {
-        _expense_id: input.expenseId,
-        _description: input.description,
-        _amount_cents: input.amountCents,
-        _date: input.date,
-        _paid_by_id: input.paidById,
-        _participant_ids: input.participantIds,
-        _paid_by_display_name: paidByName,
-        _split_type: input.splitType === "percentage" ? "custom" : input.splitType,
-        _split_amounts: input.splitAmounts ?? null,
-        _participant_display_names: participantNames,
-        _changes: JSON.stringify(input.changes),
-        _before_splits: JSON.stringify(input.beforeSplits),
-        _after_splits: JSON.stringify(input.afterSplits),
+      const params = buildUpdateExpenseParams({
+        expenseId: input.expenseId,
+        groupId: input.groupId,
+        description: input.description,
+        amountCents: input.amountCents,
+        date: input.date,
+        paidById: input.paidById,
+        participantIds: input.participantIds,
+        members: input.members,
+        splitType: input.splitType === "percentage" ? "custom" : input.splitType,
+        splitAmounts: input.splitAmounts ?? null,
+        changes: input.changes,
+        splitsBefore: input.splitsBefore,
+        splitsAfter: input.splitsAfter,
       });
+      const { error } = await supabase.rpc("update_expense", params);
       if (error) throw error;
     },
     onSettled: () => {
@@ -216,22 +213,27 @@ export function useDeleteExpense(groupId: string) {
       expenseId,
       description,
       amountCents,
+      paidByDisplayName,
+      date,
       participantDisplayNames,
-      isPayment,
     }: {
       expenseId: string;
       description: string;
       amountCents: number;
+      paidByDisplayName: string;
+      date: string;
       participantDisplayNames: string[];
-      isPayment: boolean;
     }) => {
-      const { error } = await supabase.rpc("delete_expense", {
-        _expense_id: expenseId,
-        _description: description,
-        _amount_cents: amountCents,
-        _participant_display_names: participantDisplayNames,
-        _is_payment: isPayment,
+      const params = buildDeleteExpenseParams({
+        expenseId,
+        groupId,
+        description,
+        amountCents,
+        paidByDisplayName,
+        date,
+        participantDisplayNames,
       });
+      const { error } = await supabase.rpc("delete_expense", params);
       if (error) throw error;
     },
     onMutate: async ({ expenseId }) => {
