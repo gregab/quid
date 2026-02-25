@@ -65,7 +65,6 @@ vi.mock("expo-router", () => ({
   useLocalSearchParams: vi.fn(() => ({})),
   useSegments: vi.fn(() => []),
   Link: ({ children }: { children: React.ReactNode }) => children,
-  Redirect: () => null,
   Stack: Object.assign(
     ({ children }: { children: React.ReactNode }) => children,
     { Screen: () => null },

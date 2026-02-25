@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
+import { useRouter } from "expo-router";
 import AppLayout from "./_layout";
 
 // Mock auth with controllable return value
@@ -8,7 +9,7 @@ vi.mock("../../lib/auth", () => ({
   useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }));
 
-// Override expo-router for this test to make Redirect detectable
+// Override expo-router for this test to track router.replace calls
 vi.mock("expo-router", () => ({
   useRouter: vi.fn(() => ({
     push: vi.fn(),
@@ -19,9 +20,6 @@ vi.mock("expo-router", () => ({
   useLocalSearchParams: vi.fn(() => ({})),
   useSegments: vi.fn(() => []),
   Link: ({ children }: { children: React.ReactNode }) => children,
-  Redirect: ({ href }: { href: string }) => (
-    <div data-testid="redirect" data-href={href} />
-  ),
   Stack: Object.assign(
     ({ children }: { children: React.ReactNode }) => children,
     { Screen: () => null },
@@ -46,12 +44,19 @@ describe("AppLayout (protected route)", () => {
   });
 
   it("redirects to login when not authenticated", () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
     mockUseAuth.mockReturnValue({ session: null, loading: false });
 
     render(<AppLayout />);
 
-    const redirect = screen.getByTestId("redirect");
-    expect(redirect.getAttribute("data-href")).toBe("/(auth)/login");
+    expect(replace).toHaveBeenCalledWith("/(auth)/login");
   });
 
   it("renders Stack when authenticated", () => {
@@ -62,7 +67,6 @@ describe("AppLayout (protected route)", () => {
 
     render(<AppLayout />);
 
-    expect(screen.queryByTestId("redirect")).toBeNull();
     expect(screen.queryByRole("progressbar")).toBeNull();
   });
 });

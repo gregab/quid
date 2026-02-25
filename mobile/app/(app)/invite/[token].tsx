@@ -1,13 +1,13 @@
 import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../lib/auth";
 import { useInvitePreview, useJoinGroup } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function InviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
@@ -18,13 +18,21 @@ export default function InviteScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Not authenticated — redirect to login
-  if (!session) {
-    return <Redirect href={`/(auth)/login?next=/invite/${token}`} />;
-  }
+  useEffect(() => {
+    if (!session) {
+      router.replace(`/(auth)/login?next=/invite/${token}` as never);
+    }
+  }, [session, router, token]);
 
   // Already a member — redirect to group
-  if (preview?.isMember) {
-    return <Redirect href={`/(app)/groups/${preview.id}`} />;
+  useEffect(() => {
+    if (preview?.isMember) {
+      router.replace(`/(app)/groups/${preview.id}` as never);
+    }
+  }, [preview, router]);
+
+  if (!session || preview?.isMember) {
+    return null;
   }
 
   const handleJoin = async () => {

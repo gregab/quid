@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { createTestQueryClient } from "../../../lib/test-utils";
 import InviteScreen from "./[token]";
 
@@ -157,7 +157,15 @@ describe("InviteScreen", () => {
     expect(screen.getByText("Invite expired")).toBeTruthy();
   });
 
-  it("returns null (Redirect) when not authenticated", () => {
+  it("redirects to login when not authenticated", () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
     mockUseAuth.mockReturnValue({
       user: null,
       session: null,
@@ -170,7 +178,8 @@ describe("InviteScreen", () => {
       error: null,
     });
     renderWithProviders();
-    // Redirect component renders null in our mock
+
+    expect(replace).toHaveBeenCalledWith("/(auth)/login?next=/invite/invite-abc");
     expect(screen.queryByText("Join")).toBeNull();
   });
 });

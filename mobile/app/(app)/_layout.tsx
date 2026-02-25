@@ -1,17 +1,20 @@
-import { Redirect, Stack } from "expo-router";
+import { useEffect } from "react";
+import { Stack, useRouter } from "expo-router";
 import { useAuth } from "../../lib/auth";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
 export default function AppLayout() {
   const { session, loading } = useAuth();
+  const router = useRouter();
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !session) {
+      router.replace("/(auth)/login");
+    }
+  }, [session, loading, router]);
+
+  if (loading || !session) {
     return <LoadingSpinner text="Loading..." />;
-  }
-
-  // Not authenticated — go to login
-  if (!session) {
-    return <Redirect href="/(auth)/login" />;
   }
 
   return (
