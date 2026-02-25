@@ -254,9 +254,11 @@ Only **2 operations** cannot be done from the client:
 | Operation | Why server-only? | Solution |
 |---|---|---|
 | **Account deletion** | Needs `SUPABASE_SERVICE_ROLE_KEY` to delete the auth user via `admin.auth.admin.deleteUser()` | **Supabase Edge Function** — client calls `delete_account` RPC (cleans up app data), then invokes Edge Function to delete auth record |
-| **Recurring expense cron** | Needs `CRON_SECRET` + service role key to process recurring expenses system-wide | **Supabase Edge Function** or keep existing Next.js API route (not called by clients — triggered by external cron) |
+| **Recurring expense cron** | Needs service role key to process recurring expenses system-wide | **Supabase `pg_cron`** — schedule `process_due_recurring_expenses()` directly in Postgres via `SELECT cron.schedule(...)`. Runs server-side, no external cron service or API route needed. |
 
 For **add member by email** (currently requires server-side email lookup since RLS doesn't expose the User table for arbitrary email queries): create a new RPC `add_member_by_email(_group_id, _email)` that does the lookup + validation + insert atomically as SECURITY DEFINER. This eliminates the need for a server intermediary.
+
+**All 3 operations are handled entirely within Supabase — no custom API layer needed.** If we ever find we need a server layer (rate limiting, third-party integrations, complex orchestration), the architecture makes it easy to add one later: the shared package owns all business logic and RPC param builders, so a future API server would use the same shared code. The RPCs remain the security boundary regardless of whether a client or a server calls them. Starting without an API layer avoids deploying and monitoring an extra service when Supabase already provides everything we need.
 
 **Long-term vision:** Eventually migrate the web app to also talk directly to Supabase, removing the Next.js API routes entirely. The web app already uses the Supabase JS client for auth — extending it to data access is straightforward. The API routes become dead code once both clients use the shared RPC param builders.
 
