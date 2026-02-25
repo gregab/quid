@@ -25,7 +25,7 @@ app/
   globals.css                            # Tailwind base + custom animations (fade-in, slide-up, etc.)
 
   (auth)/                                # Route group: public auth pages
-    login/page.tsx                       # Email/password login form (client component)
+    login/page.tsx                       # Email/password + Google sign-in form (client component)
     signup/page.tsx                      # Signup form with "check your email" confirmation state (client)
   auth/callback/route.ts                 # GET handler: exchanges email confirmation code for session,
                                          #   upserts User via Supabase, redirects to /dashboard
@@ -34,7 +34,7 @@ app/
     layout.tsx                           # Auth guard (redirects to /login if no session), renders Nav,
                                          #   upserts User record from Supabase metadata on every request
     dashboard/
-      page.tsx                           # Lists user's groups with deterministic emoji per group (server)
+      page.tsx                           # Lists user's groups with balance summaries + bird facts (server)
       CreateGroupButton.tsx              # "Create group" modal with name input (client)
     groups/[id]/
       page.tsx                           # Group detail: fetches members, expenses, splits, activity logs
@@ -46,21 +46,36 @@ app/
       ExpensesList.tsx                   # Renders expense cards with optimistic add/edit/delete;
                                          #   manages pending state and animations
       AddExpenseForm.tsx                 # Modal: description, amount, date, payer dropdown,
-                                         #   participant checkboxes; POSTs to expenses API
+                                         #   participant checkboxes, split mode (equal/custom/percentage);
+                                         #   POSTs to expenses API
       ExpenseDetailModal.tsx             # Modal: view/edit/delete expense details; split breakdown
+      ExpenseActions.tsx                 # Edit/delete buttons + optimistic activity log computation
       RecordPaymentForm.tsx              # Modal: record payment between two members
-      AddMemberForm.tsx                  # Modal: add member by email; POSTs to members API
-      CopyInviteLinkButton.tsx           # Copy invite link to clipboard
+      MemberPill.tsx                     # Colored member chip with avatar/emoji + name
+      CopyInviteLinkButton.tsx           # Copy invite link to clipboard / native share
+      useInviteShare.ts                  # Hook: invite link generation + Web Share API
       LeaveGroupButton.tsx               # Leave group: confirmation dialog, DELETE call, redirect
+      GroupSettingsButton.tsx             # Gear button → opens GroupSettingsModal
+      GroupSettingsModal.tsx              # Modal: rename group, upload/change banner image
+      ExportButton.tsx                   # Download group expenses as Excel spreadsheet
       ActivityFeed.tsx                   # Renders activity log entries with relative timestamps
       useActivityLogs.ts                 # Hook: manages activity log state with optimistic additions
                                          #   and server reconciliation
+      loading.tsx                        # Suspense fallback for group page
     settings/
       page.tsx                           # Settings page: fetches user info + group balances (server)
-      SettingsClient.tsx                 # Account deletion with confirmation modal + balance warnings (client)
+      SettingsClient.tsx                 # Profile picture, emoji, account deletion (client)
+    invite/[token]/
+      page.tsx                           # Invite preview: shows group name + member count (server)
+      InviteJoinForm.tsx                 # Join button for non-members (client)
+
+  (legal)/
+    privacy/page.tsx                     # Privacy Policy
+    terms/page.tsx                       # Terms of Service
 
   api/account/
     route.ts                             # DELETE: delete account (RPC + admin auth user deletion)
+    profile-picture/route.ts             # POST: upload compressed profile picture to Supabase storage
   api/groups/
     route.ts                             # GET: list user's groups; POST: create group (via RPC)
     [id]/
@@ -71,14 +86,27 @@ app/
       balances/route.ts                  # GET: compute simplified debts from expenses/splits
       payments/route.ts                  # POST: record payment (via create_payment RPC)
       activity/route.ts                  # GET: paginated activity logs for group
+      export/route.ts                    # GET: download group expenses as .xlsx spreadsheet
+      settings/route.ts                  # GET: group settings; PUT: rename group, update banner
+      recurring/[recurringId]/route.ts   # PUT: update recurring expense; DELETE: cancel recurring
   api/invite/[token]/
     join/route.ts                        # POST: join group via invite token (via join_group_by_token RPC)
+  api/feedback/
+    route.ts                             # POST: submit user feedback
+  api/cron/
+    process-recurring/route.ts           # POST: auto-create expenses from recurring templates (cron)
 
 components/
-  Nav.tsx                                # Top nav: app name, user display name, logout button (client)
-  ui/Button.tsx                          # Button component with variant props (primary, secondary, danger)
+  Nav.tsx                                # Top nav: Aviary logo, user email, settings link, feedback, logout
+  FeedbackModal.tsx                      # User feedback form modal
+  GroupThumbnail.tsx                     # Group card thumbnail (pattern or banner image)
+  InstallPrompt.tsx                      # PWA install prompt (mobile browsers only)
+  ServiceWorkerRegistration.tsx          # Service worker for PWA offline support
+  ui/Button.tsx                          # Button with variants (primary, secondary, ghost, danger)
   ui/Card.tsx                            # Card container with consistent padding/border
   ui/Input.tsx                           # Input with label, error message, full-width styling
+  ui/GoogleSignInButton.tsx              # Google OAuth login button
+  ui/DelayedFallback.tsx                 # Suspense fallback that delays visibility to avoid flicker
 
 lib/
   supabase/client.ts                     # Browser Supabase client (createBrowserClient<Database>)
@@ -91,6 +119,13 @@ lib/
   balances/splitAmount.ts                # Equal-split math: integer division + remainder distribution
   format.ts                              # formatCents() — single source of truth for "$X.XX" display
   formatDisplayName.ts                   # "First Last" → "First L." abbreviation
+  constants.ts                           # Shared character-length limits, emoji palette
+  amount.ts                              # Amount input filtering, formatting, MAX_AMOUNT_CENTS
+  percentageSplit.ts                     # Percentage ↔ cents conversion for custom splits
+  groupPattern.ts                        # Deterministic SVG pattern generator for group thumbnails/banners
+  compressImage.ts                       # Client-side image compression (Canvas API)
+  export/buildExportData.ts              # Transform expense data for spreadsheet export
+  export/generateSpreadsheet.ts          # Generate .xlsx file using exceljs
 
 supabase/
   migrations/                            # SQL migrations applied via `npx supabase db push`
@@ -106,17 +141,22 @@ All monetary values are **integers (cents)**. Never floats. All `id` columns are
 
 ```
 User
-  id            String    @id @default(uuid)
-  email         String    @unique
-  displayName   String
-  avatarUrl     String?
-  createdAt     DateTime  @default(now())
+  id                  String    @id @default(uuid)
+  email               String    @unique
+  displayName         String
+  avatarUrl           String?              // from OAuth provider (Google profile picture)
+  profilePictureUrl   String?              // user-uploaded profile picture (Supabase storage)
+  defaultEmoji        String    @default   // random emoji from MEMBER_EMOJIS, fallback avatar
+  createdAt           DateTime  @default(now())
 
 Group
   id            String    @id @default(uuid)
   name          String
   createdAt     DateTime  @default(now())
   createdById   String    → User
+  inviteToken   String    @default(uuid)   // shareable invite link token
+  patternSeed   Int       @default(random) // seed for deterministic SVG pattern generation
+  bannerUrl     String?                    // user-uploaded group banner image
 
 GroupMember
   id            String    @id @default(uuid)
@@ -126,17 +166,19 @@ GroupMember
   @@unique([groupId, userId])
 
 Expense
-  id            String    @id @default(uuid)
-  groupId       String    → Group (cascade delete)
-  paidById      String    → User
-  description   String
-  amountCents   Int       CHECK > 0
-  date          DateTime
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime? // auto-set by trigger on UPDATE; NULL = never edited
-  isPayment     Boolean   @default(false)   // true for payments recorded via Record Payment
-  createdById   String?   → User            // set on creation; creator-only edit/delete enforced in RPC
-  splitType     String    @default('equal') CHECK IN ('equal', 'custom')
+  id                  String    @id @default(uuid)
+  groupId             String    → Group (cascade delete)
+  paidById            String    → User
+  description         String
+  amountCents         Int       CHECK > 0
+  date                DateTime
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime? // auto-set by trigger on UPDATE; NULL = never edited
+  isPayment           Boolean   @default(false)   // true for payments recorded via Record Payment
+  createdById         String?   → User            // set on creation; creator-only edit/delete enforced in RPC
+  splitType           String    @default('equal') CHECK IN ('equal', 'custom')
+  settledUp           Boolean   @default(false)   // marks a payment as settled
+  recurringExpenseId  String?   → RecurringExpense // links to recurring template if auto-generated
 
 ExpenseSplit
   id            String    @id @default(uuid)
@@ -145,6 +187,21 @@ ExpenseSplit
   amountCents   Int       CHECK >= 0
   @@unique([expenseId, userId])
 
+RecurringExpense
+  id              String    @id @default(uuid)
+  groupId         String    → Group (cascade delete)
+  createdById     String    → User
+  description     String
+  amountCents     Int       CHECK > 0
+  paidById        String    → User
+  participantIds  String[]            // array of user IDs
+  splitType       String    @default('equal')
+  frequency       String    CHECK IN ('weekly', 'monthly', 'yearly')
+  nextOccurrence  Date                // next date to auto-create
+  lastProcessed   DateTime?           // when cron last created an expense from this
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
 ActivityLog
   id            String    @id @default(uuid)
   groupId       String    → Group (cascade delete)
@@ -152,6 +209,12 @@ ActivityLog
   action        String    CHECK IN ('expense_added', 'expense_edited', 'expense_deleted',
                                     'payment_recorded', 'payment_deleted', 'member_left')
   payload       Json      // See "Activity Log System" section below for full payload shape
+  createdAt     DateTime  @default(now())
+
+Feedback
+  id            String    @id @default(uuid)
+  userId        String    → User
+  message       String
   createdAt     DateTime  @default(now())
 ```
 
@@ -206,11 +269,11 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 
 ### RPC Functions
 
-9 `SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally. Each function has exactly one overload (stale overloads from earlier migrations were cleaned up).
+`SECURITY DEFINER` PL/pgSQL functions handle atomic multi-table operations. They bypass RLS and do their own auth checks internally. Each function has exactly one overload (stale overloads from earlier migrations were cleaned up).
 
 | Function | Purpose | Called from |
 |----------|---------|------------|
-| `create_group(_name)` | Creates group + adds creator as member | `POST /api/groups` |
+| `create_group(_name)` | Creates group + adds creator as member + generates invite token + pattern seed | `POST /api/groups` |
 | `create_expense(...)` | Creates expense + splits + activity log | `POST /api/groups/[id]/expenses` |
 | `update_expense(...)` | Updates expense + replaces splits + activity log | `PUT /api/groups/[id]/expenses/[expenseId]` |
 | `delete_expense(...)` | Activity log + deletes expense (cascade handles splits) | `DELETE /api/groups/[id]/expenses/[expenseId]` |
@@ -274,6 +337,33 @@ Computes simplified debts from all expenses and splits in the group. Uses the gr
 Permanently deletes the user's account. Calls `delete_account` RPC to leave all groups and delete the User row, then deletes the Supabase auth user via the admin client (service role key).
 - Returns: `{ data: { deleted: true }, error: null }`
 
+### `GET /api/groups/[id]/export`
+Downloads group expenses as an Excel spreadsheet (.xlsx). Uses `exceljs` to generate the file.
+- Returns: Excel file as binary download
+
+### `GET /api/groups/[id]/settings`
+Returns group settings (name, banner URL).
+
+### `PUT /api/groups/[id]/settings`
+Updates group settings (rename, banner image).
+- Body: `{ name?: string, bannerUrl?: string }`
+
+### `PUT /api/groups/[id]/recurring/[recurringId]`
+Updates a recurring expense template (description, amount, frequency, participants, etc.).
+
+### `DELETE /api/groups/[id]/recurring/[recurringId]`
+Deactivates a recurring expense template.
+
+### `POST /api/account/profile-picture`
+Uploads a compressed profile picture to Supabase storage. Client compresses the image before uploading.
+
+### `POST /api/feedback`
+Submits user feedback.
+- Body: `{ message: string }`
+
+### `POST /api/cron/process-recurring`
+Cron endpoint that auto-creates expenses from active recurring templates whose `nextOccurrence` has passed. Advances `nextOccurrence` after processing.
+
 ### `POST /api/invite/[token]/join`
 Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member).
 - Returns: `{ data: { groupId, alreadyMember }, error: null }`
@@ -328,16 +418,21 @@ Pending items render with fade animations. The `isPending` flag prevents user in
 
 ### Component Hierarchy (Group Detail Page)
 ```
-page.tsx (server)                    ← Fetches all data via Supabase
-  └─ GroupInteractive (client)       ← Manages expense, activity, and balance state
-       ├─ Balances section           ← Client-rendered; recomputes on every expense change
-       ├─ ExpensesList               ← Renders expenses with optimistic updates
-       │    ├─ AddExpenseForm        ← Modal for new expenses
-       │    └─ ExpenseActions (×N)   ← Edit/delete per expense
-       └─ ActivityFeed               ← Renders activity log
-  └─ AddMemberForm (client)          ← Separate: manages its own state
-  └─ LeaveGroupButton (client)       ← Confirmation dialog, DELETE call, redirect
-  └─ Members list (server HTML)      ← Static render of group members
+page.tsx (server)                         ← Fetches all data via Supabase
+  ├─ Banner hero                          ← Uploaded image or generated SVG pattern
+  ├─ MemberPill (×N)                      ← Colored chips with avatar/emoji + name
+  ├─ CopyInviteLinkButton                 ← Copy/share invite link
+  ├─ GroupInteractive (client)            ← Manages expense, activity, and balance state
+  │    ├─ Balances section                ← Client-rendered; recomputes on every expense change
+  │    ├─ ExpensesList                    ← Renders expenses with optimistic updates
+  │    │    ├─ AddExpenseForm             ← Modal: new expense (equal/custom/percentage splits)
+  │    │    ├─ RecordPaymentForm          ← Modal: record payment between members
+  │    │    ├─ ExpenseDetailModal (×N)    ← View/edit expense details + split breakdown
+  │    │    └─ ExpenseActions (×N)        ← Edit/delete + optimistic activity log
+  │    ├─ ActivityFeed                    ← Renders activity log (paginated)
+  │    └─ ExportButton                   ← Download group as Excel
+  ├─ GroupSettingsButton → GroupSettingsModal  ← Rename group, change banner
+  └─ LeaveGroupButton (client)            ← Confirmation dialog, DELETE call, redirect
 ```
 
 ### Client-Side fetch Pattern
@@ -349,7 +444,7 @@ fetch(`/api/groups/...`, { method: "POST", ... });
 
 ## Expense Splitting
 
-Two split modes are supported:
+Three split modes are supported in the UI (stored as two `splitType` values in the DB):
 
 **Equal split** (`splitType = 'equal'`, default):
 - Total ÷ number of participants = base amount per person
@@ -360,6 +455,11 @@ Two split modes are supported:
 - Per-person amounts provided by the user
 - API validates that custom split amounts sum to exactly the expense total
 - Zero-amount splits are valid (participant opted out but still in the group)
+
+**Percentage split** (UI-only mode, stored as `splitType = 'custom'`):
+- Per-person percentages that must sum to 100%
+- Converted to cent amounts via `percentagesToCents()` in `lib/percentageSplit.ts`
+- Remainder from rounding distributed to first N participants (same as equal split)
 
 **Payer exclusion**: The payer is not required to be a participant. For example, Alice can pay $60 for Bob and Carol's lunch — Alice has no split record, and both Bob and Carol owe Alice $30. This is important for the balance computation: `buildRawDebts` skips splits where `userId === paidById`, so payer-excluded expenses naturally produce debts from all participants to the payer.
 
@@ -582,6 +682,9 @@ SMOKE_TEST_BASE_URL=http://localhost:3000 npm test tests/smoke.test.ts  # run ag
 | `cypress/e2e/dashboard.cy.ts` | Group list, create-group modal, link correctness |
 | `cypress/e2e/group-detail.cy.ts` | Add/edit/delete expenses, activity feed, balances section |
 | `cypress/e2e/navigation.cy.ts` | Nav bar, browser history back/forward |
+| `cypress/e2e/invite.cy.ts` | Invite link flow, join group via token |
+| `cypress/e2e/settings.cy.ts` | Profile settings, account deletion |
+| `cypress/e2e/recurring-expenses.cy.ts` | Recurring expense setup and processing |
 
 **Selectors:** Prefer existing `id` attributes (`#email`, `#expenseDescription`) and `aria-label` attributes (`[aria-label="Edit expense"]`) over brittle class selectors. All modals have `.modal-content` for scoping assertions.
 
@@ -592,9 +695,43 @@ npm run cy:open               # Interactive GUI
 npm run cy:run                # Headless CI mode
 ```
 
+## Additional Features (beyond core CRUD)
+
+These features extend the core expense-splitting functionality:
+
+| Feature | Key files | Notes |
+|---------|-----------|-------|
+| **Recurring expenses** | `RecurringExpense` table, `api/cron/process-recurring/`, `api/groups/[id]/recurring/` | Weekly/monthly/yearly auto-creation via cron |
+| **Group settings** | `GroupSettingsButton.tsx`, `GroupSettingsModal.tsx`, `api/groups/[id]/settings/` | Rename group, upload custom banner image |
+| **Profile pictures** | `SettingsClient.tsx`, `api/account/profile-picture/`, `lib/compressImage.ts` | Client-side compression → Supabase storage |
+| **Group patterns** | `lib/groupPattern.ts`, `GroupThumbnail.tsx` | Deterministic SVG thumbnails + banners from `patternSeed` |
+| **Invite system** | `CopyInviteLinkButton.tsx`, `useInviteShare.ts`, `invite/[token]/` | Shareable token-based invite links |
+| **Export** | `ExportButton.tsx`, `lib/export/`, `api/groups/[id]/export/` | Download group expenses as .xlsx |
+| **Feedback** | `FeedbackModal.tsx`, `api/feedback/` | In-app feedback form |
+| **PWA** | `InstallPrompt.tsx`, `ServiceWorkerRegistration.tsx` | Install prompt + offline support |
+| **Google Sign-In** | `GoogleSignInButton.tsx`, login/signup pages | OAuth via Supabase |
+| **Split modes** | `AddExpenseForm.tsx`, `lib/percentageSplit.ts` | Equal, custom dollar amounts, or percentage |
+
+## Shared Pure Logic (`lib/`)
+
+These files contain **zero framework dependencies** — pure TypeScript functions that are candidates for cross-platform sharing (web + mobile). They all have co-located tests.
+
+| File | Exports | Test coverage |
+|------|---------|---------------|
+| `lib/balances/simplify.ts` | `simplifyDebts(debts)` — greedy debt simplification | 150+ tests |
+| `lib/balances/buildRawDebts.ts` | `buildRawDebts(expenses)` — expenses→debt pairs | Thorough |
+| `lib/balances/getUserDebt.ts` | `getUserDebtCents()`, `getUserBalanceCents()` | Thorough |
+| `lib/balances/splitAmount.ts` | `splitAmount(cents, n)` — equal split with remainder | Thorough |
+| `lib/format.ts` | `formatCents(cents)` → `"$X.XX"`, `UNKNOWN_USER` | Simple |
+| `lib/formatDisplayName.ts` | `formatDisplayName(name)` → abbreviated | Thorough |
+| `lib/constants.ts` | `MAX_GROUP_NAME`, `MAX_EXPENSE_DESCRIPTION`, `MEMBER_EMOJIS`, etc. | Thorough |
+| `lib/amount.ts` | `filterAmountInput()`, `formatAmountDisplay()`, `MAX_AMOUNT_CENTS` | Thorough |
+| `lib/percentageSplit.ts` | `percentagesToCents()`, `centsToPercentages()` | Thorough |
+| `lib/groupPattern.ts` | `generateGroupPattern()`, `generateGroupBanner()` | Thorough |
+
 ## Open Questions
 
 - **Dashboard balance cost**: Per-group net balance requires joining expenses+splits for each group. Fine for <50 groups/user, may need materialized balances later.
 - **Expense categories**: Small predefined enum with "Other"? Or free-text tags?
 - **Notifications**: Start with in-app toasts. Email notifications are a separate effort.
-- **Mobile client**: Same API routes + CORS headers for cross-origin native apps.
+- **Mobile app**: React Native (Expo) app planned — see `PLAN-react-native.md` for full architecture. Will share pure logic from `lib/` via `@aviary/shared` workspace package.
