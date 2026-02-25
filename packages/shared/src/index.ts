@@ -76,6 +76,9 @@ export {
   type DeleteExpenseInput,
 } from "./rpcParams";
 
+// Bird facts
+export { BIRD_FACTS } from "./birdFacts";
+
 // Group patterns
 export {
   generateGroupPattern,
