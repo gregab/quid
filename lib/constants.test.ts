@@ -16,8 +16,8 @@ describe("character-length constants", () => {
   });
 
   it("has expected values", () => {
-    expect(MAX_GROUP_NAME).toBe(100);
-    expect(MAX_EXPENSE_DESCRIPTION).toBe(200);
+    expect(MAX_GROUP_NAME).toBe(40);
+    expect(MAX_EXPENSE_DESCRIPTION).toBe(40);
     expect(MAX_DISPLAY_NAME).toBe(30);
     expect(MAX_EMAIL).toBe(254);
     expect(MAX_FEEDBACK_MESSAGE).toBe(5000);
