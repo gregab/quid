@@ -25,16 +25,13 @@ const monorepoRoot = path.resolve(projectRoot, "..");
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the monorepo root for shared packages
-config.watchFolders = [monorepoRoot];
+// Extend Expo's default watchFolders with the monorepo root
+config.watchFolders = [...(config.watchFolders || []), monorepoRoot];
 
 // Resolve modules from both mobile/node_modules and root node_modules
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(monorepoRoot, "node_modules"),
 ];
-
-// Ensure Metro resolves the mobile app as the main project
-config.resolver.disableHierarchicalLookup = true;
 
 module.exports = withNativeWind(config, { input: "./global.css" });

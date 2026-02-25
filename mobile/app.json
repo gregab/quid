@@ -41,6 +41,7 @@
     },
     "extra": {
       "router": {
+        "root": "app",
         "origin": false
       },
       "eas": {
