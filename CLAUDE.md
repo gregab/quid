@@ -12,7 +12,7 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 For any change: understand the code first, make changes, write tests, run tests, commit. **Tests pass before shipping. Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy by running `deploy` in their terminal.
 
-**Starting a task:** Read **ARCHITECTURE.md** first — it covers data models, API routes, auth flow, and key design decisions. Use the "Where to Change Things" table below to find the right files. **Be strategic with token usage** — targeted reads, not broad exploration.
+**Starting a task:** Read **ARCHITECTURE.md** first — it's the single source of truth for data models, API routes, auth flow, component hierarchy, shared logic inventory, and key design decisions. It should tell you exactly which files to read without broad exploration. Use the "Where to Change Things" table below to find the right files. **Be strategic with token usage** — targeted reads, not broad exploration. If you have to explore more than 5-10 files to understand a feature, ARCHITECTURE.md is probably missing something and should be updated after your task.
 
 **If something goes sideways, STOP and re-plan.** Don't keep pushing through a broken approach — step back, reassess, and course-correct.
 
@@ -152,6 +152,9 @@ All in `.env.local` (see `.env.local.example`):
 - `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for smoke tests + Cypress
 
 ## Keeping Docs Current
+
+**This is important.** ARCHITECTURE.md is the map that lets future sessions navigate the codebase efficiently instead of reading 50+ files. If you add a new feature, table, API route, component, or shared utility — update ARCHITECTURE.md so the next session doesn't have to rediscover it.
+
 After non-trivial tasks, update if warranted:
-- **CLAUDE.md** — Workflow changes, new gotchas, structure changes
-- **ARCHITECTURE.md** — Design decisions, new patterns, data flow details
+- **ARCHITECTURE.md** — New data models, API routes, components, shared logic, design decisions. This is the primary reference — keep it complete. Key sections to maintain: Project Structure, Data Models, API Routes, Component Hierarchy, Shared Pure Logic table, Additional Features table.
+- **CLAUDE.md** — Workflow changes, new gotchas, new "Where to Change Things" entries, new commands
