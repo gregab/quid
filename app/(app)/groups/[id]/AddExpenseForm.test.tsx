@@ -349,11 +349,29 @@ describe("AddExpenseForm", () => {
       // Should not show preset cards
       expect(screen.queryByTestId("preset-you-paid-equal")).toBeNull();
 
-      // Should show Paid by label and member names
+      // Should show Paid by dropdown with all members
       expect(screen.getByText("Paid by")).toBeDefined();
-      expect(screen.getByText("Alice (you)")).toBeDefined();
-      expect(screen.getByText("Bob")).toBeDefined();
-      expect(screen.getByText("Charlie")).toBeDefined();
+      const paidBySelect = screen.getByDisplayValue("Alice (you)") as HTMLSelectElement;
+      expect(paidBySelect.tagName).toBe("SELECT");
+      expect(paidBySelect.options).toHaveLength(3);
+
+      // Should show member checklist
+      expect(screen.getByText("Split between")).toBeDefined();
+    });
+
+    it("allows changing payer via dropdown for 3+ members", () => {
+      renderForm(threeMembers);
+      openModal();
+      enterAmount();
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+
+      const paidBySelect = screen.getByDisplayValue("Alice (you)") as HTMLSelectElement;
+      fireEvent.change(paidBySelect, { target: { value: "user-2" } });
+      expect(paidBySelect.value).toBe("user-2");
+
+      // Go back and check summary reflects the change
+      fireEvent.click(screen.getByText("Done"));
+      expect(screen.getByTestId("split-summary-pill").textContent).toContain("Paid by Bob");
     });
 
     it("Done button returns to quick-entry", () => {

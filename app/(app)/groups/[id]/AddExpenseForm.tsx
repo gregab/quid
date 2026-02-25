@@ -46,16 +46,49 @@ function scaleAmounts(
   return result;
 }
 
-/** Strips non-numeric characters, allowing at most one decimal point. */
+/** Strips non-numeric characters, allowing at most one decimal point and max 2 decimal places. */
 function filterDecimalInput(value: string): string {
   let filtered = "";
   let hasDot = false;
+  let decimals = 0;
   for (const ch of value) {
-    if (ch >= "0" && ch <= "9") filtered += ch;
-    else if (ch === "." && !hasDot) {
+    if (ch >= "0" && ch <= "9") {
+      if (hasDot && decimals >= 2) continue;
+      filtered += ch;
+      if (hasDot) decimals++;
+    } else if (ch === "." && !hasDot) {
       filtered += ch;
       hasDot = true;
     }
+  }
+  return filtered;
+}
+
+/** Like filterDecimalInput but also allows commas (for formatted dollar amounts). */
+function filterAmountInput(value: string): string {
+  let filtered = "";
+  let hasDot = false;
+  let decimals = 0;
+  for (const ch of value) {
+    if (ch >= "0" && ch <= "9") {
+      if (hasDot && decimals >= 2) continue;
+      filtered += ch;
+      if (hasDot) decimals++;
+    } else if (ch === "." && !hasDot) {
+      filtered += ch;
+      hasDot = true;
+    } else if (ch === ",") {
+      filtered += ch;
+    }
+  }
+  return filtered;
+}
+
+/** Strips non-numeric characters, integers only, max 3 digits (for 0–100%). */
+function filterIntegerInput(value: string): string {
+  let filtered = "";
+  for (const ch of value) {
+    if (ch >= "0" && ch <= "9" && filtered.length < 3) filtered += ch;
   }
   return filtered;
 }
@@ -172,7 +205,7 @@ export function AddExpenseForm({
         const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
         setPercentages(centsToPercentages(dollarsMap, ids, parsedTotalCents));
       } else {
-        setPercentages(new Map(ids.map((id) => [id, "0.00"])));
+        setPercentages(new Map(ids.map((id) => [id, "0"])));
       }
     } else if (type === "percentage" && splitType === "custom") {
       setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
@@ -217,7 +250,7 @@ export function AddExpenseForm({
         if (splitType === "custom") {
           setCustomAmounts((m) => new Map(m).set(userId, "0.00"));
         } else if (splitType === "percentage") {
-          setPercentages((m) => new Map(m).set(userId, "0.00"));
+          setPercentages((m) => new Map(m).set(userId, "0"));
         }
       }
       return next;
@@ -545,15 +578,15 @@ export function AddExpenseForm({
                 </label>
                 {/* Percentage input */}
                 {splitType === "percentage" && isParticipant && (
-                  <div className="w-22 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
+                  <div className="w-20 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                     <input
                       type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={percentages.get(m.userId) ?? "0.00"}
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={percentages.get(m.userId) ?? "0"}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        const val = filterDecimalInput(e.target.value);
+                        const val = filterIntegerInput(e.target.value);
                         setPercentages((prev) => new Map(prev).set(m.userId, val));
                       }}
                       className="w-full bg-transparent pl-2 pr-0.5 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
@@ -602,16 +635,16 @@ export function AddExpenseForm({
               <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
               <span
                 className={`text-xs font-semibold ${
-                  Math.abs(percentageRemaining) < 0.005
+                  percentageRemaining === 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-rose-500 dark:text-rose-400"
                 }`}
               >
-                {Math.abs(percentageRemaining) < 0.005
+                {percentageRemaining === 0
                   ? "100% \u2713"
                   : percentageRemaining > 0
-                  ? `${(100 - percentageRemaining).toFixed(2)}% of 100%`
-                  : `${(100 - percentageRemaining).toFixed(2)}% — over by ${Math.abs(percentageRemaining).toFixed(2)}%`}
+                  ? `${100 - percentageRemaining}% of 100%`
+                  : `${100 - percentageRemaining}% — over by ${Math.abs(percentageRemaining)}%`}
               </span>
             </div>
           )}
@@ -698,7 +731,7 @@ export function AddExpenseForm({
                   aria-label="Amount"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                  onChange={(e) => { setAmount(filterAmountInput(e.target.value)); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
                   onBlur={handleAmountBlur}
                   onFocus={handleAmountFocus}
                   className="w-full bg-transparent px-2 py-2 text-base sm:text-sm text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
@@ -845,7 +878,7 @@ export function AddExpenseForm({
                   aria-label="Amount"
                   placeholder="0.00"
                   value={amount}
-                  onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); setShowAmountRequired(false); }}
+                  onChange={(e) => { setAmount(filterAmountInput(e.target.value)); setAmountError(false); setAmountErrorMessage(null); setError(null); setShowAmountRequired(false); }}
                   onBlur={handleAmountBlur}
                   onFocus={handleAmountFocus}
                   className="flex-1 text-3xl font-bold px-0 py-2.5 bg-transparent border-0 border-b-2 border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white placeholder:text-stone-300 dark:placeholder:text-stone-600 focus:outline-none focus:border-amber-500 dark:focus:border-amber-400 transition-colors"
@@ -1057,25 +1090,23 @@ export function AddExpenseForm({
             </>
           ) : (
             <>
-              {/* 3+ person: payer info (read-only) + participant checklist */}
-              {(() => {
-                const payer = members.find((m) => m.userId === paidByUserId);
-                const payerName = paidByUserId === currentUserId ? "You" : (payer?.displayName ?? "Unknown");
-                return (
-                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-stone-50 border border-stone-200 dark:bg-stone-800/60 dark:border-stone-700">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 bg-amber-100 text-amber-700 dark:bg-amber-800/60 dark:text-amber-300 overflow-hidden">
-                      {payer?.avatarUrl ? (
-                        <img src={payer.avatarUrl} alt="" className="w-full h-full object-cover rounded-full" />
-                      ) : (
-                        (payer?.displayName ?? "U").charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    <span className="text-sm text-stone-600 dark:text-stone-300">
-                      Paid by <span className="font-semibold text-stone-800 dark:text-stone-100">{payerName}</span>
-                    </span>
-                  </div>
-                );
-              })()}
+              {/* 3+ person: payer dropdown + participant checklist */}
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
+                  Paid by
+                </label>
+                <select
+                  value={paidByUserId}
+                  onChange={(e) => setPaidByUserId(e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100"
+                >
+                  {members.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.displayName}{m.userId === currentUserId ? " (you)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
