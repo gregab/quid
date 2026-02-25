@@ -390,12 +390,12 @@ describe("ExpensesList — payment card rendering", () => {
     expect(list?.textContent).toContain("→");
   });
 
-  it("renders amount in amber for payments", () => {
+  it("renders amount with muted color for payment-sent cards", () => {
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[makePayment()]} />
     );
-    const amountEl = container.querySelector(".text-amber-700.font-bold");
-    expect(amountEl, "amount should have amber color class").not.toBeNull();
+    const amountEl = container.querySelector(".text-stone-500.font-bold");
+    expect(amountEl, "amount should have muted color class for payment-sent").not.toBeNull();
     expect(amountEl!.textContent).toContain("$50.00");
   });
 
@@ -497,18 +497,18 @@ describe("ExpensesList — settled-up payment card rendering", () => {
     expect(list?.textContent).toContain("Bob settled up with Charlie");
   });
 
-  it("appends ✨ to the settled-up title", () => {
+  it("does not append emoji to the settled-up title", () => {
     render(<ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />);
     const list = document.querySelector("ul");
-    expect(list?.textContent).toContain("✨");
+    expect(list?.textContent).not.toContain("✨");
   });
 
-  it("renders amount in amber for settled-up payments", () => {
+  it("renders amount with muted color for settled-up payments", () => {
     const { container } = render(
       <ExpensesList {...BASE_PROPS} initialExpenses={[makeSettledPayment()]} />
     );
-    const amountEl = container.querySelector(".text-amber-700.font-bold");
-    expect(amountEl, "amount should have amber color class").not.toBeNull();
+    const amountEl = container.querySelector(".text-stone-500.font-bold");
+    expect(amountEl, "amount should have muted color class for settled").not.toBeNull();
     expect(amountEl!.textContent).toContain("$50.00");
   });
 

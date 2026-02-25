@@ -150,6 +150,87 @@ export function getSettledUpTitle(
   return `${fromName} settled up with ${toName}`;
 }
 
+type ExpenseType = "settled" | "payment-received" | "payment-sent" | "lent" | "owe" | "not-involved";
+
+function getExpenseType(
+  expense: ExpenseRow,
+  personalContext: { positive: boolean } | null,
+  currentUserId: string
+): ExpenseType {
+  if (expense.isPayment && expense.settledUp) return "settled";
+  if (expense.isPayment && expense.participantIds[0] === currentUserId) return "payment-received";
+  if (expense.isPayment) return "payment-sent";
+  if (personalContext?.positive) return "lent";
+  if (personalContext) return "owe";
+  return "not-involved";
+}
+
+function TypeIcon({ type }: { type: ExpenseType }) {
+  const config: Record<ExpenseType, { icon: React.ReactNode; circleClass: string; size: string; ring?: string }> = {
+    lent: {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M7 17L17 7" /><path d="M7 7h10v10" />
+        </svg>
+      ),
+      circleClass: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400",
+      size: "w-7 h-7",
+    },
+    owe: {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M17 7L7 17" /><path d="M17 17H7V7" />
+        </svg>
+      ),
+      circleClass: "bg-rose-50 text-rose-500 dark:bg-rose-950/50 dark:text-rose-400",
+      size: "w-7 h-7",
+    },
+    "not-involved": {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" />
+        </svg>
+      ),
+      circleClass: "bg-stone-100 text-stone-400 dark:bg-stone-800 dark:text-stone-500",
+      size: "w-7 h-7",
+    },
+    "payment-sent": {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M5 12h14" /><path d="M12 5l7 7-7 7" />
+        </svg>
+      ),
+      circleClass: "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400",
+      size: "w-7 h-7",
+    },
+    "payment-received": {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
+        </svg>
+      ),
+      circleClass: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400",
+      size: "w-7 h-7",
+    },
+    settled: {
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      ),
+      circleClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400",
+      size: "w-7 h-7",
+    },
+  };
+
+  const c = config[type];
+  return (
+    <div className={`${c.size} rounded-full ${c.circleClass} ${c.ring ?? ""} flex items-center justify-center shrink-0`}>
+      {c.icon}
+    </div>
+  );
+}
+
 export function ExpensesList({
   groupId,
   groupCreatedById,
@@ -419,22 +500,113 @@ export function ExpensesList({
             const dateParts = formatDateBlock(expense.date);
 
             const isSettledUp = expense.isPayment && expense.settledUp;
+            const expenseType = getExpenseType(expense, personalContext, currentUserId);
 
-            // Left accent bar color
-            const accentColor = expense.isPayment
-              ? "border-l-stone-200 dark:border-l-stone-700"
-              : personalContext?.positive
-                ? "border-l-emerald-500"
-                : personalContext
-                  ? "border-l-rose-400"
-                  : "border-l-stone-200 dark:border-l-stone-700";
+            // Card class: settled-up gets emerald tint, payment-received gets glow
+            const cardBg = isSettledUp
+              ? "bg-emerald-50/30 dark:bg-emerald-950/15"
+              : "";
+            const cardExtra = expenseType === "payment-received"
+              ? "payment-received-glow"
+              : "";
 
-            // Payment row background tint
-            const paymentBg = isSettledUp
-              ? "bg-emerald-50/40 dark:bg-emerald-950/20"
-              : expense.isPayment
-                ? "bg-amber-50/40 dark:bg-amber-950/20"
-                : "";
+            // Payment amount color: muted for sent, emerald for received
+            const paymentAmountClass = expenseType === "payment-received"
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-stone-500 dark:text-stone-400";
+
+            const cardContent = (
+              <Card
+                className={`px-3 sm:px-4 py-3 ${cardBg} ${cardExtra} ${expense.isPending ? "opacity-60" : ""} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
+              >
+                <div className="flex items-center gap-3">
+                  {/* Date block */}
+                  <div className="flex flex-col items-center w-9 shrink-0 text-center">
+                    <span className="text-[9px] font-bold tracking-wider text-stone-400 dark:text-stone-500 leading-none">
+                      {dateParts.month}
+                    </span>
+                    <span className="text-sm font-bold text-stone-600 dark:text-stone-300 leading-tight mt-px">
+                      {dateParts.day}
+                    </span>
+                  </div>
+
+                  {/* Type icon badge */}
+                  <TypeIcon type={expenseType} />
+
+                  {/* Info: title + subtitle */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-stone-900 dark:text-stone-100"}`}>
+                      {isSettledUp ? (
+                        <>{getSettledUpTitle(expense, members, allUserNames)}</>
+                      ) : expense.isPayment ? (
+                        <>{paymentDirection}</>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          {expense.description}
+                          {expense.recurringExpense && (
+                            <svg
+                              className="inline w-3.5 h-3.5 shrink-0 text-amber-400 dark:text-amber-500"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-label="Recurring"
+                            >
+                              <path d="M17 1l4 4-4 4" />
+                              <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                              <path d="M7 23l-4-4 4-4" />
+                              <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5 truncate">
+                      {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
+                    </p>
+                  </div>
+
+                  {/* Right: personal stake (expenses) or amount (payments) + chevron */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {expense.isPayment ? (
+                      <span className={`text-base font-bold whitespace-nowrap ${paymentAmountClass}`}>
+                        {formatCents(expense.amountCents)}
+                      </span>
+                    ) : personalContext ? (
+                      <div className="text-right">
+                        <p className={`text-xs leading-none ${
+                          personalContext.positive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}>
+                          {personalContext.label}
+                        </p>
+                        <p className={`text-base font-bold leading-tight mt-px whitespace-nowrap ${
+                          personalContext.positive
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-500 dark:text-rose-400"
+                        }`}>
+                          {formatCents(personalContext.amountCents)}
+                        </p>
+                      </div>
+                    ) : null}
+                    <svg
+                      className="w-4 h-4 text-stone-300 dark:text-stone-600 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                  </div>
+                </div>
+              </Card>
+            );
 
             return (
               <li
@@ -446,96 +618,7 @@ export function ExpensesList({
                   className="w-full text-left rounded-xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                   onClick={() => setOpenDetailExpenseId(expense.id)}
                 >
-                  <Card
-                    className={`px-3 sm:px-4 py-3 border-l-[3px] ${accentColor} ${paymentBg} ${expense.isPending ? "opacity-60" : ""} hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Date block */}
-                      <div className="flex flex-col items-center w-9 shrink-0 text-center">
-                        <span className="text-[9px] font-bold tracking-wider text-stone-400 dark:text-stone-500 leading-none">
-                          {dateParts.month}
-                        </span>
-                        <span className="text-sm font-bold text-stone-600 dark:text-stone-300 leading-tight mt-px">
-                          {dateParts.day}
-                        </span>
-                      </div>
-
-                      {/* Vertical divider */}
-                      <div className="w-px h-7 bg-stone-200 dark:bg-stone-700 shrink-0" />
-
-                      {/* Info: title + subtitle */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-sm truncate ${isSettledUp ? "text-emerald-700 dark:text-emerald-400" : "text-stone-900 dark:text-stone-100"}`}>
-                          {isSettledUp ? (
-                            <>{getSettledUpTitle(expense, members, allUserNames)} ✨</>
-                          ) : expense.isPayment ? (
-                            <>{paymentDirection}</>
-                          ) : (
-                            <span className="inline-flex items-center gap-1">
-                              {expense.description}
-                              {expense.recurringExpense && (
-                                <svg
-                                  className="inline w-3.5 h-3.5 shrink-0 text-amber-400 dark:text-amber-500"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-label="Recurring"
-                                >
-                                  <path d="M17 1l4 4-4 4" />
-                                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                                  <path d="M7 23l-4-4 4-4" />
-                                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-                                </svg>
-                              )}
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5 truncate">
-                          {expense.isPayment ? `Payment · ${formatCents(expense.amountCents)}` : payerLine}
-                        </p>
-                      </div>
-
-                      {/* Right: personal stake (expenses) or amount (payments) + chevron */}
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {expense.isPayment ? (
-                          <span className="text-base font-bold whitespace-nowrap text-amber-700 dark:text-amber-400">
-                            {formatCents(expense.amountCents)}
-                          </span>
-                        ) : personalContext ? (
-                          <div className="text-right">
-                            <p className={`text-xs leading-none ${
-                              personalContext.positive
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-rose-500 dark:text-rose-400"
-                            }`}>
-                              {personalContext.label}
-                            </p>
-                            <p className={`text-base font-bold leading-tight mt-px whitespace-nowrap ${
-                              personalContext.positive
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : "text-rose-500 dark:text-rose-400"
-                            }`}>
-                              {formatCents(personalContext.amountCents)}
-                            </p>
-                          </div>
-                        ) : null}
-                        <svg
-                          className="w-4 h-4 text-stone-300 dark:text-stone-600 shrink-0"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M9 18l6-6-6-6" />
-                        </svg>
-                      </div>
-                    </div>
-                  </Card>
+                  {cardContent}
                 </button>
               </li>
             );

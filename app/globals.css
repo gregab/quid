@@ -140,3 +140,28 @@ body {
 .debt-expand > div {
   overflow: hidden;
 }
+
+/* Payment received: warm left-edge glow */
+.payment-received-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-received-glow::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  background: linear-gradient(to right, rgb(251 191 36 / 0.12), transparent);
+  border-radius: 0.75rem 0 0 0.75rem;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .payment-received-glow::before {
+    background: linear-gradient(to right, rgb(251 191 36 / 0.08), transparent);
+  }
+}
