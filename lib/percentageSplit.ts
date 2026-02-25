@@ -33,12 +33,12 @@ export function centsToPercentages(
 ): Map<string, string> {
   const result = new Map<string, string>();
   if (totalCents <= 0) {
-    participantIds.forEach((id) => result.set(id, "0.00"));
+    participantIds.forEach((id) => result.set(id, "0"));
     return result;
   }
   participantIds.forEach((id) => {
     const amountCents = Math.round(parseFloat(customAmounts.get(id) ?? "0") * 100);
-    result.set(id, ((amountCents / totalCents) * 100).toFixed(2));
+    result.set(id, Math.round((amountCents / totalCents) * 100).toString());
   });
   return result;
 }

@@ -67,16 +67,29 @@ function scaleAmounts(
   return result;
 }
 
-/** Strips non-numeric characters, allowing at most one decimal point. */
+/** Strips non-numeric characters, allowing at most one decimal point and max 2 decimal places. */
 function filterDecimalInput(value: string): string {
   let filtered = "";
   let hasDot = false;
+  let decimals = 0;
   for (const ch of value) {
-    if (ch >= "0" && ch <= "9") filtered += ch;
-    else if (ch === "." && !hasDot) {
+    if (ch >= "0" && ch <= "9") {
+      if (hasDot && decimals >= 2) continue;
+      filtered += ch;
+      if (hasDot) decimals++;
+    } else if (ch === "." && !hasDot) {
       filtered += ch;
       hasDot = true;
     }
+  }
+  return filtered;
+}
+
+/** Strips non-numeric characters, integers only, max 3 digits (for 0–100%). */
+function filterIntegerInput(value: string): string {
+  let filtered = "";
+  for (const ch of value) {
+    if (ch >= "0" && ch <= "9" && filtered.length < 3) filtered += ch;
   }
   return filtered;
 }
@@ -171,7 +184,7 @@ export function ExpenseDetailModal({
         if (editSplitType === "custom") {
           setEditCustomAmounts((m) => new Map(m).set(userId, "0.00"));
         } else if (editSplitType === "percentage") {
-          setEditPercentages((m) => new Map(m).set(userId, "0.00"));
+          setEditPercentages((m) => new Map(m).set(userId, "0"));
         }
       }
       return next;
@@ -187,7 +200,7 @@ export function ExpenseDetailModal({
         const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
         setEditPercentages(centsToPercentages(dollarsMap, ids, parsedAmountCents));
       } else {
-        setEditPercentages(new Map(ids.map((id) => [id, "0.00"])));
+        setEditPercentages(new Map(ids.map((id) => [id, "0"])));
       }
     } else if (type === "percentage" && editSplitType === "custom") {
       setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
@@ -827,15 +840,15 @@ export function ExpenseDetailModal({
                             <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
                           )}
                         </span>
-                        <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
+                        <div className="w-20 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                           <input
                             type="text"
-                            inputMode="decimal"
-                            placeholder="0.00"
-                            value={editPercentages.get(m.userId) ?? "0.00"}
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={editPercentages.get(m.userId) ?? "0"}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
-                              const val = filterDecimalInput(e.target.value);
+                              const val = filterIntegerInput(e.target.value);
                               setEditPercentages((prev) =>
                                 new Map(prev).set(m.userId, val)
                               );
@@ -851,16 +864,16 @@ export function ExpenseDetailModal({
                         <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
                         <span
                           className={`text-xs font-semibold ${
-                            Math.abs(editPercentageRemaining) < 0.005
+                            editPercentageRemaining === 0
                               ? "text-emerald-600 dark:text-emerald-400"
                               : "text-rose-500 dark:text-rose-400"
                           }`}
                         >
-                          {Math.abs(editPercentageRemaining) < 0.005
+                          {editPercentageRemaining === 0
                             ? "100% ✓"
                             : editPercentageRemaining > 0
-                            ? `${(100 - editPercentageRemaining).toFixed(2)}% of 100%`
-                            : `${(100 - editPercentageRemaining).toFixed(2)}% — over by ${Math.abs(editPercentageRemaining).toFixed(2)}%`}
+                            ? `${100 - editPercentageRemaining}% of 100%`
+                            : `${100 - editPercentageRemaining}% — over by ${Math.abs(editPercentageRemaining)}%`}
                         </span>
                       </div>
                     )}
