@@ -4,6 +4,8 @@
 
 Add a React Native (Expo) mobile app to the existing Aviary repo as a monorepo, sharing TypeScript business logic between the Next.js web app and the new mobile app. The mobile app will have full feature parity with the web app, designed to feel truly native on iOS and Android.
 
+**Data architecture: both clients talk directly to Supabase.** The Supabase JS client + RLS + RPC functions _are_ the API. No Next.js API intermediary for the mobile app. The RPCs handle atomicity, auth checks, and multi-table writes. RLS handles read authorization. Both web and mobile call the same RPCs and query the same tables — the shared package ensures identical business logic on both platforms.
+
 ---
 
 ## 1. Monorepo Structure
@@ -39,6 +41,8 @@ aviary/                          # Root workspace (Next.js web app)
         groupPattern.ts          # Deterministic SVG pattern generation
         types.ts                 # Shared TypeScript types (Debt, ExpenseForDebt, etc.)
         validation.ts            # Zod schemas extracted from API routes
+        activityDiff.ts          # NEW: Change diff computation for expense edits
+        rpcParams.ts             # NEW: Builders for RPC call parameters
       tsconfig.json
       package.json
 ```
@@ -74,6 +78,63 @@ These are all **pure TypeScript functions** with zero React/Next.js/DOM dependen
 | Group patterns | `lib/groupPattern.ts` | `generateGroupPattern`, `generateGroupBanner`, `seedToBytes`, `resolvePatternDNA` |
 | **NEW: Validation schemas** | extracted from API routes | Zod schemas for expense, group, payment input |
 | **NEW: Shared types** | extracted from components | `ExpenseRow`, `Member`, `ActivityLog` types |
+| **NEW: Activity diff** | extracted from API route + client components | `computeExpenseChanges()`, `buildSplitSnapshots()` |
+| **NEW: RPC param builders** | extracted from API routes | `buildCreateExpenseParams()`, `buildUpdateExpenseParams()`, `buildDeleteExpenseParams()`, `buildCreatePaymentParams()` |
+
+### NEW: Activity Diff & RPC Parameter Builders
+
+Currently, the expense change-diff computation (for activity logs) is duplicated in **three places**: the API route, `ExpenseActions.tsx`, and `ExpenseDetailModal.tsx`. Moving to direct Supabase access forces us to consolidate this into one shared implementation — which is a strict improvement.
+
+```ts
+// @aviary/shared/src/activityDiff.ts
+export interface ExpenseChanges {
+  amount?: { from: number; to: number };
+  description?: { from: string; to: string };
+  date?: { from: string; to: string };
+  paidBy?: { from: string; to: string };
+  participants?: { added: string[]; removed: string[] };
+  splitType?: { from: string; to: string };
+}
+
+export function computeExpenseChanges(
+  old: { amountCents: number; description: string; date: string; paidById: string; splits: Array<{ userId: string; amountCents: number }> },
+  new_: { amountCents: number; description: string; date: string; paidById: string; participantIds: string[]; splitType: string },
+  members: Array<{ userId: string; displayName: string }>
+): ExpenseChanges { /* ... */ }
+
+export function buildSplitSnapshots(
+  splits: Array<{ userId: string; amountCents: number }>,
+  members: Array<{ userId: string; displayName: string }>
+): Array<{ displayName: string; amountCents: number }> { /* ... */ }
+```
+
+```ts
+// @aviary/shared/src/rpcParams.ts — ensures both web and mobile build identical RPC payloads
+export function buildCreateExpenseParams(input: {
+  groupId: string; description: string; amountCents: number; date: string;
+  paidById: string; participantIds: string[];
+  members: Array<{ userId: string; displayName: string }>;
+  splitType: "equal" | "custom" | "percentage"; splitAmounts?: number[];
+}) {
+  const paidByName = input.members.find(m => m.userId === input.paidById)?.displayName ?? "Unknown";
+  const participantNames = input.participantIds.map(id =>
+    input.members.find(m => m.userId === id)?.displayName ?? "Unknown"
+  );
+  return {
+    _group_id: input.groupId,
+    _description: input.description,
+    _amount_cents: input.amountCents,
+    _date: input.date,
+    _paid_by_id: input.paidById,
+    _participant_ids: input.participantIds,
+    _paid_by_display_name: paidByName,
+    _split_type: input.splitType,
+    _split_amounts: input.splitAmounts ?? null,
+    _participant_display_names: participantNames,
+  };
+}
+// Similar builders for update_expense, delete_expense, create_payment
+```
 
 ### What stays web-only
 
@@ -114,62 +175,90 @@ This way existing web imports don't need to change. We can clean this up later.
 | Styling | **NativeWind v4** (Tailwind for RN) | Reuse exact same design tokens (stone-*, amber-*, etc.). Same className mental model. Compiles to native StyleSheet. |
 | Server state | **TanStack Query v5** | Caching, background refetch, optimistic updates, infinite scroll. Perfect for the expense list pattern. |
 | Auth storage | **expo-secure-store** | Encrypted key-value store for Supabase session tokens. |
-| Supabase client | **@supabase/supabase-js** + custom auth storage | Same client as web, but uses SecureStore instead of cookies. |
+| Supabase client | **@supabase/supabase-js** + custom auth storage | Full Supabase client — auth, reads, and RPC calls. Uses SecureStore instead of cookies. |
 | Icons | **Lucide React Native** | Consistent icon set, tree-shakeable. |
 | Haptics | **expo-haptics** | Tactile feedback for button presses, swipe actions. |
 | Date picker | **@react-native-community/datetimepicker** | Native OS date pickers. |
 | Bottom sheets | **@gorhom/bottom-sheet** | iOS-style bottom sheets for modals (add expense, etc.). |
 
-### Data Architecture (Mobile → Shared Next.js API Routes)
+### Data Architecture (Direct to Supabase)
 
-The mobile app calls the **same Next.js API routes** as the web app — `https://aviary.gregbigelow.com/api/...`. No duplicated business logic.
+Both web and mobile talk directly to Supabase. The Supabase JS client handles auth, RLS enforces read access, and RPC functions handle atomic mutations.
 
 ```
-Web Browser  → fetch("/api/...")             → Next.js API Route → Supabase (RLS + RPC)
-                  (cookies)
-
-Mobile App   → fetch(BASE_URL + "/api/...")  → Next.js API Route → Supabase (RLS + RPC)
-                  (Bearer token)
+Web App     → Supabase JS client (cookies via @supabase/ssr) → Supabase (RLS + RPC)
+Mobile App  → Supabase JS client (SecureStore)               → Supabase (RLS + RPC)
 ```
 
-**Why shared API routes instead of direct Supabase from mobile?**
-- **Single source of truth:** The API routes contain real business logic beyond "call RPC" — the expense PUT handler computes change diffs for activity logs, validates custom splits sum to the total, checks membership and creator permissions, etc. Duplicating this in a mobile service layer invites drift and bugs.
-- **Zero feature work on mutations:** Every API endpoint already exists, is tested, and handles edge cases. Mobile just calls the same URLs.
-- **Easier to reason about:** One place to add validation, one place to debug, one place to audit for security.
+No intermediary. No CORS. No Bearer token plumbing. Both clients use the same Supabase project, same RPCs, same RLS policies.
 
-**What needs to change to support mobile clients:**
+**Why direct Supabase instead of a custom API layer?**
 
-1. **Auth in `lib/supabase/server.ts`:** Currently reads auth from cookies only. Update `createClient()` to also accept a `Bearer` token in the `Authorization` header. When the header is present, create a Supabase client initialized with that token. When absent, fall back to cookies. **Zero changes to any API route handler** — they all call `createClient()` and get a properly authenticated client either way.
+An audit of all 17 API routes revealed that only 2 genuinely require server authority (admin key or secrets). The rest are:
+- **Atomic RPCs** the client can call directly (`create_expense`, `update_expense`, `delete_expense`, `create_payment`, `leave_group`, `create_group`, `join_group_by_token`)
+- **RLS-protected reads** the client can query directly (groups, expenses, activity logs, balances)
+- **Default resolution** (e.g., "paidById defaults to current user") that the client already knows
+- **Display name lookups** the client already has in local state
+- **Change diff computation** that we're extracting to `@aviary/shared` anyway
 
-2. **CORS headers:** Add CORS configuration (in `next.config.ts` or a middleware) to allow requests from the mobile app. Only needs to permit the mobile app's requests (no browser origin restrictions for native apps, but preflight handling may still be needed).
+Adding a custom API layer would mean: another thing to deploy/monitor, duplicated security checks, added latency (client → server → Supabase), and over-engineering for this app's complexity.
 
-3. **Mobile API client:** A thin wrapper in `mobile/lib/api.ts` that:
-   - Reads the Supabase access token from SecureStore
-   - Sends it as `Authorization: Bearer <token>` on every request
-   - Points at the configurable `API_BASE_URL` (production or local dev)
-   - Has typed helpers like `api.post("/api/groups", { name })` that match the web's `fetch()` calls
+**What the client needs to do (that the API routes currently do):**
 
+| API route responsibility | Who does it in the new world? |
+|---|---|
+| Auth check | Supabase client handles auth. RPCs check `auth.uid()` internally. |
+| Membership check | RPCs verify membership internally. RLS enforces on reads. |
+| Zod validation | Client validates before calling RPC. Supabase rejects bad types. |
+| Default paidById to current user | Client already knows the current user |
+| Default participantIds to all members | Client already has the member list |
+| Look up display names for RPCs | Client already has these in local state. Shared `rpcParams.ts` builds the payload. |
+| Compute change diffs for expense edits | Shared `activityDiff.ts` (extracted from the 3 current duplicates) |
+| Call the RPC | Client calls directly via `supabase.rpc()` |
+
+**Mobile reads (queries):**
 ```ts
-// mobile/lib/api.ts
-import * as SecureStore from "expo-secure-store";
+// Fetch user's groups — RLS ensures only groups the user belongs to
+const { data } = await supabase
+  .from("GroupMember")
+  .select("Group(*)")
+  .eq("userId", user.id)
+  .order("createdAt", { ascending: false });
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; // https://aviary.gregbigelow.com
-
-export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = await SecureStore.getItemAsync("supabase-access-token");
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  return res.json();
-}
+// Fetch group expenses with splits
+const { data } = await supabase
+  .from("Expense")
+  .select("*, User!Expense_paidById_fkey(*), ExpenseSplit(*, User(*))")
+  .eq("groupId", groupId)
+  .order("date", { ascending: false });
 ```
 
-**For reads that the web app does in server components** (group detail page, dashboard), the mobile app will also call API routes. We may need to add a couple of GET endpoints that the web currently fetches server-side (e.g., `GET /api/groups/[id]` for the full group detail payload). These are simple to add and keep the "one data path" principle.
+**Mobile mutations (RPCs):**
+```ts
+import { buildCreateExpenseParams } from "@aviary/shared/rpcParams";
+
+// Client builds params from data it already has
+const params = buildCreateExpenseParams({
+  groupId, description, amountCents, date, paidById,
+  participantIds, members, splitType, splitAmounts,
+});
+
+// Direct RPC call — atomic, auth-checked, activity-logged
+const { data, error } = await supabase.rpc("create_expense", params);
+```
+
+### Operations That Require Server Authority
+
+Only **2 operations** cannot be done from the client:
+
+| Operation | Why server-only? | Solution |
+|---|---|---|
+| **Account deletion** | Needs `SUPABASE_SERVICE_ROLE_KEY` to delete the auth user via `admin.auth.admin.deleteUser()` | **Supabase Edge Function** — client calls `delete_account` RPC (cleans up app data), then invokes Edge Function to delete auth record |
+| **Recurring expense cron** | Needs `CRON_SECRET` + service role key to process recurring expenses system-wide | **Supabase Edge Function** or keep existing Next.js API route (not called by clients — triggered by external cron) |
+
+For **add member by email** (currently requires server-side email lookup since RLS doesn't expose the User table for arbitrary email queries): create a new RPC `add_member_by_email(_group_id, _email)` that does the lookup + validation + insert atomically as SECURITY DEFINER. This eliminates the need for a server intermediary.
+
+**Long-term vision:** Eventually migrate the web app to also talk directly to Supabase, removing the Next.js API routes entirely. The web app already uses the Supabase JS client for auth — extending it to data access is straightforward. The API routes become dead code once both clients use the shared RPC param builders.
 
 ---
 
@@ -283,10 +372,10 @@ Root (Expo Router)
 
 ## 5. Auth Flow (Mobile)
 
-Mobile uses Supabase JS client **only for authentication** (login, signup, session management). All data access goes through the shared Next.js API routes using the Supabase access token as a Bearer token.
+Mobile uses the Supabase JS client for **everything** — auth, reads, and RPC mutations. The client is initialized with SecureStore for encrypted session persistence.
 
 ```ts
-// mobile/lib/supabase.ts — used ONLY for auth (login, signup, session refresh)
+// mobile/lib/supabase.ts — full Supabase client (auth + data + RPCs)
 import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import type { Database } from "@aviary/shared/types/database";
@@ -312,7 +401,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 - No session → auth stack
 - Session → app tabs
 
-The `session.access_token` is what gets sent as `Authorization: Bearer <token>` on every API call via `apiFetch()`. Supabase handles token refresh automatically.
+Supabase handles token refresh automatically. The client's auth state is tied to the session in SecureStore — no separate token management needed.
 
 **Google Sign-In:** Use `expo-auth-session` with Supabase's Google provider. The OAuth flow opens in-app browser, callback returns to the app via deep link.
 
@@ -417,6 +506,8 @@ export const queryClient = new QueryClient({
 
 ```ts
 // mobile/lib/queries/groups.ts
+import { supabase } from "../supabase";
+
 export const groupKeys = {
   all: ["groups"] as const,
   detail: (id: string) => ["groups", id] as const,
@@ -428,14 +519,29 @@ export const groupKeys = {
 export function useGroups() {
   return useQuery({
     queryKey: groupKeys.all,
-    queryFn: () => fetchGroups(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("GroupMember")
+        .select("Group(*)")
+        .order("createdAt", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 }
 
-export function useGroupDetail(id: string) {
+export function useGroupExpenses(groupId: string) {
   return useQuery({
-    queryKey: groupKeys.detail(id),
-    queryFn: () => fetchGroupDetail(id),
+    queryKey: groupKeys.expenses(groupId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("Expense")
+        .select("*, User!Expense_paidById_fkey(*), ExpenseSplit(*, User(*))")
+        .eq("groupId", groupId)
+        .order("date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 }
 ```
@@ -445,17 +551,21 @@ export function useGroupDetail(id: string) {
 TanStack Query's `useMutation` with `onMutate` for optimistic updates (same UX as the web app's manual optimistic state):
 
 ```ts
+import { buildCreateExpenseParams } from "@aviary/shared/rpcParams";
+
 export function useCreateExpense(groupId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input) => createExpense(groupId, input),
+    mutationFn: async (input) => {
+      const params = buildCreateExpenseParams(input);
+      const { data, error } = await supabase.rpc("create_expense", params);
+      if (error) throw error;
+      return data;
+    },
     onMutate: async (newExpense) => {
-      // Cancel in-flight queries
       await queryClient.cancelQueries({ queryKey: groupKeys.expenses(groupId) });
-      // Snapshot previous state
       const previous = queryClient.getQueryData(groupKeys.expenses(groupId));
-      // Optimistically add the expense
       queryClient.setQueryData(groupKeys.expenses(groupId), (old) => [
         { ...newExpense, id: "temp-" + Date.now(), isPending: true },
         ...old,
@@ -463,11 +573,9 @@ export function useCreateExpense(groupId: string) {
       return { previous };
     },
     onError: (err, _, context) => {
-      // Rollback on error
       queryClient.setQueryData(groupKeys.expenses(groupId), context?.previous);
     },
     onSettled: () => {
-      // Refetch to get server truth
       queryClient.invalidateQueries({ queryKey: groupKeys.expenses(groupId) });
       queryClient.invalidateQueries({ queryKey: groupKeys.balances(groupId) });
     },
@@ -488,29 +596,30 @@ export function useCreateExpense(groupId: string) {
 5. Move tests alongside shared code
 6. Extract Zod validation schemas from API routes → `packages/shared/src/validation.ts`
 7. Extract shared TypeScript types → `packages/shared/src/types.ts`
-8. Run `SKIP_SMOKE_TESTS=1 npm test` and `npm run build` to verify web still works
+8. Extract activity diff computation → `packages/shared/src/activityDiff.ts` (consolidates 3 duplicates)
+9. Create RPC param builders → `packages/shared/src/rpcParams.ts`
+10. Run `SKIP_SMOKE_TESTS=1 npm test` and `npm run build` to verify web still works
 
-### Phase 2: Server-Side Mobile Auth Support
+### Phase 2: Database Changes for Direct Client Access
 
-1. Update `lib/supabase/server.ts` to accept Bearer tokens (the key enabler for mobile)
-2. Add CORS headers in `next.config.ts` for mobile requests
-3. Add `GET /api/groups/[id]` endpoint (group detail data currently fetched server-side)
-4. Test that existing web auth (cookies) still works
-5. Test Bearer token auth against a local dev server
+1. Create `add_member_by_email(_group_id, _email)` RPC — SECURITY DEFINER function that does email lookup + validation + insert atomically (replaces the API route that needed server-side email lookup)
+2. Create `delete_auth_user()` Supabase Edge Function — accepts authenticated request, calls `admin.auth.admin.deleteUser()` (the only operation requiring the service role key that clients trigger)
+3. Migration: `npx supabase db push`
+4. Test new RPC from Supabase dashboard
+5. Verify existing web app still works (API routes unchanged for now)
 
 ### Phase 3: Expo App Scaffold
 
 1. `npx create-expo-app mobile --template blank-typescript`
 2. Configure Metro for monorepo (resolve `@aviary/shared`)
 3. Install dependencies: NativeWind, TanStack Query, expo-secure-store, etc.
-4. Set up Supabase client with SecureStore (for auth only)
-5. Set up `apiFetch()` wrapper that sends Bearer token to shared API routes
-6. Configure Expo Router file structure
-7. Set up NativeWind with matching design tokens
-8. Bundle Geist + Cormorant Garamond fonts via expo-font
-9. Create root layout with providers (Auth, Query, Theme)
+4. Set up Supabase client with SecureStore (full client — auth + data + RPCs)
+5. Configure Expo Router file structure
+6. Set up NativeWind with matching design tokens
+7. Bundle Geist + Cormorant Garamond fonts via expo-font
+8. Create root layout with providers (Auth, Query, Theme)
 
-### Phase 3: Auth Screens
+### Phase 4: Auth Screens
 
 1. Login screen (email/password)
 2. Signup screen
@@ -519,7 +628,7 @@ export function useCreateExpense(groupId: string) {
 5. Google Sign-In via expo-auth-session
 6. Protected route wrapper (redirect to login if no session)
 
-### Phase 4: Dashboard & Group List
+### Phase 5: Dashboard & Group List
 
 1. Dashboard screen with group list
 2. Group card component with SVG pattern thumbnail (via react-native-svg)
@@ -529,7 +638,7 @@ export function useCreateExpense(groupId: string) {
 6. Empty state
 7. Bird fact card
 
-### Phase 5: Group Detail
+### Phase 6: Group Detail
 
 1. Group detail screen with banner
 2. Member pills (horizontal scroll)
@@ -539,7 +648,7 @@ export function useCreateExpense(groupId: string) {
 6. Activity feed (paginated, infinite scroll)
 7. Expense card component (tap for detail, swipe to delete)
 
-### Phase 6: Expense CRUD
+### Phase 7: Expense CRUD
 
 1. Add expense bottom sheet/modal
 2. Amount input with formatting
@@ -550,17 +659,17 @@ export function useCreateExpense(groupId: string) {
 7. Delete expense with confirmation
 8. Optimistic updates for all mutations
 
-### Phase 7: Payments & Members
+### Phase 8: Payments & Members
 
 1. Record payment sheet
-2. Add member form
+2. Add member form (calls `add_member_by_email` RPC)
 3. Leave group (with balance check, confirmation)
 4. Group settings (rename, banner upload)
 
-### Phase 8: Settings & Polish
+### Phase 9: Settings & Polish
 
 1. Settings screen (display name, email display)
-2. Delete account with confirmation + balance warnings
+2. Delete account with confirmation + balance warnings (calls `delete_account` RPC + Edge Function)
 3. Dark mode (system + manual toggle)
 4. Push notification setup (future — just the plumbing)
 5. Universal links for invite URLs
@@ -568,14 +677,14 @@ export function useCreateExpense(groupId: string) {
 7. Animations and haptic feedback polish
 8. Error boundaries and offline state handling
 
-### Phase 9: Testing
+### Phase 10: Testing
 
 1. Unit tests for shared package (already moved from web)
 2. Component tests for mobile screens (React Native Testing Library)
-3. Integration tests for Supabase service layer
+3. Integration tests for Supabase queries + RPCs
 4. E2E tests with Detox or Maestro
 
-### Phase 10: Build & Distribution
+### Phase 11: Build & Distribution
 
 1. EAS Build configuration (`eas.json`)
 2. App store metadata (screenshots, description)
@@ -599,12 +708,25 @@ export function useCreateExpense(groupId: string) {
 - Compiles to native StyleSheet at build time (good performance)
 - Active ecosystem, well-maintained
 
-### Why shared API routes instead of direct Supabase?
-- The API routes are **not** all thin wrappers — the expense PUT handler computes change diffs, the expense POST validates custom splits, the leave-group handler checks balances. Duplicating this in a mobile service layer invites bugs.
-- One place to add validation, debug, and audit security — no drift between platforms
-- Every endpoint is already built and tested
-- Small change needed: update `lib/supabase/server.ts` to accept Bearer tokens alongside cookies
-- Mobile gets the exact same behavior as web, automatically, for every current and future endpoint
+### Why direct Supabase instead of a custom API layer?
+
+An audit of all 17 Next.js API routes revealed that **only 2 require server authority** (admin key or cron secret). The other 15 are:
+
+- **Atomic RPCs** the client can call directly — `create_expense`, `update_expense`, `delete_expense`, `create_payment`, `leave_group`, `create_group`, `join_group_by_token`. These already handle auth checks, membership verification, and activity logging internally.
+- **RLS-protected reads** the client can query directly — groups, expenses, activity logs, members.
+- **Default resolution** the client already knows — "paidById defaults to current user", "participantIds defaults to all members."
+- **Display name lookups** the client already has in local state — shared `rpcParams.ts` builders handle the mapping.
+- **Change diff computation** we're extracting to `@aviary/shared/activityDiff.ts` anyway — consolidating 3 duplicated implementations into one.
+
+A custom API layer would mean:
+- Another service to deploy, monitor, and scale
+- Duplicated security checks (RPCs already verify auth + membership)
+- Added latency (client → your server → Supabase vs client → Supabase)
+- CORS configuration headaches
+- Bearer token plumbing
+- Over-engineering for this app's complexity level
+
+The migration path is clean: mobile starts direct-to-Supabase from day one. Web continues using API routes for now (they work fine). Eventually, web migrates to the same pattern, and the API routes are deleted.
 
 ### Why TanStack Query?
 - Built-in caching, background refetching, optimistic updates
@@ -627,24 +749,32 @@ Move `lib/supabase/database.types.ts` to `packages/shared/src/types/database.ts`
 | Supabase auth session management on mobile | Well-documented pattern with expo-secure-store. Supabase JS client has first-class support for custom storage adapters. |
 | SVG pattern rendering on mobile | Use `react-native-svg` to render the existing pattern generators. The generators output SVG strings — we parse and render natively. |
 | App store review delays | Ship to TestFlight/internal testing first. Use OTA updates for quick iteration post-launch. |
+| Supabase query complexity on client | TanStack Query handles caching, deduplication, and background refetching. Complex queries (group detail with nested relations) are well-supported by Supabase's PostgREST API. |
+| Client-side display name lookups for RPCs | Shared `rpcParams.ts` builders ensure both platforms construct identical payloads. If a member isn't in local state (departed user), falls back to "Unknown" — same as today. |
 
 ---
 
 ## 11. Files to Modify in Existing Web App
 
-Minimal changes to the web app:
+Minimal changes to the web app during Phase 1:
 
 1. **`package.json`** — Add `"workspaces"` field
 2. **`tsconfig.json`** — Add path alias for `@aviary/shared`
-3. **`next.config.ts`** — Add `transpilePackages: ["@aviary/shared"]` + CORS headers
-4. **`lib/supabase/server.ts`** — Accept `Authorization: Bearer <token>` in addition to cookies. When a Bearer token is present, create a Supabase client initialized with that session. Fall back to cookies when no header is present. This is the key change that makes all API routes work for mobile with zero per-route modifications.
-5. **`lib/balances/*.ts`** — Become re-export barrels (or update imports project-wide)
-6. **`lib/format.ts`** — Becomes re-export barrel
-7. **`lib/formatDisplayName.ts`** — Becomes re-export barrel
-8. **`lib/constants.ts`** — Becomes re-export barrel
-9. **`lib/amount.ts`** — Becomes re-export barrel
-10. **`lib/percentageSplit.ts`** — Becomes re-export barrel
-11. **`lib/groupPattern.ts`** — Becomes re-export barrel
-12. **New GET endpoints** — Add `GET /api/groups/[id]` (full group detail) since the web app currently fetches this server-side in the page component. Mobile needs an API route for the same data.
+3. **`next.config.ts`** — Add `transpilePackages: ["@aviary/shared"]`
+4. **`lib/balances/*.ts`** — Become re-export barrels (or update imports project-wide)
+5. **`lib/format.ts`** — Becomes re-export barrel
+6. **`lib/formatDisplayName.ts`** — Becomes re-export barrel
+7. **`lib/constants.ts`** — Becomes re-export barrel
+8. **`lib/amount.ts`** — Becomes re-export barrel
+9. **`lib/percentageSplit.ts`** — Becomes re-export barrel
+10. **`lib/groupPattern.ts`** — Becomes re-export barrel
 
-No changes to existing API route handlers, components, pages, or Supabase RPC functions.
+**No changes to:**
+- Existing API route handlers (web continues using them as-is)
+- `lib/supabase/server.ts` (no Bearer token support needed)
+- `next.config.ts` CORS headers (no cross-origin requests)
+- Components, pages, or Supabase RPC functions
+
+**New database migration (Phase 2):**
+- `add_member_by_email` RPC function
+- `delete_auth_user` Supabase Edge Function
