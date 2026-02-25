@@ -7,7 +7,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { formatCents } from "@/lib/format";
-import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
+import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting, filterAmountInput, filterDecimalInput } from "@/lib/amount";
 import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 
@@ -47,42 +47,6 @@ function scaleAmounts(
 }
 
 /** Strips non-numeric characters, allowing at most one decimal point and max 2 decimal places. */
-function filterDecimalInput(value: string): string {
-  let filtered = "";
-  let hasDot = false;
-  let decimals = 0;
-  for (const ch of value) {
-    if (ch >= "0" && ch <= "9") {
-      if (hasDot && decimals >= 2) continue;
-      filtered += ch;
-      if (hasDot) decimals++;
-    } else if (ch === "." && !hasDot) {
-      filtered += ch;
-      hasDot = true;
-    }
-  }
-  return filtered;
-}
-
-/** Like filterDecimalInput but also allows commas (for formatted dollar amounts). */
-function filterAmountInput(value: string): string {
-  let filtered = "";
-  let hasDot = false;
-  let decimals = 0;
-  for (const ch of value) {
-    if (ch >= "0" && ch <= "9") {
-      if (hasDot && decimals >= 2) continue;
-      filtered += ch;
-      if (hasDot) decimals++;
-    } else if (ch === "." && !hasDot) {
-      filtered += ch;
-      hasDot = true;
-    } else if (ch === ",") {
-      filtered += ch;
-    }
-  }
-  return filtered;
-}
 
 /** Strips non-numeric characters, integers only, max 3 digits (for 0–100%). */
 function filterIntegerInput(value: string): string {

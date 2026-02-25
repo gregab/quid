@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
-import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
+import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting, filterAmountInput } from "@/lib/amount";
 import { formatCents } from "@/lib/format";
 
 export interface UserOwesDebt {
@@ -420,7 +420,7 @@ export function RecordPaymentForm({
                       placeholder="0.00"
                       value={amount}
                       hasError={amountError}
-                      onChange={(e) => { setAmount(e.target.value); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
+                      onChange={(e) => { setAmount(filterAmountInput(e.target.value)); setAmountError(false); setAmountErrorMessage(null); setError(null); }}
                       onBlur={handleAmountBlur}
                       onFocus={handleAmountFocus}
                       autoFocus
