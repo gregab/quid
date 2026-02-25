@@ -34,4 +34,24 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, "node_modules"),
 ];
 
+// expo-router v6 needs routerRoot passed via customTransformOptions so Babel
+// can inline process.env.EXPO_ROUTER_APP_ROOT during bundling.
+const originalGetTransformOptions = config.transformer?.getTransformOptions;
+config.transformer = {
+  ...config.transformer,
+  async getTransformOptions(entryPoints, options, getDependenciesOf) {
+    const original = await originalGetTransformOptions?.(entryPoints, options, getDependenciesOf);
+    return {
+      ...original,
+      transform: {
+        ...original?.transform,
+        customTransformOptions: {
+          ...original?.transform?.customTransformOptions,
+          routerRoot: "app",
+        },
+      },
+    };
+  },
+};
+
 module.exports = withNativeWind(config, { input: "./global.css" });
