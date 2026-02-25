@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -132,6 +132,12 @@ export function ExpenseDetailModal({
   const [error, setError] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
 
+  // Source-of-truth for cent amounts — survives lossy percentage round-trips.
+  const splitCentsRef = useRef<Map<string, number>>(
+    new Map(expense.splits.map((s) => [s.userId, s.amountCents]))
+  );
+  const inputDirtyRef = useRef(false);
+
   const parsedAmountCents = Math.round(parseFloat(amount) * 100);
   const totalCentsValid = !isNaN(parsedAmountCents) && parsedAmountCents > 0;
 
@@ -174,6 +180,8 @@ export function ExpenseDetailModal({
       const next = new Set(prev);
       if (next.has(userId)) {
         next.delete(userId);
+        splitCentsRef.current = new Map(splitCentsRef.current);
+        splitCentsRef.current.delete(userId);
         if (editSplitType === "custom") {
           setEditCustomAmounts((m) => { const n = new Map(m); n.delete(userId); return n; });
         } else if (editSplitType === "percentage") {
@@ -181,6 +189,7 @@ export function ExpenseDetailModal({
         }
       } else {
         next.add(userId);
+        splitCentsRef.current = new Map(splitCentsRef.current).set(userId, 0);
         if (editSplitType === "custom") {
           setEditCustomAmounts((m) => new Map(m).set(userId, "0.00"));
         } else if (editSplitType === "percentage") {
@@ -193,37 +202,36 @@ export function ExpenseDetailModal({
 
   function handleEditSplitTypeChange(type: SplitType) {
     const ids = [...participantIds];
-    if (type === "percentage" && editSplitType === "equal") {
-      // Derive percentages from the penny-distributed equal cent split (same data as Custom view)
+
+    // ── Leaving current mode: capture cents into splitCentsRef ──
+    if (editSplitType === "equal" && ids.length > 0 && totalCentsValid) {
+      const equal = splitAmount(parsedAmountCents, ids.length);
+      const m = new Map<string, number>();
+      ids.forEach((id, i) => m.set(id, equal[i]!));
+      splitCentsRef.current = m;
+    } else if (editSplitType === "custom") {
+      const m = new Map<string, number>();
+      ids.forEach((id) => m.set(id, Math.round(parseFloat(editCustomAmounts.get(id) ?? "0") * 100)));
+      splitCentsRef.current = m;
+    } else if (editSplitType === "percentage" && inputDirtyRef.current) {
       if (ids.length > 0 && totalCentsValid) {
-        const equal = splitAmount(parsedAmountCents, ids.length);
-        const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
+        splitCentsRef.current = percentagesToCents(editPercentages, ids, parsedAmountCents);
+      }
+    }
+
+    // ── Entering new mode: derive display from splitCentsRef ──
+    if (type === "percentage") {
+      if (ids.length > 0 && totalCentsValid && splitCentsRef.current.size > 0) {
+        const dollarsMap = new Map<string, string>();
+        ids.forEach((id) => dollarsMap.set(id, ((splitCentsRef.current.get(id) ?? 0) / 100).toFixed(2)));
         setEditPercentages(centsToPercentages(dollarsMap, ids, parsedAmountCents));
       } else {
         setEditPercentages(new Map(ids.map((id) => [id, "0"])));
       }
-    } else if (type === "percentage" && editSplitType === "custom") {
-      if (totalCentsValid) {
-        setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
-      } else {
-        setEditPercentages(new Map(ids.map((id) => [id, "0"])));
-      }
-    } else if (type === "custom" && editSplitType === "equal") {
-      if (ids.length > 0 && totalCentsValid) {
-        const equal = splitAmount(parsedAmountCents, ids.length);
+    } else if (type === "custom") {
+      if (ids.length > 0 && totalCentsValid && splitCentsRef.current.size > 0) {
         const map = new Map<string, string>();
-        ids.forEach((id, i) => map.set(id, (equal[i]! / 100).toFixed(2)));
-        setEditCustomAmounts(map);
-      } else {
-        const map = new Map<string, string>();
-        ids.forEach((id) => map.set(id, "0.00"));
-        setEditCustomAmounts(map);
-      }
-    } else if (type === "custom" && editSplitType === "percentage") {
-      if (ids.length > 0 && totalCentsValid) {
-        const centMap = percentagesToCents(editPercentages, ids, parsedAmountCents);
-        const map = new Map<string, string>();
-        ids.forEach((id) => map.set(id, ((centMap.get(id) ?? 0) / 100).toFixed(2)));
+        ids.forEach((id) => map.set(id, ((splitCentsRef.current.get(id) ?? 0) / 100).toFixed(2)));
         setEditCustomAmounts(map);
       } else {
         const map = new Map<string, string>();
@@ -231,18 +239,39 @@ export function ExpenseDetailModal({
         setEditCustomAmounts(map);
       }
     }
+
+    inputDirtyRef.current = false;
     setEditSplitType(type);
   }
 
   function handleAmountChange(newAmount: string) {
     setAmount(newAmount);
+    const newCents = Math.round(parseFloat(newAmount) * 100);
     // Scale custom amounts when total changes in custom mode
     if (editSplitType === "custom") {
-      const newCents = Math.round(parseFloat(newAmount) * 100);
       if (!isNaN(newCents) && newCents > 0 && editCustomAmounts.size > 0) {
-        setEditCustomAmounts((prev) =>
-          scaleAmounts(prev, [...participantIds], editCustomSumCents, newCents)
-        );
+        const ids = [...participantIds];
+        const scaled = scaleAmounts(editCustomAmounts, ids, editCustomSumCents, newCents);
+        setEditCustomAmounts(scaled);
+        // Sync ref
+        const m = new Map<string, number>();
+        ids.forEach((id) => m.set(id, Math.round(parseFloat(scaled.get(id) ?? "0") * 100)));
+        splitCentsRef.current = m;
+      }
+    } else if (editSplitType === "percentage") {
+      // Scale splitCentsRef proportionally so switching to custom later is accurate
+      if (!isNaN(newCents) && newCents > 0 && splitCentsRef.current.size > 0) {
+        const currentSum = [...splitCentsRef.current.values()].reduce((s, v) => s + v, 0);
+        if (currentSum > 0 && currentSum !== newCents) {
+          const ids = [...participantIds];
+          const oldCents = ids.map((id) => splitCentsRef.current.get(id) ?? 0);
+          const scaled = oldCents.map((a) => Math.floor((a * newCents) / currentSum));
+          const remainder = newCents - scaled.reduce((s, a) => s + a, 0);
+          const final = scaled.map((a, i) => a + (i < remainder ? 1 : 0));
+          const m = new Map<string, number>();
+          ids.forEach((id, i) => m.set(id, final[i]!));
+          splitCentsRef.current = m;
+        }
       }
     }
   }
@@ -258,11 +287,15 @@ export function ExpenseDetailModal({
     );
     setEditSplitType(expense.splitType);
     const map = new Map<string, string>();
+    const centsMap = new Map<string, number>();
     for (const s of expense.splits) {
       map.set(s.userId, (s.amountCents / 100).toFixed(2));
+      centsMap.set(s.userId, s.amountCents);
     }
     setEditCustomAmounts(map);
     setEditPercentages(new Map());
+    splitCentsRef.current = centsMap;
+    inputDirtyRef.current = false;
     setError(null);
   }
 
@@ -853,6 +886,7 @@ export function ExpenseDetailModal({
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const val = filterIntegerInput(e.target.value);
+                              inputDirtyRef.current = true;
                               setEditPercentages((prev) =>
                                 new Map(prev).set(m.userId, val)
                               );
@@ -908,6 +942,7 @@ export function ExpenseDetailModal({
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const val = filterDecimalInput(e.target.value);
+                              inputDirtyRef.current = true;
                               setEditCustomAmounts((prev) =>
                                 new Map(prev).set(m.userId, val)
                               );

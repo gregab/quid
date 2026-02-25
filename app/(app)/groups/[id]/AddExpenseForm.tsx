@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
@@ -189,6 +189,13 @@ export function AddExpenseForm({
   // Desktop progressive disclosure — split section collapsed by default
   const [splitExpanded, setSplitExpanded] = useState(false);
 
+  // Source-of-truth for cent amounts — survives lossy percentage round-trips.
+  // Both percentage and custom-$ views derive display values from this ref.
+  const splitCentsRef = useRef<Map<string, number>>(new Map());
+  // Tracks whether the user has edited inputs since the last mode switch.
+  // When false, we skip lossy re-derivation from percentages.
+  const inputDirtyRef = useRef(false);
+
   const parsedTotalCents = Math.round(parseFloat(stripAmountFormatting(amount)) * 100);
   const totalCentsValid = !isNaN(parsedTotalCents) && parsedTotalCents > 0 && parsedTotalCents <= MAX_AMOUNT_CENTS;
 
@@ -205,36 +212,39 @@ export function AddExpenseForm({
 
   function handleSplitTypeChange(type: SplitType) {
     const ids = [...participantIds];
-    if (type === "percentage" && splitType === "equal") {
+
+    // ── Leaving current mode: capture cents into splitCentsRef ──
+    if (splitType === "equal" && ids.length > 0 && totalCentsValid) {
+      const equal = splitAmount(parsedTotalCents, ids.length);
+      const m = new Map<string, number>();
+      ids.forEach((id, i) => m.set(id, equal[i]!));
+      splitCentsRef.current = m;
+    } else if (splitType === "custom") {
+      const m = new Map<string, number>();
+      ids.forEach((id) => m.set(id, Math.round(parseFloat(customAmounts.get(id) ?? "0") * 100)));
+      splitCentsRef.current = m;
+    } else if (splitType === "percentage" && inputDirtyRef.current) {
+      // User edited percentages — derive cents from their edits (lossy but intentional)
       if (ids.length > 0 && totalCentsValid) {
-        const equal = splitAmount(parsedTotalCents, ids.length);
-        const dollarsMap = new Map<string, string>(ids.map((id, i) => [id, (equal[i]! / 100).toFixed(2)]));
+        const centMap = percentagesToCents(percentages, ids, parsedTotalCents);
+        splitCentsRef.current = centMap;
+      }
+    }
+    // If leaving percentage mode without edits, splitCentsRef already has higher-precision values
+
+    // ── Entering new mode: derive display from splitCentsRef ──
+    if (type === "percentage") {
+      if (ids.length > 0 && totalCentsValid && splitCentsRef.current.size > 0) {
+        const dollarsMap = new Map<string, string>();
+        ids.forEach((id) => dollarsMap.set(id, ((splitCentsRef.current.get(id) ?? 0) / 100).toFixed(2)));
         setPercentages(centsToPercentages(dollarsMap, ids, parsedTotalCents));
       } else {
         setPercentages(new Map(ids.map((id) => [id, "0"])));
       }
-    } else if (type === "percentage" && splitType === "custom") {
-      if (totalCentsValid) {
-        setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
-      } else {
-        setPercentages(new Map(ids.map((id) => [id, "0"])));
-      }
-    } else if (type === "custom" && splitType === "equal") {
-      if (ids.length > 0 && totalCentsValid) {
-        const equal = splitAmount(parsedTotalCents, ids.length);
+    } else if (type === "custom") {
+      if (ids.length > 0 && totalCentsValid && splitCentsRef.current.size > 0) {
         const map = new Map<string, string>();
-        ids.forEach((id, i) => map.set(id, (equal[i]! / 100).toFixed(2)));
-        setCustomAmounts(map);
-      } else {
-        const map = new Map<string, string>();
-        ids.forEach((id) => map.set(id, "0.00"));
-        setCustomAmounts(map);
-      }
-    } else if (type === "custom" && splitType === "percentage") {
-      if (ids.length > 0 && totalCentsValid) {
-        const centMap = percentagesToCents(percentages, ids, parsedTotalCents);
-        const map = new Map<string, string>();
-        ids.forEach((id) => map.set(id, ((centMap.get(id) ?? 0) / 100).toFixed(2)));
+        ids.forEach((id) => map.set(id, ((splitCentsRef.current.get(id) ?? 0) / 100).toFixed(2)));
         setCustomAmounts(map);
       } else {
         const map = new Map<string, string>();
@@ -242,6 +252,8 @@ export function AddExpenseForm({
         setCustomAmounts(map);
       }
     }
+
+    inputDirtyRef.current = false;
     setSplitType(type);
   }
 
@@ -250,6 +262,8 @@ export function AddExpenseForm({
       const next = new Set(prev);
       if (next.has(userId)) {
         next.delete(userId);
+        splitCentsRef.current = new Map(splitCentsRef.current);
+        splitCentsRef.current.delete(userId);
         if (splitType === "custom") {
           setCustomAmounts((m) => { const n = new Map(m); n.delete(userId); return n; });
         } else if (splitType === "percentage") {
@@ -257,6 +271,7 @@ export function AddExpenseForm({
         }
       } else {
         next.add(userId);
+        splitCentsRef.current = new Map(splitCentsRef.current).set(userId, 0);
         if (splitType === "custom") {
           setCustomAmounts((m) => new Map(m).set(userId, "0.00"));
         } else if (splitType === "percentage") {
@@ -276,9 +291,30 @@ export function AddExpenseForm({
       0
     );
     if (currentSum === parsedTotalCents) return;
-    setCustomAmounts((prev) =>
-      scaleAmounts(prev, [...participantIds], currentSum, parsedTotalCents)
-    );
+    const ids = [...participantIds];
+    const scaled = scaleAmounts(customAmounts, ids, currentSum, parsedTotalCents);
+    setCustomAmounts(scaled);
+    // Sync ref from the scaled values
+    const m = new Map<string, number>();
+    ids.forEach((id) => m.set(id, Math.round(parseFloat(scaled.get(id) ?? "0") * 100)));
+    splitCentsRef.current = m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedTotalCents]);
+
+  // Scale splitCentsRef when total changes in percentage mode (so switching to custom later is accurate)
+  useEffect(() => {
+    if (splitType !== "percentage" || !totalCentsValid) return;
+    if (splitCentsRef.current.size === 0) return;
+    const currentSum = [...splitCentsRef.current.values()].reduce((s, v) => s + v, 0);
+    if (currentSum === parsedTotalCents || currentSum <= 0) return;
+    const ids = [...participantIds];
+    const oldCents = ids.map((id) => splitCentsRef.current.get(id) ?? 0);
+    const scaled = oldCents.map((a) => Math.floor((a * parsedTotalCents) / currentSum));
+    const remainder = parsedTotalCents - scaled.reduce((s, a) => s + a, 0);
+    const final = scaled.map((a, i) => a + (i < remainder ? 1 : 0));
+    const m = new Map<string, number>();
+    ids.forEach((id, i) => m.set(id, final[i]!));
+    splitCentsRef.current = m;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsedTotalCents]);
 
@@ -333,7 +369,12 @@ export function AddExpenseForm({
     setParticipantIds(new Set(newParticipantIds));
     if (newCustomAmounts) {
       setCustomAmounts(newCustomAmounts);
+      // Sync ref from preset amounts
+      const m = new Map<string, number>();
+      newParticipantIds.forEach((id) => m.set(id, Math.round(parseFloat(newCustomAmounts.get(id) ?? "0") * 100)));
+      splitCentsRef.current = m;
     }
+    inputDirtyRef.current = false;
     navigateTo("quick-entry");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -501,6 +542,8 @@ export function AddExpenseForm({
     setSplitExpanded(false);
     setScreen("quick-entry");
     setSlideDirection("forward");
+    splitCentsRef.current = new Map();
+    inputDirtyRef.current = false;
   }
 
   function handleClose() {
@@ -598,6 +641,7 @@ export function AddExpenseForm({
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = filterIntegerInput(e.target.value);
+                        inputDirtyRef.current = true;
                         setPercentages((prev) => new Map(prev).set(m.userId, val));
                       }}
                       className="w-full bg-transparent pl-2 pr-0.5 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
@@ -617,6 +661,7 @@ export function AddExpenseForm({
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = filterDecimalInput(e.target.value);
+                        inputDirtyRef.current = true;
                         setCustomAmounts((prev) => new Map(prev).set(m.userId, val));
                       }}
                       className="w-full bg-transparent px-1 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
