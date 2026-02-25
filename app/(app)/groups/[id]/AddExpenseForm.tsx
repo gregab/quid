@@ -152,6 +152,7 @@ export function AddExpenseForm({
 
   // Desktop progressive disclosure — split section collapsed by default
   const [splitExpanded, setSplitExpanded] = useState(false);
+  const desktopDateRef = useRef<HTMLInputElement>(null);
 
   // Source-of-truth for cent amounts — survives lossy percentage round-trips.
   // Both percentage and custom-$ views derive display values from this ref.
@@ -770,23 +771,37 @@ export function AddExpenseForm({
               )}
             </div>
 
-            {/* Date pill — compact, click to change */}
+            {/* Date pill — compact, click to open native date picker */}
             <div className="flex items-center gap-2">
-              <label htmlFor="desktopDatePicker" className="relative inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-700/60 text-sm font-medium text-stone-700 dark:text-stone-300 cursor-pointer hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = desktopDateRef.current;
+                  if (!el) return;
+                  if (typeof el.showPicker === "function") {
+                    el.showPicker();
+                  } else {
+                    el.focus();
+                    el.click();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-100 dark:bg-stone-700/60 text-sm font-medium text-stone-700 dark:text-stone-300 cursor-pointer hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors"
+              >
                 <svg className="w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                 </svg>
                 {formatDatePill(date)}
-                <input
-                  id="desktopDatePicker"
-                  type="date"
-                  required
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  tabIndex={-1}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-              </label>
+              </button>
+              <input
+                ref={desktopDateRef}
+                type="date"
+                required
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                tabIndex={-1}
+                aria-label="Expense date"
+                className="sr-only"
+              />
             </div>
 
             {/* Split summary pill — click to expand/collapse split options */}
