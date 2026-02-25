@@ -48,6 +48,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Redirect authenticated users from landing page to dashboard
+  if (pathname === "/" && user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   // Redirect authenticated users away from auth pages.
   // Honor ?next= so users land on the right page (e.g. returning to an invite link).
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
