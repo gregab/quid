@@ -260,6 +260,10 @@ export function ExpensesList({
   const [fabVisible, setFabVisible] = useState(false);
   const [fabCompact, setFabCompact] = useState(false);
 
+  // Track IDs we've already rendered so we only play the entrance animation
+  // for genuinely new items — not when router.refresh() reconciles.
+  const seenIdsRef = useRef<Set<string>>(new Set(initialExpenses.map((e) => e.id)));
+
   useEffect(() => {
     const desktopTarget = inlineButtonsRef.current;
     const mobileTarget = mobileButtonsRef.current;
@@ -316,6 +320,7 @@ export function ExpensesList({
     // prevents the entrance animation from replaying and the resulting
     // visual jump.
     if (pendingId && realId) {
+      seenIdsRef.current.add(realId);
       setExpenses((prev) =>
         prev.map((e) => (e.id === pendingId ? { ...e, id: realId, isPending: false } : e))
       );
@@ -617,10 +622,14 @@ export function ExpensesList({
               </Card>
             );
 
+            // Only animate genuinely new items, not refreshed-in-place ones.
+            const isNew = !seenIdsRef.current.has(expense.id);
+            if (isNew) seenIdsRef.current.add(expense.id);
+
             return (
               <li
                 key={expense.id}
-                className={removingIds.has(expense.id) ? "expense-item-exit" : "expense-item-enter"}
+                className={removingIds.has(expense.id) ? "expense-item-exit" : isNew ? "expense-item-enter" : ""}
               >
                 <button
                   type="button"
