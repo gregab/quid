@@ -79,9 +79,6 @@ export default function CreateGroupButton({ userId, variant = "default" }: { use
           <div className="modal-content bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl dark:bg-stone-800">
             <div className="mb-4">
               <h2 className="text-lg font-bold text-stone-900 dark:text-white">Form a new group</h2>
-              <p className="text-sm text-stone-400 mt-0.5">
-                Who's in your next financial friendship?
-              </p>
             </div>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
