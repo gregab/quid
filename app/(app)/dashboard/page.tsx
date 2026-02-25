@@ -56,6 +56,21 @@ const BIRD_FACTS = [
   "Migrating birds can see Earth's magnetic field thanks to proteins in their eyes.",
   "African grey parrots can understand the concept of zero — something young children struggle with.",
   "A group of goldfinches is called a charm. It's also just charming to watch them.",
+  "Gentoo penguins propose to their mates with the smoothest pebble they can find.",
+  "A hummingbird's heart beats over 1,200 times per minute during flight.",
+  "Bee hummingbirds are the smallest birds in the world — lighter than a penny.",
+  "Hoatzin chicks have claws on their wings that they use to climb trees.",
+  "The wandering albatross has the largest wingspan of any living bird — up to 12 feet.",
+  "Pigeons were once used to smuggle messages across enemy lines — they're basically spies with wings.",
+  "The shoebill stork can stand motionless for hours, then strike a fish in milliseconds.",
+  "Toucans regulate their body temperature by adjusting blood flow to their enormous bills.",
+  "Snowy owls can eat up to 1,600 lemmings in a single year.",
+  "Cedar waxwings sometimes get drunk from eating fermented berries.",
+  "The greater honeyguide bird leads humans to beehives and waits for its share of the wax.",
+  "Budgies can learn over 1,700 words — more than any other bird species.",
+  "Woodpeckers have spongy bone behind their beaks that acts like a built-in helmet.",
+  "The malleefowl builds a compost mound to incubate its eggs — no sitting required.",
+  "Secretary birds stomp on snakes with a force five times their own body weight.",
 ];
 
 
@@ -265,10 +280,10 @@ export default async function DashboardPage() {
 
       {/* Bird fact — subtle editorial aside */}
       <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">
-        <p className="text-[11px] sm:text-[10px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70">
+        <p className="text-xs sm:text-[11px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70">
           Bird fact
         </p>
-        <p className="mt-1.5 text-base sm:text-sm leading-relaxed text-stone-700 dark:text-stone-300" style={{ fontFamily: "var(--font-serif-logo)" }}>
+        <p className="mt-1.5 text-lg sm:text-base leading-relaxed text-stone-700 dark:text-stone-300" style={{ fontFamily: "var(--font-serif-logo)" }}>
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>
