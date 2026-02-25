@@ -310,7 +310,16 @@ export function ExpensesList({
     setExpenses((prev) => [expense, ...prev]);
   }, []);
 
-  const handleAddSettled = useCallback(() => {
+  const handleAddSettled = useCallback((pendingId?: string, realId?: string) => {
+    // Swap the optimistic placeholder key → real DB key so React sees the
+    // same `key` and does a prop update instead of unmount/remount.  This
+    // prevents the entrance animation from replaying and the resulting
+    // visual jump.
+    if (pendingId && realId) {
+      setExpenses((prev) =>
+        prev.map((e) => (e.id === pendingId ? { ...e, id: realId, isPending: false } : e))
+      );
+    }
     router.refresh();
   }, [router]);
 

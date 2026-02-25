@@ -21,7 +21,7 @@ interface RecordPaymentFormProps {
   members: Member[];
   userOwesDebts: UserOwesDebt[];
   onOptimisticAdd: (expense: ExpenseRow) => void;
-  onSettled: () => void;
+  onSettled: (pendingId?: string, realId?: string) => void;
   onOptimisticActivity: (log: ActivityLog) => void;
   onCelebration?: (name: string) => void;
 }
@@ -164,7 +164,7 @@ export function RecordPaymentForm({
 
     setLoading(true);
 
-    await fetch(`/api/groups/${groupId}/payments`, {
+    const res = await fetch(`/api/groups/${groupId}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -177,7 +177,13 @@ export function RecordPaymentForm({
     });
 
     setLoading(false);
-    onSettled();
+
+    let realId: string | undefined;
+    try {
+      const json = await res.json();
+      realId = json?.data?.id;
+    } catch { /* non-critical */ }
+    onSettled(pendingId, realId);
   }
 
   function resetForm() {

@@ -17,7 +17,7 @@ interface AddExpenseFormProps {
   currentUserDisplayName: string;
   members: Member[];
   onOptimisticAdd: (expense: ExpenseRow) => void;
-  onSettled: () => void;
+  onSettled: (pendingId?: string, realId?: string) => void;
   onOptimisticActivity: (log: ActivityLog) => void;
   renderTrigger?: (props: { onClick: () => void; loading: boolean }) => React.ReactNode;
 }
@@ -422,7 +422,7 @@ export function AddExpenseForm({
       body.recurring = { frequency: recurringFrequency };
     }
 
-    await fetch(`/api/groups/${groupId}/expenses`, {
+    const res = await fetch(`/api/groups/${groupId}/expenses`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -430,8 +430,14 @@ export function AddExpenseForm({
 
     setLoading(false);
 
-    // router.refresh() syncs the real data (including the pending item being replaced)
-    onSettled();
+    // Pass the real DB id so the parent can swap the pending key before
+    // router.refresh() lands — prevents React from remounting the card.
+    let realId: string | undefined;
+    try {
+      const json = await res.json();
+      realId = json?.data?.id;
+    } catch { /* non-critical — refresh will reconcile anyway */ }
+    onSettled(pendingId, realId);
   }
 
   function resetForm() {
