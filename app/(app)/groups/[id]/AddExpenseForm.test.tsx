@@ -143,7 +143,7 @@ describe("AddExpenseForm", () => {
       openModal();
 
       expect(screen.getByText("Add an expense")).toBeDefined();
-      expect(screen.getByPlaceholderText("Description")).toBeDefined();
+      expect(screen.getByLabelText("Description")).toBeDefined();
       expect(screen.getByPlaceholderText("0.00")).toBeDefined();
       expect(screen.getByText("Today")).toBeDefined();
     });
@@ -219,7 +219,7 @@ describe("AddExpenseForm", () => {
       const { onOptimisticAdd } = renderForm();
       openModal();
 
-      fireEvent.change(screen.getByPlaceholderText("Description"), { target: { value: "Lunch" } });
+      fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Lunch" } });
       fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "30.00" } });
 
       const form = document.querySelector("form")!;
@@ -246,7 +246,7 @@ describe("AddExpenseForm", () => {
       expect(submitBtn.disabled).toBe(true);
 
       // Only description — still disabled
-      fireEvent.change(screen.getByPlaceholderText("Description"), { target: { value: "Lunch" } });
+      fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Lunch" } });
       expect(submitBtn.disabled).toBe(true);
 
       // Both filled — enabled

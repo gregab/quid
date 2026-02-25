@@ -91,7 +91,7 @@ export default function CreateGroupButton({ userId, variant = "default" }: { use
                   id="groupName"
                   type="text"
                   required
-                  placeholder="Group name"
+
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus

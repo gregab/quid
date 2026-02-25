@@ -651,7 +651,7 @@ export function AddExpenseForm({
                 id="expenseDescription"
                 type="text"
                 required
-                placeholder="Description"
+
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 autoFocus
@@ -800,7 +800,7 @@ export function AddExpenseForm({
                 type="text"
                 required
                 autoComplete="off"
-                placeholder="Description"
+
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 autoFocus
