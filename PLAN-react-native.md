@@ -120,37 +120,56 @@ This way existing web imports don't need to change. We can clean this up later.
 | Date picker | **@react-native-community/datetimepicker** | Native OS date pickers. |
 | Bottom sheets | **@gorhom/bottom-sheet** | iOS-style bottom sheets for modals (add expense, etc.). |
 
-### Data Architecture (Mobile → Supabase Direct)
+### Data Architecture (Mobile → Shared Next.js API Routes)
 
-The mobile app talks directly to Supabase — **not** through the Next.js API routes.
+The mobile app calls the **same Next.js API routes** as the web app — `https://aviary.gregbigelow.com/api/...`. No duplicated business logic.
 
 ```
-Mobile App → Supabase JS Client → Supabase (RLS + RPC functions)
+Web Browser  → fetch("/api/...")             → Next.js API Route → Supabase (RLS + RPC)
+                  (cookies)
+
+Mobile App   → fetch(BASE_URL + "/api/...")  → Next.js API Route → Supabase (RLS + RPC)
+                  (Bearer token)
 ```
 
-**Why direct Supabase, not through the Next.js API?**
-- The Next.js API routes are thin wrappers: Zod validate → Supabase RPC call → JSON response
-- RLS already protects all data at the database layer
-- RPC functions (`create_expense`, `update_expense`, etc.) handle all complex mutations atomically
-- Eliminates an extra network hop and CORS configuration
-- The Supabase JS client works identically in React Native
-- Validation schemas extracted to `@aviary/shared` can be reused in both clients
+**Why shared API routes instead of direct Supabase from mobile?**
+- **Single source of truth:** The API routes contain real business logic beyond "call RPC" — the expense PUT handler computes change diffs for activity logs, validates custom splits sum to the total, checks membership and creator permissions, etc. Duplicating this in a mobile service layer invites drift and bugs.
+- **Zero feature work on mutations:** Every API endpoint already exists, is tested, and handles edge cases. Mobile just calls the same URLs.
+- **Easier to reason about:** One place to add validation, one place to debug, one place to audit for security.
 
-**Service layer:** We'll create a thin service layer in `mobile/lib/services/` that mirrors what the API routes do:
+**What needs to change to support mobile clients:**
+
+1. **Auth in `lib/supabase/server.ts`:** Currently reads auth from cookies only. Update `createClient()` to also accept a `Bearer` token in the `Authorization` header. When the header is present, create a Supabase client initialized with that token. When absent, fall back to cookies. **Zero changes to any API route handler** — they all call `createClient()` and get a properly authenticated client either way.
+
+2. **CORS headers:** Add CORS configuration (in `next.config.ts` or a middleware) to allow requests from the mobile app. Only needs to permit the mobile app's requests (no browser origin restrictions for native apps, but preflight handling may still be needed).
+
+3. **Mobile API client:** A thin wrapper in `mobile/lib/api.ts` that:
+   - Reads the Supabase access token from SecureStore
+   - Sends it as `Authorization: Bearer <token>` on every request
+   - Points at the configurable `API_BASE_URL` (production or local dev)
+   - Has typed helpers like `api.post("/api/groups", { name })` that match the web's `fetch()` calls
 
 ```ts
-// mobile/lib/services/expenses.ts
-import { z } from "zod";
-import { ExpenseInputSchema } from "@aviary/shared/validation";
-import { supabase } from "../supabase";
+// mobile/lib/api.ts
+import * as SecureStore from "expo-secure-store";
 
-export async function createExpense(groupId: string, input: z.infer<typeof ExpenseInputSchema>) {
-  const validated = ExpenseInputSchema.parse(input);
-  const { data, error } = await supabase.rpc("create_expense", { ... });
-  if (error) throw error;
-  return data;
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; // https://aviary.gregbigelow.com
+
+export async function apiFetch(path: string, options: RequestInit = {}) {
+  const token = await SecureStore.getItemAsync("supabase-access-token");
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+  return res.json();
 }
 ```
+
+**For reads that the web app does in server components** (group detail page, dashboard), the mobile app will also call API routes. We may need to add a couple of GET endpoints that the web currently fetches server-side (e.g., `GET /api/groups/[id]` for the full group detail payload). These are simple to add and keep the "one data path" principle.
 
 ---
 
@@ -264,10 +283,10 @@ Root (Expo Router)
 
 ## 5. Auth Flow (Mobile)
 
-Supabase auth in React Native uses a custom storage adapter instead of cookies:
+Mobile uses Supabase JS client **only for authentication** (login, signup, session management). All data access goes through the shared Next.js API routes using the Supabase access token as a Bearer token.
 
 ```ts
-// mobile/lib/supabase.ts
+// mobile/lib/supabase.ts — used ONLY for auth (login, signup, session refresh)
 import { createClient } from "@supabase/supabase-js";
 import * as SecureStore from "expo-secure-store";
 import type { Database } from "@aviary/shared/types/database";
@@ -292,6 +311,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 **Auth state management:** A React context provider wraps the app, listens to `supabase.auth.onAuthStateChange`, and provides `user` + `session` + `loading` to all screens. The root layout redirects:
 - No session → auth stack
 - Session → app tabs
+
+The `session.access_token` is what gets sent as `Authorization: Bearer <token>` on every API call via `apiFetch()`. Supabase handles token refresh automatically.
 
 **Google Sign-In:** Use `expo-auth-session` with Supabase's Google provider. The OAuth flow opens in-app browser, callback returns to the app via deep link.
 
@@ -469,16 +490,25 @@ export function useCreateExpense(groupId: string) {
 7. Extract shared TypeScript types → `packages/shared/src/types.ts`
 8. Run `SKIP_SMOKE_TESTS=1 npm test` and `npm run build` to verify web still works
 
-### Phase 2: Expo App Scaffold
+### Phase 2: Server-Side Mobile Auth Support
+
+1. Update `lib/supabase/server.ts` to accept Bearer tokens (the key enabler for mobile)
+2. Add CORS headers in `next.config.ts` for mobile requests
+3. Add `GET /api/groups/[id]` endpoint (group detail data currently fetched server-side)
+4. Test that existing web auth (cookies) still works
+5. Test Bearer token auth against a local dev server
+
+### Phase 3: Expo App Scaffold
 
 1. `npx create-expo-app mobile --template blank-typescript`
 2. Configure Metro for monorepo (resolve `@aviary/shared`)
 3. Install dependencies: NativeWind, TanStack Query, expo-secure-store, etc.
-4. Set up Supabase client with SecureStore
-5. Configure Expo Router file structure
-6. Set up NativeWind with matching design tokens
-7. Bundle Geist + Cormorant Garamond fonts via expo-font
-8. Create root layout with providers (Auth, Query, Theme)
+4. Set up Supabase client with SecureStore (for auth only)
+5. Set up `apiFetch()` wrapper that sends Bearer token to shared API routes
+6. Configure Expo Router file structure
+7. Set up NativeWind with matching design tokens
+8. Bundle Geist + Cormorant Garamond fonts via expo-font
+9. Create root layout with providers (Auth, Query, Theme)
 
 ### Phase 3: Auth Screens
 
@@ -569,11 +599,12 @@ export function useCreateExpense(groupId: string) {
 - Compiles to native StyleSheet at build time (good performance)
 - Active ecosystem, well-maintained
 
-### Why direct Supabase instead of API routes?
-- The API routes are thin wrappers — the real logic is in RPC functions
-- Eliminates CORS, extra hop, and API route maintenance for mobile
-- RLS protects data regardless of which client connects
-- Same `@supabase/supabase-js` client works in RN
+### Why shared API routes instead of direct Supabase?
+- The API routes are **not** all thin wrappers — the expense PUT handler computes change diffs, the expense POST validates custom splits, the leave-group handler checks balances. Duplicating this in a mobile service layer invites bugs.
+- One place to add validation, debug, and audit security — no drift between platforms
+- Every endpoint is already built and tested
+- Small change needed: update `lib/supabase/server.ts` to accept Bearer tokens alongside cookies
+- Mobile gets the exact same behavior as web, automatically, for every current and future endpoint
 
 ### Why TanStack Query?
 - Built-in caching, background refetching, optimistic updates
@@ -605,13 +636,15 @@ Minimal changes to the web app:
 
 1. **`package.json`** — Add `"workspaces"` field
 2. **`tsconfig.json`** — Add path alias for `@aviary/shared`
-3. **`next.config.ts`** — Add `transpilePackages: ["@aviary/shared"]`
-4. **`lib/balances/*.ts`** — Become re-export barrels (or update imports project-wide)
-5. **`lib/format.ts`** — Becomes re-export barrel
-6. **`lib/formatDisplayName.ts`** — Becomes re-export barrel
-7. **`lib/constants.ts`** — Becomes re-export barrel
-8. **`lib/amount.ts`** — Becomes re-export barrel
-9. **`lib/percentageSplit.ts`** — Becomes re-export barrel
-10. **`lib/groupPattern.ts`** — Becomes re-export barrel
+3. **`next.config.ts`** — Add `transpilePackages: ["@aviary/shared"]` + CORS headers
+4. **`lib/supabase/server.ts`** — Accept `Authorization: Bearer <token>` in addition to cookies. When a Bearer token is present, create a Supabase client initialized with that session. Fall back to cookies when no header is present. This is the key change that makes all API routes work for mobile with zero per-route modifications.
+5. **`lib/balances/*.ts`** — Become re-export barrels (or update imports project-wide)
+6. **`lib/format.ts`** — Becomes re-export barrel
+7. **`lib/formatDisplayName.ts`** — Becomes re-export barrel
+8. **`lib/constants.ts`** — Becomes re-export barrel
+9. **`lib/amount.ts`** — Becomes re-export barrel
+10. **`lib/percentageSplit.ts`** — Becomes re-export barrel
+11. **`lib/groupPattern.ts`** — Becomes re-export barrel
+12. **New GET endpoints** — Add `GET /api/groups/[id]` (full group detail) since the web app currently fetches this server-side in the page component. Mobile needs an API route for the same data.
 
-No changes to components, pages, API routes, or Supabase config.
+No changes to existing API route handlers, components, pages, or Supabase RPC functions.
