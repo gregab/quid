@@ -329,24 +329,21 @@ describe("ActivityFeed — load more", () => {
     expect(screen.queryByText("Load more")).toBeNull();
   });
 
-  it("shows Load more button when hasMore is true", () => {
+  it("shows Show more button when hasMore is true", () => {
     render(<ActivityFeed logs={[makeLog()]} hasMore={true} onLoadMore={vi.fn()} />);
-    expect(screen.getByText("Load more")).toBeDefined();
+    expect(screen.getByText("Show more")).toBeDefined();
   });
 
   it("calls onLoadMore when button is clicked", () => {
     const onLoadMore = vi.fn();
     render(<ActivityFeed logs={[makeLog()]} hasMore={true} onLoadMore={onLoadMore} />);
-    fireEvent.click(screen.getByText("Load more"));
+    fireEvent.click(screen.getByText("Show more"));
     expect(onLoadMore).toHaveBeenCalledOnce();
   });
 
-  it("shows Loading… and disables button when isLoadingMore is true", () => {
+  it("disables button when isLoadingMore is true", () => {
     render(<ActivityFeed logs={[makeLog()]} hasMore={true} isLoadingMore={true} />);
-    const loadingEl = screen.getByText("Loading…");
-    expect(loadingEl).toBeDefined();
-    // The loading text may be inside a span within the button
-    const btn = loadingEl.closest("button") as HTMLButtonElement;
+    const btn = screen.getByText("Show more") as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
   });
 });
