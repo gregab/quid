@@ -14,9 +14,25 @@ export function useInviteShare(inviteToken: string) {
 
   const share = useCallback(async () => {
     if (canShare) {
-      await navigator.share({ url: inviteUrl });
+      try {
+        await navigator.share({ url: inviteUrl });
+      } catch {
+        // User cancelled the share sheet — ignore
+      }
     } else {
-      await navigator.clipboard.writeText(inviteUrl);
+      try {
+        await navigator.clipboard.writeText(inviteUrl);
+      } catch {
+        // Clipboard API unavailable (e.g. insecure context) — use legacy fallback
+        const textarea = document.createElement("textarea");
+        textarea.value = inviteUrl;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }

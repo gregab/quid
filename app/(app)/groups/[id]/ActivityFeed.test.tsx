@@ -343,9 +343,11 @@ describe("ActivityFeed — load more", () => {
 
   it("shows Loading… and disables button when isLoadingMore is true", () => {
     render(<ActivityFeed logs={[makeLog()]} hasMore={true} isLoadingMore={true} />);
-    const btn = screen.getByText("Loading…");
-    expect(btn).toBeDefined();
-    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    const loadingEl = screen.getByText("Loading…");
+    expect(loadingEl).toBeDefined();
+    // The loading text may be inside a span within the button
+    const btn = loadingEl.closest("button") as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
   });
 });
 

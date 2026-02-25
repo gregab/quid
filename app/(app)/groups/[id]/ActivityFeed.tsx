@@ -453,7 +453,7 @@ export function ActivityFeed({
             {logs.map((log) => {
               const payload = log.payload as Payload;
               const clickable = isClickable(log);
-              const rowClass = `flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}${clickable ? " cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700/50 transition-colors" : ""}`;
+              const rowClass = `expense-item-enter flex items-start justify-between gap-4 px-4 py-3${log.isPending ? " opacity-60" : ""}${clickable ? " cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-700/50 transition-colors" : ""}`;
               const handleClick = clickable ? () => setSelectedLog(log) : undefined;
 
               if (log.action === "expense_edited") {
@@ -570,7 +570,15 @@ export function ActivityFeed({
                 disabled={isLoadingMore}
                 className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default"
               >
-                {isLoadingMore ? "Loading…" : "Load more"}
+                {isLoadingMore ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Loading…
+                  </span>
+                ) : "Load more"}
               </button>
             </div>
           )}

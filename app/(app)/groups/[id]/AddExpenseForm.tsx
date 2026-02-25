@@ -510,27 +510,33 @@ export function AddExpenseForm({
                 key={m.userId}
                 className="flex items-center gap-3 px-3.5 py-2.5"
               >
-                <button
-                  type="button"
-                  onClick={() => toggleParticipant(m.userId)}
-                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    isParticipant
-                      ? "bg-amber-500 border-amber-500"
-                      : "border-stone-300 dark:border-stone-600"
-                  }`}
-                >
-                  {isParticipant && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-800 dark:text-stone-200" : "text-stone-400 dark:text-stone-500"}`}>
-                  {m.displayName}
-                  {m.userId === currentUserId && (
-                    <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
-                  )}
-                </span>
+                <label className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer active:opacity-80">
+                  <span
+                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                      isParticipant
+                        ? "bg-amber-500 border-amber-500 scale-100"
+                        : "border-stone-300 dark:border-stone-600 scale-95"
+                    }`}
+                  >
+                    {isParticipant && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={isParticipant}
+                    onChange={() => toggleParticipant(m.userId)}
+                    className="sr-only"
+                  />
+                  <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-800 dark:text-stone-200" : "text-stone-400 dark:text-stone-500"}`}>
+                    {m.displayName}
+                    {m.userId === currentUserId && (
+                      <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
+                    )}
+                  </span>
+                </label>
                 {/* Percentage input */}
                 {splitType === "percentage" && isParticipant && (
                   <div className="w-22 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
