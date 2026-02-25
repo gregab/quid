@@ -735,7 +735,7 @@ export function AddExpenseForm({
             {renderSplitSection()}
 
             {/* Repeat toggle */}
-            <div>
+            <div className="flex items-center gap-2.5">
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -746,17 +746,15 @@ export function AddExpenseForm({
                 <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
               </label>
               {recurring && (
-                <div className="mt-2 ml-6">
-                  <select
-                    value={recurringFrequency}
-                    onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                    className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2 text-base sm:text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                  >
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                  className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
               )}
             </div>
 
@@ -1186,7 +1184,7 @@ export function AddExpenseForm({
           {renderSplitSection()}
 
           {/* Recurring toggle */}
-          <div>
+          <div className="flex items-center gap-2.5">
             <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -1197,17 +1195,15 @@ export function AddExpenseForm({
               <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
             </label>
             {recurring && (
-              <div className="mt-2 ml-6">
-                <select
-                  value={recurringFrequency}
-                  onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                  className="w-full min-w-0 rounded-lg border border-stone-300 px-3 py-2.5 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                >
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
-              </div>
+              <select
+                value={recurringFrequency}
+                onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+              >
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
             )}
           </div>
 
