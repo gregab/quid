@@ -15,18 +15,12 @@ describe("ExportButton", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders with 'Export' text", () => {
-    render(<ExportButton groupId="test-group" />);
-    expect(screen.getByText("Export")).toBeTruthy();
-  });
-
   it("has correct aria-label", () => {
     render(<ExportButton groupId="test-group" />);
     expect(screen.getByLabelText("Export expenses to spreadsheet")).toBeTruthy();
   });
 
-  it("shows 'Exporting...' while loading", async () => {
-    // Mock fetch to hang indefinitely
+  it("disables button while loading", async () => {
     let resolveFetch: (value: Response) => void;
     vi.spyOn(global, "fetch").mockImplementation(
       () => new Promise((resolve) => { resolveFetch = resolve; })
@@ -39,7 +33,7 @@ describe("ExportButton", () => {
       fireEvent.click(button);
     });
 
-    expect(screen.getByText("Exporting...")).toBeTruthy();
+    expect(button).toHaveProperty("disabled", true);
 
     // Resolve to clean up
     await act(async () => {

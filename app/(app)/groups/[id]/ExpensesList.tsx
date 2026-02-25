@@ -218,7 +218,7 @@ function TypeIcon({ type }: { type: ExpenseType }) {
           <path d="M20 6L9 17l-5-5" />
         </svg>
       ),
-      circleClass: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400",
+      circleClass: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400",
       size: "w-7 h-7",
     },
   };
@@ -675,14 +675,14 @@ export function ExpensesList({
             onClick={onClick}
             disabled={loading}
             aria-label="Add expense"
-            className={`fab-button fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 transition-all duration-300 ease-out hover:bg-amber-600 hover:shadow-xl hover:shadow-amber-500/30 active:scale-[0.94] disabled:opacity-50 cursor-pointer dark:bg-amber-500 dark:hover:bg-amber-400 dark:shadow-amber-500/20 ${
+            className={`fab-button fixed right-6 z-40 flex items-center gap-2 rounded-full bg-amber-500 text-white font-semibold shadow-lg shadow-amber-500/25 transition-all duration-300 ease-out hover:bg-amber-600 hover:shadow-xl hover:shadow-amber-500/30 active:scale-[0.94] disabled:opacity-50 cursor-pointer dark:bg-amber-500 dark:hover:bg-amber-400 dark:shadow-amber-500/20 ${
               fabVisible ? "fab-enter" : "fab-exit pointer-events-none"
             } w-14 h-14 justify-center px-0 sm:w-auto sm:h-12 ${
               fabCompact
                 ? "sm:w-12 sm:h-12 sm:justify-center sm:px-0"
                 : "sm:px-5"
             }`}
-            style={{ paddingBottom: "calc(0.375rem + env(safe-area-inset-bottom, 0px))" }}
+            style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}
           >
             <svg
               className={`shrink-0 transition-transform duration-300 w-6 h-6 sm:w-4 sm:h-4 ${fabCompact ? "sm:w-5 sm:h-5" : ""}`}
