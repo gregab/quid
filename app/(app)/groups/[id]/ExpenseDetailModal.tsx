@@ -759,61 +759,75 @@ export function ExpenseDetailModal({
                   ))}
                 </select>
               </div>
-              <div>
-                <p className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">Split between</p>
-                <div className="space-y-1.5">
-                  {members.map((m) => (
-                    <label key={m.userId} className="flex items-center gap-2.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={participantIds.has(m.userId)}
-                        onChange={() => toggleParticipant(m.userId)}
-                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      <span className="text-sm text-stone-700 dark:text-stone-300">{m.displayName}</span>
-                    </label>
-                  ))}
+              <div className="space-y-3">
+                <p className="block text-sm font-medium text-stone-700 dark:text-stone-300">Split between</p>
+
+                {/* Member checkboxes */}
+                <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden divide-y divide-stone-100 dark:divide-stone-800">
+                  {members.map((m) => {
+                    const isChecked = participantIds.has(m.userId);
+                    return (
+                      <label key={m.userId} className="flex items-center gap-3 px-3.5 py-2.5 cursor-pointer">
+                        <span
+                          className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked
+                              ? "bg-amber-500 border-amber-500"
+                              : "border-stone-300 dark:border-stone-600"
+                          }`}
+                        >
+                          {isChecked && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleParticipant(m.userId)}
+                          className="sr-only"
+                        />
+                        <span className={`text-sm ${isChecked ? "text-stone-800 dark:text-stone-200" : "text-stone-400 dark:text-stone-500"}`}>{m.displayName}</span>
+                      </label>
+                    );
+                  })}
                 </div>
 
                 {/* Split type toggle */}
                 {participantIds.size > 0 && (
-                  <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-700/60">
-                    <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
-                      {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => handleEditSplitTypeChange(type)}
-                          className={`px-3.5 py-1.5 rounded-full transition-all ${
-                            editSplitType === type
-                              ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
-                              : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
-                          }`}
-                        >
-                          {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="grid grid-cols-3 rounded-xl bg-stone-100 dark:bg-stone-800 p-1 text-sm font-medium">
+                    {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => handleEditSplitTypeChange(type)}
+                        className={`py-2 rounded-lg transition-all ${
+                          editSplitType === type
+                            ? "bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm"
+                            : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                        }`}
+                      >
+                        {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
+                      </button>
+                    ))}
                   </div>
                 )}
 
                 {/* Percentage inputs for edit mode */}
                 {editSplitType === "percentage" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
-                    {orderedEditParticipants.map((m, idx) => (
+                  <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden divide-y divide-stone-100 dark:divide-stone-800">
+                    {orderedEditParticipants.map((m) => (
                       <div
                         key={m.userId}
-                        className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
-                        }`}
+                        className="flex items-center gap-3 px-3.5 py-2.5"
                       >
-                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
+                        <span className="text-sm text-stone-800 dark:text-stone-200 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-stone-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
                           )}
                         </span>
-                        <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                        <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                           <input
                             type="text"
                             inputMode="decimal"
@@ -826,15 +840,15 @@ export function ExpenseDetailModal({
                                 new Map(prev).set(m.userId, val)
                               );
                             }}
-                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
+                            className="w-full bg-transparent pl-2.5 pr-0.5 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
                           />
                           <span className="pr-2 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
                         </div>
                       </div>
                     ))}
                     {editPercentageRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+                      <div className="flex items-center justify-between px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800/50">
+                        <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             Math.abs(editPercentageRemaining) < 0.005
@@ -855,21 +869,19 @@ export function ExpenseDetailModal({
 
                 {/* Custom amount inputs for edit mode */}
                 {editSplitType === "custom" && participantIds.size > 0 && (
-                  <div className="mt-3 space-y-0 rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
-                    {orderedEditParticipants.map((m, idx) => (
+                  <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden divide-y divide-stone-100 dark:divide-stone-800">
+                    {orderedEditParticipants.map((m) => (
                       <div
                         key={m.userId}
-                        className={`flex items-center gap-2 px-3 py-2.5 ${
-                          idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
-                        }`}
+                        className="flex items-center gap-3 px-3.5 py-2.5"
                       >
-                        <span className="text-sm text-stone-700 dark:text-stone-300 flex-1 truncate">
+                        <span className="text-sm text-stone-800 dark:text-stone-200 flex-1 truncate">
                           {m.displayName}
                           {m.userId === currentUserId && (
-                            <span className="ml-1 text-xs text-stone-400">(you)</span>
+                            <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
                           )}
                         </span>
-                        <div className="w-28 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                        <div className="w-28 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                           <span className="pl-2.5 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
                           <input
                             type="text"
@@ -883,15 +895,15 @@ export function ExpenseDetailModal({
                                 new Map(prev).set(m.userId, val)
                               );
                             }}
-                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-sm focus:outline-none dark:text-stone-100"
+                            className="w-full bg-transparent px-1.5 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
                           />
                         </div>
                       </div>
                     ))}
                     {/* Running total indicator */}
                     {totalCentsValid && editCustomRemaining !== null && (
-                      <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-                        <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+                      <div className="flex items-center justify-between px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800/50">
+                        <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
                         <span
                           className={`text-xs font-semibold ${
                             editCustomRemaining === 0

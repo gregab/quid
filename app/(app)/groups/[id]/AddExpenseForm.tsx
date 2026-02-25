@@ -476,54 +476,64 @@ export function AddExpenseForm({
 
   function renderSplitSection() {
     return (
-      <div>
-        <div className="flex items-center justify-between mb-2">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-stone-700 dark:text-stone-300">Split between</p>
-          {participantIds.size > 0 && (
-            <div className="inline-flex rounded-full bg-stone-100 dark:bg-stone-700/60 p-0.5 text-xs font-medium">
-              {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleSplitTypeChange(type)}
-                  className={`px-3.5 py-1.5 rounded-full transition-all ${
-                    splitType === type
-                      ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
-                      : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
-                  }`}
-                >
-                  {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
-        <div className="rounded-xl border border-stone-100 dark:border-stone-700/60 overflow-hidden">
-          {members.map((m, idx) => {
+        {/* Split type toggle — segmented control */}
+        {participantIds.size > 0 && (
+          <div className="grid grid-cols-3 rounded-xl bg-stone-100 dark:bg-stone-800 p-1 text-sm font-medium">
+            {(["equal", "percentage", "custom"] as SplitType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleSplitTypeChange(type)}
+                className={`py-2 rounded-lg transition-all ${
+                  splitType === type
+                    ? "bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-sm"
+                    : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                }`}
+              >
+                {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Member list */}
+        <div className="rounded-xl border border-stone-200 dark:border-stone-700 overflow-hidden divide-y divide-stone-100 dark:divide-stone-800">
+          {members.map((m) => {
             const isParticipant = participantIds.has(m.userId);
             return (
               <div
                 key={m.userId}
-                className={`flex items-center gap-2.5 px-3 py-2 ${
-                  idx % 2 === 1 ? "bg-stone-50/60 dark:bg-stone-750/30" : ""
-                }`}
+                className="flex items-center gap-3 px-3.5 py-2.5"
               >
-                <input
-                  type="checkbox"
-                  checked={isParticipant}
-                  onChange={() => toggleParticipant(m.userId)}
-                  className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 shrink-0"
-                />
-                <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-700 dark:text-stone-300" : "text-stone-400 dark:text-stone-500"}`}>
+                <button
+                  type="button"
+                  onClick={() => toggleParticipant(m.userId)}
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    isParticipant
+                      ? "bg-amber-500 border-amber-500"
+                      : "border-stone-300 dark:border-stone-600"
+                  }`}
+                >
+                  {isParticipant && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+                <span className={`text-sm flex-1 truncate ${isParticipant ? "text-stone-800 dark:text-stone-200" : "text-stone-400 dark:text-stone-500"}`}>
                   {m.displayName}
                   {m.userId === currentUserId && (
-                    <span className="ml-1 text-xs text-stone-400">(you)</span>
+                    <span className="ml-1 text-xs text-stone-400 dark:text-stone-500">(you)</span>
                   )}
                 </span>
                 {/* Percentage input */}
                 {splitType === "percentage" && isParticipant && (
-                  <div className="w-20 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                  <div className="w-22 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -534,14 +544,14 @@ export function AddExpenseForm({
                         const val = filterDecimalInput(e.target.value);
                         setPercentages((prev) => new Map(prev).set(m.userId, val));
                       }}
-                      className="w-full bg-transparent pl-2 pr-0.5 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
+                      className="w-full bg-transparent pl-2 pr-0.5 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
                     />
-                    <span className="pr-1.5 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
+                    <span className="pr-2 text-sm text-stone-400 dark:text-stone-500 select-none">%</span>
                   </div>
                 )}
                 {/* Custom $ input */}
                 {splitType === "custom" && isParticipant && (
-                  <div className="w-24 flex items-center rounded-lg border border-stone-200 dark:border-stone-600 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900">
+                  <div className="w-26 flex items-center rounded-lg border border-stone-200 dark:border-stone-700 overflow-hidden focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-800">
                     <span className="pl-2 text-sm text-stone-400 dark:text-stone-500 select-none">$</span>
                     <input
                       type="text"
@@ -553,7 +563,7 @@ export function AddExpenseForm({
                         const val = filterDecimalInput(e.target.value);
                         setCustomAmounts((prev) => new Map(prev).set(m.userId, val));
                       }}
-                      className="w-full bg-transparent px-1 py-1 text-right text-sm focus:outline-none dark:text-stone-100"
+                      className="w-full bg-transparent px-1 py-1.5 text-right text-base focus:outline-none text-stone-900 dark:text-stone-100"
                     />
                   </div>
                 )}
@@ -563,8 +573,8 @@ export function AddExpenseForm({
 
           {/* Equal split preview */}
           {splitType === "equal" && totalCentsValid && participantIds.size > 0 && (
-            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-              <span className="text-xs text-stone-400 dark:text-stone-500">Per person</span>
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800/50">
+              <span className="text-xs text-stone-500 dark:text-stone-400">Per person</span>
               <span className="text-xs font-semibold text-stone-600 dark:text-stone-300">
                 {formatCents(splitAmount(parsedTotalCents, participantIds.size)[0]!)} each
                 {parsedTotalCents % participantIds.size !== 0 && (
@@ -576,8 +586,8 @@ export function AddExpenseForm({
 
           {/* Running total indicator for percentages */}
           {splitType === "percentage" && percentageRemaining !== null && (
-            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-              <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800/50">
+              <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
               <span
                 className={`text-xs font-semibold ${
                   Math.abs(percentageRemaining) < 0.005
@@ -596,8 +606,8 @@ export function AddExpenseForm({
 
           {/* Running total indicator for custom */}
           {splitType === "custom" && totalCentsValid && customRemaining !== null && (
-            <div className="flex items-center justify-between px-3 py-2 border-t border-stone-100 dark:border-stone-700/60 bg-stone-50/40 dark:bg-stone-750/20">
-              <span className="text-xs text-stone-400 dark:text-stone-500">Total</span>
+            <div className="flex items-center justify-between px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800/50">
+              <span className="text-xs text-stone-500 dark:text-stone-400">Total</span>
               <span
                 className={`text-xs font-semibold ${
                   customRemaining === 0
