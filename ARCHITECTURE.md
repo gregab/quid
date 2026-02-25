@@ -10,7 +10,7 @@ Aviary is an expense-splitting app for groups of people. Three concepts drive th
 
 2. **Payments**: Records of money sent from one person to another outside the app (Venmo, cash, etc.). Stored as a special expense (`isPayment=true`) where `paidById` = sender and a single `ExpenseSplit` covers the recipient for the full amount. This means payments flow through the same balance computation pipeline as expenses with zero special-casing.
 
-3. **Balances**: A simplified summary of who owes whom within a group, computed on-demand from all expenses and payments. The pipeline is: `buildRawDebts(expenses)` → `simplifyDebts(rawDebts)`. Convenience wrappers: `getUserDebtCents(expenses, userId)` returns how much a user owes (unsigned), `getUserBalanceCents(expenses, userId)` returns signed net balance (positive = owed money, negative = owes money). No balance data is stored — it's always derived from the source of truth (expense + split records). All balance functions live in `lib/balances/` and are the **single source of truth** — never re-derive balances with a manual loop.
+3. **Balances**: A simplified summary of who owes whom within a group, computed on-demand from all expenses and payments. The pipeline is: `buildRawDebts(expenses)` → `simplifyDebts(rawDebts)`. Convenience wrappers: `getUserDebtCents(expenses, userId)` returns how much a user owes (unsigned), `getUserBalanceCents(expenses, userId)` returns signed net balance (positive = owed money, negative = owes money). No balance data is stored — it's always derived from the source of truth (expense + split records). All balance functions live in `lib/balances/`.
 
 Both expenses and payments can be edited and deleted, which immediately affects the computed balances.
 
@@ -436,7 +436,7 @@ page.tsx (server)                         ← Fetches all data via Supabase
 ```
 
 ### Client-Side fetch Pattern
-**Never use `NEXT_PUBLIC_SITE_URL` in `fetch()` calls.** This hardcodes the domain and causes CORS failures. Use root-relative paths directly:
+All client-side `fetch()` calls use root-relative paths:
 
 ```ts
 fetch(`/api/groups/...`, { method: "POST", ... });
