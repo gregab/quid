@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_GROUP_NAME } from "@/lib/constants";
 
 const updateSettingsSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
+  name: z.string().min(1).max(MAX_GROUP_NAME).optional(),
   bannerUrl: z.string().url().nullable().optional(),
 });
 

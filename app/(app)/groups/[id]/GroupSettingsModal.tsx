@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/compressImage";
+import { MAX_GROUP_NAME } from "@/lib/constants";
 
 interface Props {
   groupId: string;
@@ -258,7 +259,7 @@ export function GroupSettingsModal({
               type="text"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              maxLength={100}
+              maxLength={MAX_GROUP_NAME}
               className="w-full rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 px-3 py-2 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
             />
           </div>

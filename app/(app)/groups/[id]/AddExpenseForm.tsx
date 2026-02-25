@@ -9,6 +9,7 @@ import { splitAmount } from "@/lib/balances/splitAmount";
 import { formatCents } from "@/lib/format";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
 import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
+import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -651,7 +652,7 @@ export function AddExpenseForm({
                 id="expenseDescription"
                 type="text"
                 required
-
+                maxLength={MAX_EXPENSE_DESCRIPTION}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 autoFocus
@@ -800,7 +801,7 @@ export function AddExpenseForm({
                 type="text"
                 required
                 autoComplete="off"
-
+                maxLength={MAX_EXPENSE_DESCRIPTION}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 autoFocus

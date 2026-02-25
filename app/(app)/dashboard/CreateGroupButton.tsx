@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { MAX_GROUP_NAME } from "@/lib/constants";
 
 export default function CreateGroupButton({ userId, variant = "default" }: { userId: string; variant?: "default" | "large" }) {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function CreateGroupButton({ userId, variant = "default" }: { use
                   id="groupName"
                   type="text"
                   required
-
+                  maxLength={MAX_GROUP_NAME}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus

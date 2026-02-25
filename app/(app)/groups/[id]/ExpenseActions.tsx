@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/Input";
 import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountFormatting } from "@/lib/amount";
+import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 
 interface ExpenseActionsProps {
   groupId: string;
@@ -339,6 +340,7 @@ export function ExpenseActions({
                   id="editDescription"
                   type="text"
                   required
+                  maxLength={MAX_EXPENSE_DESCRIPTION}
                   placeholder="e.g. Birdseed, Field Guide, Binoculars"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

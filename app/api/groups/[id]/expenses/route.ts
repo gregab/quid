@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_AMOUNT_CENTS } from "@/lib/amount";
+import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 
 const createExpenseSchema = z.object({
-  description: z.string().min(1).max(200),
+  description: z.string().min(1).max(MAX_EXPENSE_DESCRIPTION),
   amountCents: z
     .number()
     .int()

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/Button";
+import { MAX_FEEDBACK_MESSAGE } from "@/lib/constants";
 
 type State = "idle" | "open" | "submitting" | "success" | "error";
 
@@ -110,7 +111,7 @@ export function FeedbackModal() {
                     id="feedbackMessage"
                     rows={5}
                     required
-                    maxLength={5000}
+                    maxLength={MAX_FEEDBACK_MESSAGE}
                     placeholder="Bug, suggestion, or anything else…"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -121,8 +122,8 @@ export function FeedbackModal() {
                     <p className="text-xs text-stone-400 dark:text-stone-500">
                       Your browser info and current page will be included to help with debugging.
                     </p>
-                    <p className={`text-xs shrink-0 ${message.length >= 4800 ? "text-red-500 dark:text-red-400" : "text-stone-400 dark:text-stone-500"}`}>
-                      {message.length}/5000
+                    <p className={`text-xs shrink-0 ${message.length >= MAX_FEEDBACK_MESSAGE - 200 ? "text-red-500 dark:text-red-400" : "text-stone-400 dark:text-stone-500"}`}>
+                      {message.length}/{MAX_FEEDBACK_MESSAGE}
                     </p>
                   </div>
                 </div>

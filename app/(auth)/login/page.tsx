@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton";
+import { MAX_EMAIL } from "@/lib/constants";
 
 function LoginForm() {
   const router = useRouter();
@@ -59,6 +60,7 @@ function LoginForm() {
             id="email"
             type="email"
             required
+            maxLength={MAX_EMAIL}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"

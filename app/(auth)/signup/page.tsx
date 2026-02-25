@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/ui/GoogleSignInButton";
+import { MAX_DISPLAY_NAME, MAX_EMAIL } from "@/lib/constants";
 
 function SignupForm() {
   const searchParams = useSearchParams();
@@ -135,7 +136,7 @@ function SignupForm() {
                 required
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                maxLength={30}
+                maxLength={MAX_DISPLAY_NAME}
                 placeholder="What should people call you?"
                 className="w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-base sm:text-sm text-stone-900 placeholder-stone-400 transition focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 dark:bg-stone-800 dark:border-stone-700 dark:text-stone-100 dark:placeholder-stone-500"
               />
@@ -151,6 +152,7 @@ function SignupForm() {
                 id="email"
                 type="email"
                 required
+                maxLength={MAX_EMAIL}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"

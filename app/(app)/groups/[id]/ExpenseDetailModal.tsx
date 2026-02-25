@@ -8,6 +8,7 @@ import type { ExpenseRow, Member } from "./ExpensesList";
 import type { ActivityLog } from "./ActivityFeed";
 import { splitAmount } from "@/lib/balances/splitAmount";
 import { formatCents } from "@/lib/format";
+import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 
 interface ExpenseDetailModalProps {
@@ -706,6 +707,7 @@ export function ExpenseDetailModal({
                   id="editDescription"
                   type="text"
                   required
+                  maxLength={MAX_EXPENSE_DESCRIPTION}
                   placeholder="e.g. Birdseed, Field Guide, Binoculars"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
