@@ -83,6 +83,7 @@ npm run cy:run                          # Cypress headless
 7. **Atomic mutations use RPC functions** (`create_expense`, `update_expense`, `delete_expense`, `create_group`, `create_payment`). These are `SECURITY DEFINER` PL/pgSQL functions that bypass RLS and do their own auth checks.
 8. **RLS is enabled on all 6 tables.** The `is_group_member()` helper checks membership via `auth.uid()`.
 9. **RPC function migrations must DROP then CREATE** — `CREATE OR REPLACE` only works if the parameter signature is identical. Changing params without dropping first creates stale overloads.
+10. **Views must set `security_invoker = true`** — Postgres defaults views to SECURITY DEFINER (runs as view owner, bypassing RLS). Always add `WITH (security_invoker = true)` when creating views, or they silently expose data to anyone with SELECT access.
 
 ## Security Rules
 - All API routes verify Supabase session server-side
