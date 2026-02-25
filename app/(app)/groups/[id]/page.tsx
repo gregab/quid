@@ -85,13 +85,13 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     .order("date", { ascending: false })
     .order("createdAt", { ascending: false });
 
-  // Fetch activity logs with actor — limit to 20; more can be paged in client-side.
+  // Fetch activity logs with actor — limit to 10; more can be paged in client-side.
   const { data: activityLogs } = await supabase
     .from("ActivityLog")
     .select("*, User!actorId(displayName)")
     .eq("groupId", id)
     .order("createdAt", { ascending: false })
-    .limit(20);
+    .limit(10);
 
   // Transform activity logs to match the shape expected by GroupInteractive
   // (Prisma returned { actor: { displayName } }, Supabase returns { User: { displayName } })
@@ -261,7 +261,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         currentUserDisplayName={currentUserDisplayName}
         initialExpenses={initialExpenses}
         initialLogs={transformedLogs}
-        hasMoreLogs={(activityLogs?.length ?? 0) >= 20}
+        hasMoreLogs={(activityLogs?.length ?? 0) >= 10}
         members={members}
         allUserNames={allUserNames}
         inviteToken={group.inviteToken}
