@@ -118,27 +118,29 @@ describe("round-trip: percentagesToCents → centsToPercentages", () => {
  * The UI will show this as needing adjustment (user must set one to 34%).
  */
 describe("equal-split-to-percentages pattern (UI: Equal → % toggle)", () => {
-  it("$50 split 3 ways: integer percentages round to 33/33/33 (user adjusts to 100)", () => {
+  it("$50 split 3 ways: integer percentages sum to exactly 100 via remainder distribution", () => {
     const ids = ["a", "b", "c"];
     const totalCents = 5000;
     const equalCents = splitAmount(totalCents, ids.length);
     const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
     const pcts = centsToPercentages(dollarsMap, ids, totalCents);
-    // Each person rounds to 33%, sum = 99 (user must adjust one to 34%)
-    expect(pcts.get("a")).toBe("33");
-    expect(pcts.get("b")).toBe("33");
-    expect(pcts.get("c")).toBe("33");
+    const sum = ids.reduce((s, id) => s + parseInt(pcts.get(id) ?? "0"), 0);
+    expect(sum).toBe(100);
+    // Two get 33%, one gets 34% (remainder distributed to largest fractional part)
+    const values = ids.map((id) => parseInt(pcts.get(id) ?? "0"));
+    expect(values.sort()).toEqual([33, 33, 34]);
   });
 
-  it("$100 split 3 ways: integer percentages round to 33/33/33", () => {
+  it("$100 split 3 ways: integer percentages sum to exactly 100", () => {
     const ids = ["a", "b", "c"];
     const totalCents = 10000;
     const equalCents = splitAmount(totalCents, ids.length);
     const dollarsMap = new Map(ids.map((id, i) => [id, (equalCents[i]! / 100).toFixed(2)]));
     const pcts = centsToPercentages(dollarsMap, ids, totalCents);
-    expect(pcts.get("a")).toBe("33");
-    expect(pcts.get("b")).toBe("33");
-    expect(pcts.get("c")).toBe("33");
+    const sum = ids.reduce((s, id) => s + parseInt(pcts.get(id) ?? "0"), 0);
+    expect(sum).toBe(100);
+    const values = ids.map((id) => parseInt(pcts.get(id) ?? "0"));
+    expect(values.sort()).toEqual([33, 33, 34]);
   });
 
   it("$10 split 3 ways: 33/33/34 round-trips back to cents correctly", () => {
