@@ -195,6 +195,9 @@ export function AddExpenseForm({
     const targetIdx = order.indexOf(target);
     setSlideDirection(targetIdx > currentIdx ? "forward" : "back");
     setScreen(target);
+    // Clear validation errors when navigating — prevents stale warnings from
+    // a previous submit attempt remaining visible after the user fixes the issue.
+    setError(null);
   }
 
   function handleSplitTypeChange(type: SplitType) {

@@ -408,6 +408,129 @@ describe("AddExpenseForm", () => {
     });
   });
 
+  describe("Stale validation errors cleared on navigation", () => {
+    beforeEach(() => {
+      mockMatchMedia(true);
+    });
+
+    it("clears percentage validation error when navigating back to fix and returning", async () => {
+      renderForm(threeMembers);
+      openModal();
+
+      // Fill in required fields
+      fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Lunch" } });
+      enterAmount("30.00");
+
+      // Navigate to split-options, then advanced to set percentage split
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      fireEvent.click(screen.getByText("More options..."));
+
+      // Switch to percentage mode
+      fireEvent.click(screen.getByText("Percent"));
+
+      // Set percentages that don't add up to 100 (e.g., 20 + 20 + 20 = 60)
+      const percentInputs = screen.getAllByPlaceholderText("0") as HTMLInputElement[];
+      percentInputs.forEach((input) => {
+        fireEvent.change(input, { target: { value: "20" } });
+      });
+
+      // Go back to quick-entry via Done
+      fireEvent.click(screen.getByText("Done"));
+
+      // Try to submit — should fail with percentage validation error
+      const form = document.querySelector("form")!;
+      await act(async () => {
+        fireEvent.submit(form);
+      });
+
+      expect(screen.getByText(/Percentages must total 100%/)).toBeDefined();
+
+      // Navigate to split-options to fix it
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+
+      // Error should be cleared when navigating away
+      expect(screen.queryByText(/Percentages must total 100%/)).toBeNull();
+
+      // Navigate back to quick-entry — error should still be gone
+      const header = screen.getByText("Split options").parentElement!;
+      const backBtn = header.querySelector("button")!;
+      fireEvent.click(backBtn);
+
+      expect(screen.queryByText(/Percentages must total 100%/)).toBeNull();
+    });
+
+    it("clears custom amount validation error when navigating to fix splits", async () => {
+      renderForm(threeMembers);
+      openModal();
+
+      fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Dinner" } });
+      enterAmount("30.00");
+
+      // Navigate to advanced split
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      fireEvent.click(screen.getByText("More options..."));
+
+      // Switch to custom mode
+      fireEvent.click(screen.getByText("Custom $"));
+
+      // Set custom amounts that don't sum to total (5.00 + 5.00 + 5.00 = 15.00, not 30.00)
+      const customInputs = screen.getAllByPlaceholderText("0.00") as HTMLInputElement[];
+      // Filter to only the split input fields (not the main amount input)
+      const splitInputs = customInputs.filter((input) => input.closest(".divide-y"));
+      splitInputs.forEach((input) => {
+        fireEvent.change(input, { target: { value: "5.00" } });
+      });
+
+      // Go back to quick-entry
+      fireEvent.click(screen.getByText("Done"));
+
+      // Try to submit
+      const form = document.querySelector("form")!;
+      await act(async () => {
+        fireEvent.submit(form);
+      });
+
+      expect(screen.getByText(/Custom amounts must sum to/)).toBeDefined();
+
+      // Navigate to split-options — error should be cleared
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      expect(screen.queryByText(/Custom amounts must sum to/)).toBeNull();
+    });
+
+    it("clears participant validation error when navigating to split-options", async () => {
+      renderForm(threeMembers);
+      openModal();
+
+      fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Coffee" } });
+      enterAmount("10.00");
+
+      // Navigate to advanced split to uncheck all participants
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      fireEvent.click(screen.getByText("More options..."));
+
+      // Uncheck all participants
+      const checkboxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
+      checkboxes.forEach((cb) => {
+        if (cb.checked) fireEvent.click(cb);
+      });
+
+      // Go back to quick-entry
+      fireEvent.click(screen.getByText("Done"));
+
+      // Try to submit
+      const form = document.querySelector("form")!;
+      await act(async () => {
+        fireEvent.submit(form);
+      });
+
+      expect(screen.getByText("At least one participant must be selected.")).toBeDefined();
+
+      // Navigate to split-options — error should be cleared
+      fireEvent.click(screen.getByTestId("split-summary-pill"));
+      expect(screen.queryByText("At least one participant must be selected.")).toBeNull();
+    });
+  });
+
   describe("Advanced screen (mobile)", () => {
     beforeEach(() => {
       mockMatchMedia(true);
