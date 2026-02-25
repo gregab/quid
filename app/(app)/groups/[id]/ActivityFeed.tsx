@@ -568,7 +568,7 @@ export function ActivityFeed({
                 type="button"
                 onClick={onLoadMore}
                 disabled={isLoadingMore}
-                className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors disabled:opacity-50"
+                className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-default"
               >
                 {isLoadingMore ? "Loading…" : "Load more"}
               </button>

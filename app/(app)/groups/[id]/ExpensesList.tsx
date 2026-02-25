@@ -631,7 +631,7 @@ export function ExpensesList({
           <button
             type="button"
             onClick={() => setDisplayCount((c) => c + 20)}
-            className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors"
+            className="text-sm text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 font-medium transition-colors cursor-pointer"
           >
             Show {Math.min(expenses.length - displayCount, 20)} more
           </button>
