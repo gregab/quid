@@ -486,13 +486,13 @@ export function AddExpenseForm({
                   key={type}
                   type="button"
                   onClick={() => handleSplitTypeChange(type)}
-                  className={`px-2.5 py-1 rounded-full transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full transition-all ${
                     splitType === type
                       ? "bg-white dark:bg-stone-600 text-stone-900 dark:text-white shadow-sm"
                       : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                   }`}
                 >
-                  {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
+                  {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
                 </button>
               ))}
             </div>

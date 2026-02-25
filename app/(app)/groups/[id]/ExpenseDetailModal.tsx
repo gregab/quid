@@ -790,7 +790,7 @@ export function ExpenseDetailModal({
                               : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
                           }`}
                         >
-                          {type === "equal" ? "Equal" : type === "percentage" ? "%" : "Custom $"}
+                          {type === "equal" ? "Equal" : type === "percentage" ? "Percent" : "Custom $"}
                         </button>
                       ))}
                     </div>
