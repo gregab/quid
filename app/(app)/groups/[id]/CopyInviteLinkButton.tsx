@@ -21,7 +21,7 @@ export function CopyInviteLinkButton({ inviteToken }: { inviteToken: string }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.656a4.5 4.5 0 0 0-1.242-7.244l-4.5-4.5a4.5 4.5 0 0 0-6.364 6.364L4.343 8.69" />
         </svg>
       )}
-      {copied ? "Copied!" : canShare ? "Share invite" : "Copy invite link"}
+      {canShare ? "Share invite" : copied ? "Copied!" : "Copy invite link"}
     </button>
   );
 }
