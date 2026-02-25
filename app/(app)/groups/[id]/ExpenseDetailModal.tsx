@@ -203,7 +203,11 @@ export function ExpenseDetailModal({
         setEditPercentages(new Map(ids.map((id) => [id, "0"])));
       }
     } else if (type === "percentage" && editSplitType === "custom") {
-      setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
+      if (totalCentsValid) {
+        setEditPercentages(centsToPercentages(editCustomAmounts, ids, parsedAmountCents));
+      } else {
+        setEditPercentages(new Map(ids.map((id) => [id, "0"])));
+      }
     } else if (type === "custom" && editSplitType === "equal") {
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedAmountCents, ids.length);

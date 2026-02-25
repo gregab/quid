@@ -208,7 +208,11 @@ export function AddExpenseForm({
         setPercentages(new Map(ids.map((id) => [id, "0"])));
       }
     } else if (type === "percentage" && splitType === "custom") {
-      setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
+      if (totalCentsValid) {
+        setPercentages(centsToPercentages(customAmounts, ids, parsedTotalCents));
+      } else {
+        setPercentages(new Map(ids.map((id) => [id, "0"])));
+      }
     } else if (type === "custom" && splitType === "equal") {
       if (ids.length > 0 && totalCentsValid) {
         const equal = splitAmount(parsedTotalCents, ids.length);
