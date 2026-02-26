@@ -364,7 +364,6 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* PWA install prompt — mobile only, hidden if already using PWA */}
       <InstallPrompt />
