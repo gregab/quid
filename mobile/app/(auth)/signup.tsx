@@ -9,9 +9,11 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { TriangleAlert } from "lucide-react-native";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { Card } from "../../components/ui/Card";
 import { friendlyAuthError } from "../../lib/authErrors";
 import { MAX_DISPLAY_NAME, MAX_EMAIL } from "../../lib/queries/shared";
 
@@ -69,7 +71,7 @@ export default function SignupScreen() {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="mb-2 text-4xl">📬</Text>
+          <Text className="mb-2 text-5xl">📬</Text>
           <Text className="mb-2 text-xl font-bold text-stone-800 dark:text-stone-100">
             Check your email
           </Text>
@@ -102,62 +104,65 @@ export default function SignupScreen() {
         >
           {/* Hero */}
           <View className="mb-8 items-center">
-            <Text className="mb-2 text-4xl">🐦</Text>
-            <Text className="font-serif-logo text-3xl text-stone-800 dark:text-stone-100">
+            <Text className="mb-2 text-5xl">🐦</Text>
+            <Text className="font-serif-logo text-4xl text-stone-800 dark:text-stone-100">
               Aviary
             </Text>
-            <Text className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-              Create your account
+            <Text className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+              Split expenses with friends
             </Text>
           </View>
 
-          {/* Form */}
-          <View className="gap-4">
-            {error ? (
-              <View className="rounded-xl bg-red-50 px-4 py-3 dark:bg-red-950/50">
-                <Text className="text-xs text-red-600 dark:text-red-400">
-                  {error}
-                </Text>
-              </View>
-            ) : null}
+          {/* Form card */}
+          <Card variant="elevated" className="px-5 py-6">
+            <View className="gap-4">
+              {error ? (
+                <View className="flex-row items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/50">
+                  <TriangleAlert size={16} color="#d97706" />
+                  <Text className="min-w-0 flex-1 text-xs text-amber-800 dark:text-amber-300">
+                    {error}
+                  </Text>
+                </View>
+              ) : null}
 
-            <Input
-              label="Display name"
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-              autoComplete="name"
-              textContentType="name"
-              placeholder="Your name"
-              maxLength={MAX_DISPLAY_NAME}
-            />
+              <Input
+                label="Display name"
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+                autoComplete="name"
+                textContentType="name"
+                placeholder="Your name"
+                maxLength={MAX_DISPLAY_NAME}
+              />
 
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              placeholder="you@example.com"
-              maxLength={MAX_EMAIL}
-            />
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                placeholder="you@example.com"
+                maxLength={MAX_EMAIL}
+              />
 
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              placeholder="At least 6 characters"
-            />
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+                placeholder="At least 6 characters"
+              />
 
-            <Button onPress={handleSignup} loading={loading}>
-              Sign Up
-            </Button>
-          </View>
+              <Button onPress={handleSignup} loading={loading} size="lg">
+                Sign Up
+              </Button>
+            </View>
+          </Card>
 
           {/* Login link */}
           <View className="mt-6 flex-row items-center justify-center gap-1">

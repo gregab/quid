@@ -18,6 +18,7 @@ import { ChevronRight, Plus, Settings, UserPlus } from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
 import { useGroups, useCurrentUser, useContacts } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
+import { EmptyState } from "../../../components/ui/EmptyState";
 import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import {
@@ -349,31 +350,16 @@ export default function DashboardScreen() {
           <GroupCard group={item} index={index} />
         )}
         ListEmptyComponent={
-          <Card className="items-center px-5 py-12">
-            <View className="mb-4 h-14 w-14 items-center justify-center rounded-2xl bg-amber-600">
-              <Text className="text-2xl text-white">A</Text>
-            </View>
-            <Text className="mb-1.5 text-lg font-bold text-stone-800 dark:text-stone-200">
-              Welcome to the nest
-            </Text>
-            <Text className="mb-6 text-center text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-              Start a group to split expenses with friends, roommates, or
-              travel buddies.
-            </Text>
-            <Pressable
-              onPress={() =>
-                router.push("/(app)/(dashboard)/create-group")
-              }
-              className="rounded-xl bg-amber-600 px-6 py-3 dark:bg-amber-500"
-            >
-              <Text className="font-semibold text-white">
-                Create your first group
-              </Text>
-            </Pressable>
-            <Text className="mt-3 text-xs text-stone-500 dark:text-stone-400">
-              Or ask a friend for an invite link to join theirs
-            </Text>
-          </Card>
+          <EmptyState
+            icon={<Text className="text-2xl">🪺</Text>}
+            title="Welcome to the nest"
+            subtitle="Start a group to split expenses with friends, roommates, or travel buddies."
+            action={{
+              label: "Create your first group",
+              onPress: () =>
+                router.push("/(app)/(dashboard)/create-group"),
+            }}
+          />
         }
         ListFooterComponent={
           <>

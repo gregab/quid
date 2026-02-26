@@ -10,9 +10,11 @@ import type { ReactNode } from "react";
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   onPress: () => void;
   children: ReactNode;
   loading?: boolean;
@@ -36,7 +38,8 @@ const variantStyles: Record<
     loader: "#78716c",
   },
   ghost: {
-    container: "bg-transparent",
+    container:
+      "bg-transparent border border-stone-200 dark:border-stone-700",
     text: "text-stone-600 dark:text-stone-400",
     loader: "#78716c",
   },
@@ -47,8 +50,15 @@ const variantStyles: Record<
   },
 };
 
+const sizeStyles: Record<ButtonSize, { container: string; text: string }> = {
+  sm: { container: "px-3 py-2 rounded-lg", text: "text-xs" },
+  md: { container: "px-4 py-3 rounded-xl", text: "text-sm" },
+  lg: { container: "px-5 py-3.5 rounded-xl", text: "text-base" },
+};
+
 export function Button({
   variant = "primary",
+  size = "md",
   onPress,
   children,
   loading = false,
@@ -57,6 +67,7 @@ export function Button({
 }: ButtonProps) {
   const scale = useSharedValue(1);
   const styles = variantStyles[variant];
+  const sizes = sizeStyles[size];
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -85,12 +96,12 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ busy: loading }}
       style={animatedStyle}
-      className={`flex-row items-center justify-center rounded-xl px-4 py-3 ${styles.container} ${disabled ? "opacity-50" : ""} ${className}`}
+      className={`flex-row items-center justify-center ${sizes.container} ${styles.container} ${disabled ? "opacity-50" : ""} ${className}`}
     >
       {loading ? (
         <ActivityIndicator color={styles.loader} size="small" />
       ) : typeof children === "string" ? (
-        <Text className={`text-sm font-semibold ${styles.text}`}>
+        <Text className={`font-semibold ${sizes.text} ${styles.text}`}>
           {children}
         </Text>
       ) : (

@@ -8,11 +8,19 @@ import {
   Pressable,
   ScrollView,
   useColorScheme,
-  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
+import {
+  ChevronRight,
+  LogOut,
+  Moon,
+  Pencil,
+  Shield,
+  FileText,
+  Trash2,
+} from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
 import {
   useCurrentUser,
@@ -28,6 +36,47 @@ import {
   MAX_DISPLAY_NAME,
   formatCents,
 } from "../../../lib/queries/shared";
+
+function SettingsRow({
+  icon,
+  label,
+  value,
+  onPress,
+  danger,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      className="flex-row items-center gap-3 px-4 py-3.5"
+    >
+      <View
+        className={`h-8 w-8 items-center justify-center rounded-lg ${danger ? "bg-red-100 dark:bg-red-900/30" : "bg-stone-100 dark:bg-stone-800"}`}
+      >
+        {icon}
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text
+          className={`text-sm ${danger ? "font-semibold text-red-600 dark:text-red-400" : "text-stone-800 dark:text-stone-200"}`}
+        >
+          {label}
+        </Text>
+      </View>
+      {value && (
+        <Text className="text-sm text-stone-400 dark:text-stone-500">
+          {value}
+        </Text>
+      )}
+      {onPress && !danger && <ChevronRight size={16} color="#d6d3d1" />}
+    </Pressable>
+  );
+}
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
@@ -70,7 +119,6 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    // Check for outstanding balances
     const groupsWithBalance = (groups ?? []).filter(
       (g) => g.balanceCents !== 0,
     );
@@ -140,111 +188,110 @@ export default function SettingsScreen() {
             Settings
           </Text>
 
-          <View className="gap-3">
-            {/* Email */}
-            <Card className="px-4 py-3">
-              <Text className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Email
+          {/* Profile header */}
+          <View className="mb-6 items-center">
+            <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+              <Text className="text-3xl">
+                {profile?.defaultEmoji ?? "🐦"}
               </Text>
-              <Text className="mt-1 text-sm text-stone-700 dark:text-stone-300">
-                {user?.email}
-              </Text>
-            </Card>
-
-            {/* Display name */}
-            <Card className="px-4 py-3">
-              <Text className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Display name
-              </Text>
-              {editingName ? (
-                <View className="gap-2">
-                  <Input
-                    value={displayName}
-                    onChangeText={(text) => {
-                      setDisplayName(text);
-                      setNameError(null);
-                    }}
-                    maxLength={MAX_DISPLAY_NAME}
-                    autoFocus
-                    error={nameError ?? undefined}
-                  />
-                  <View className="flex-row gap-2">
-                    <View className="flex-1">
-                      <Button
-                        variant="ghost"
-                        onPress={() => setEditingName(false)}
-                      >
-                        Cancel
-                      </Button>
-                    </View>
-                    <View className="flex-1">
-                      <Button
-                        onPress={handleSaveName}
-                        loading={updateProfile.isPending}
-                      >
-                        Save
-                      </Button>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-sm text-stone-700 dark:text-stone-300">
-                    {profile?.displayName ?? "—"}
-                  </Text>
-                  <Button variant="ghost" onPress={startEditName}>
-                    Edit
-                  </Button>
-                </View>
-              )}
-            </Card>
-
-            {/* Dark mode */}
-            <Card className="flex-row items-center justify-between px-4 py-3">
-              <Text className="text-sm text-stone-700 dark:text-stone-300">
-                Dark mode
-              </Text>
-              <Text className="text-xs text-stone-400 dark:text-stone-500">
-                {colorScheme === "dark" ? "On" : "Off"} (follows system)
-              </Text>
-            </Card>
+            </View>
+            <Text className="text-lg font-bold text-stone-900 dark:text-white">
+              {profile?.displayName ?? "—"}
+            </Text>
+            <Text className="mt-0.5 text-sm text-stone-500 dark:text-stone-400">
+              {user?.email}
+            </Text>
           </View>
 
-          {/* Legal */}
-          <View className="mt-8 gap-3">
-            <Text className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-              Legal
-            </Text>
-            <Pressable
+          {/* Account section */}
+          <Text className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+            Account
+          </Text>
+          <Card className="mb-6 overflow-hidden">
+            {editingName ? (
+              <View className="gap-2 px-4 py-3">
+                <Input
+                  label="Display name"
+                  value={displayName}
+                  onChangeText={(text) => {
+                    setDisplayName(text);
+                    setNameError(null);
+                  }}
+                  maxLength={MAX_DISPLAY_NAME}
+                  autoFocus
+                  error={nameError ?? undefined}
+                />
+                <View className="flex-row gap-2">
+                  <View className="flex-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => setEditingName(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </View>
+                  <View className="flex-1">
+                    <Button
+                      size="sm"
+                      onPress={handleSaveName}
+                      loading={updateProfile.isPending}
+                    >
+                      Save
+                    </Button>
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <SettingsRow
+                icon={<Pencil size={16} color="#78716c" />}
+                label="Display name"
+                value={profile?.displayName ?? "—"}
+                onPress={startEditName}
+              />
+            )}
+            <View className="mx-4 border-b border-stone-100 dark:border-stone-800" />
+            <SettingsRow
+              icon={<Moon size={16} color="#78716c" />}
+              label="Dark mode"
+              value={colorScheme === "dark" ? "On" : "Off"}
+            />
+          </Card>
+
+          {/* Legal section */}
+          <Text className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+            Legal
+          </Text>
+          <Card className="mb-6 overflow-hidden">
+            <SettingsRow
+              icon={<Shield size={16} color="#78716c" />}
+              label="Privacy Policy"
               onPress={() =>
                 Linking.openURL("https://aviary.gregbigelow.com/privacy")
               }
-              accessibilityRole="link"
-            >
-              <Card className="px-4 py-3">
-                <Text className="text-sm text-stone-700 dark:text-stone-300">
-                  Privacy Policy
-                </Text>
-              </Card>
-            </Pressable>
-            <Pressable
+            />
+            <View className="mx-4 border-b border-stone-100 dark:border-stone-800" />
+            <SettingsRow
+              icon={<FileText size={16} color="#78716c" />}
+              label="Terms of Service"
               onPress={() =>
                 Linking.openURL("https://aviary.gregbigelow.com/terms")
               }
-              accessibilityRole="link"
-            >
-              <Card className="px-4 py-3">
-                <Text className="text-sm text-stone-700 dark:text-stone-300">
-                  Terms of Service
-                </Text>
-              </Card>
-            </Pressable>
-          </View>
+            />
+          </Card>
 
           {/* Actions */}
-          <View className="mt-8 gap-3">
-            <Button variant="secondary" onPress={signOut}>
-              Log out
+          <View className="gap-3">
+            <Button
+              variant="ghost"
+              onPress={signOut}
+            >
+              <View className="flex-row items-center gap-2">
+                <LogOut size={16} color="#78716c" />
+                <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
+                  Sign out
+                </Text>
+              </View>
             </Button>
 
             <Button
@@ -252,7 +299,12 @@ export default function SettingsScreen() {
               onPress={handleDeleteAccount}
               loading={deleteAccount.isPending}
             >
-              Delete account
+              <View className="flex-row items-center gap-2">
+                <Trash2 size={16} color="#ffffff" />
+                <Text className="text-sm font-semibold text-white">
+                  Delete account
+                </Text>
+              </View>
             </Button>
           </View>
         </ScrollView>

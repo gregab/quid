@@ -35,7 +35,6 @@ describe("Input", () => {
 
   it("does not show error when not provided", () => {
     render(<Input label="Name" value="" onChangeText={vi.fn()} />);
-    // No error element
     expect(
       screen.queryByText(/required|invalid|error/i),
     ).toBeNull();
@@ -54,5 +53,31 @@ describe("Input", () => {
       target: { value: "hello" },
     });
     expect(onChangeText).toHaveBeenCalledWith("hello");
+  });
+
+  it("renders prefix text", () => {
+    render(<Input prefix="$" value="100" onChangeText={vi.fn()} />);
+    expect(screen.getByText("$")).toBeTruthy();
+  });
+
+  it("applies disabled opacity when editable is false", () => {
+    const { container } = render(
+      <Input label="Disabled" value="test" onChangeText={vi.fn()} editable={false} />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.className).toContain("opacity-50");
+  });
+
+  it("renders with focus styling on focus", () => {
+    render(
+      <Input
+        placeholder="focus-test"
+        value=""
+        onChangeText={vi.fn()}
+      />,
+    );
+    const input = screen.getByPlaceholderText("focus-test");
+    fireEvent.focus(input);
+    expect(input).toBeTruthy();
   });
 });

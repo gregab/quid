@@ -83,7 +83,7 @@ describe("RecurringExpensesScreen", () => {
     });
 
     renderWithProviders();
-    expect(screen.getByText(/No active recurring expenses/)).toBeTruthy();
+    expect(screen.getByText("No recurring expenses")).toBeTruthy();
   });
 
   it("renders recurring expense items", () => {
