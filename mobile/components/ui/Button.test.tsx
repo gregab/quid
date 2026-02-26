@@ -24,8 +24,6 @@ describe("Button", () => {
         Disabled
       </Button>,
     );
-    // The button element has disabled attribute, but our mock uses onClick
-    // so we verify the handler guards against it
     fireEvent.click(screen.getByText("Disabled"));
     expect(onPress).not.toHaveBeenCalled();
   });
@@ -37,7 +35,6 @@ describe("Button", () => {
         Loading
       </Button>,
     );
-    // When loading, text is replaced by ActivityIndicator
     expect(screen.queryByText("Loading")).toBeNull();
     expect(screen.getByRole("progressbar")).toBeTruthy();
   });
@@ -59,5 +56,46 @@ describe("Button", () => {
       </Button>,
     );
     expect(screen.getByTestId("custom")).toBeTruthy();
+  });
+
+  it("renders sm size with smaller text", () => {
+    render(
+      <Button onPress={vi.fn()} size="sm">
+        Small
+      </Button>,
+    );
+    const text = screen.getByText("Small");
+    expect(text.className).toContain("text-xs");
+  });
+
+  it("renders lg size with larger padding", () => {
+    const { container } = render(
+      <Button onPress={vi.fn()} size="lg">
+        Large
+      </Button>,
+    );
+    const button = container.firstChild as HTMLElement;
+    expect(button.className).toContain("py-3.5");
+  });
+
+  it("renders md size by default", () => {
+    const { container } = render(
+      <Button onPress={vi.fn()}>Default</Button>,
+    );
+    const button = container.firstChild as HTMLElement;
+    expect(button.className).toContain("py-3");
+    const text = screen.getByText("Default");
+    expect(text.className).toContain("text-sm");
+  });
+
+  it("ghost variant has visible border", () => {
+    const { container } = render(
+      <Button onPress={vi.fn()} variant="ghost">
+        Ghost
+      </Button>,
+    );
+    const button = container.firstChild as HTMLElement;
+    expect(button.className).toContain("border");
+    expect(button.className).toContain("border-stone-200");
   });
 });
