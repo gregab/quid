@@ -10,77 +10,20 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
+**`origin/main` is the canonical source of truth.** All work — interactive or autonomous — ultimately lands on `origin/main`. Local `main` is just a local cache; don't treat it as authoritative.
+
 There are two modes depending on how Claude is being used:
 
 ### Interactive mode (default — user is present)
-Commit directly to `main`. No PR needed — the user is watching and in control.
+Commit directly to local `main`, then push to `origin/main` when ready.
 1. Make changes and write tests
 2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-3. Commit to `main`
-4. Pushing `main` triggers a Vercel **preview deployment** automatically
+3. Commit to local `main`
+4. `git push origin main` triggers a Vercel **preview deployment** automatically
 5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
-Workers each get their own worktree. `main` is the source of truth. Finished, reviewed commits land directly on local `main` — no PRs, no GitHub intermediary.
-
-**Setup:**
-```bash
-git worktree add "../aviary-<feature>" -b "<feature>" main
-cd ../aviary-<feature>
-npm install
-```
-
-**During implementation — commit as you go:**
-Make **focused, self-contained commits** as work progresses — one logical change per commit. Don't bundle unrelated changes. Small commits are easier to review, easier to revert, and produce a cleaner history on `main`.
-
-Verify before committing: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-
-**Getting commits reviewed:**
-Spawn a `feature-dev:code-reviewer` subagent to review your work. You can ask for review after any commit — for a single commit, a range, or the whole branch:
-```bash
-git show HEAD                  # review the latest commit
-git diff HEAD~2 HEAD           # review the last two commits
-git diff main                  # review everything since branching
-```
-Pass the diff + CLAUDE.md to the reviewer. It reads any files it needs and returns a verdict. If changes are requested, amend the relevant commit (`git commit --amend`) or add a fixup commit, then re-request review. Repeat until all commits are signed off.
-
-**Merging to main once everything is approved:**
-```bash
-# First, rebase onto main to pick up anything that landed while you were working
-git rebase main
-
-# Then merge into main (fast-forward or regular — commits are already clean)
-git checkout main
-git merge <feature>
-
-# Clean up
-git worktree remove "../aviary-<feature>"
-git branch -d <feature>
-```
-
-**Pushing to GitHub:**
-Push `main` to GitHub when it's getting behind (after several merged tasks, or when a Vercel preview is needed):
-```bash
-git push origin main    # triggers a Vercel preview deployment
-```
-Never push to `production` — the user controls production promotion.
-
-**Review criteria for the subagent reviewer:**
-
-Hard blockers (request changes):
-- Missing tests for new behavior or bug fixes
-- Security issues: missing auth checks, RLS bypasses, SQL injection, XSS
-- Incorrect money handling (floats instead of cents)
-- Business logic that should be in @aviary/shared but isn't
-- TypeScript `any` types
-- Missing `await params` in Next.js 16 route handlers
-- Breaking API changes without migration
-- Missing database migration for schema changes
-
-Approve with comments (non-blocking):
-- Minor naming or style suggestions
-- Simplification opportunities
-- Non-critical edge cases
+Workers branch from `origin/main`, implement, get subagent review, then push commits directly back to `origin/main`. No PRs. See `~/.claude/prompts/worker.md` for the full loop.
 
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
