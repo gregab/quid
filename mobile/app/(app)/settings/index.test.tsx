@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { createTestQueryClient, makeGroup } from "../../../lib/test-utils";
 import SettingsScreen from "./index";
 
@@ -148,6 +149,29 @@ describe("SettingsScreen", () => {
   it("renders Delete account button", () => {
     renderWithProviders();
     expect(screen.getByText("Delete account")).toBeTruthy();
+  });
+
+  it("renders Privacy Policy link that opens in browser", () => {
+    renderWithProviders();
+    const privacyText = screen.getByText("Privacy Policy");
+    expect(privacyText).toBeTruthy();
+    // The Pressable renders as a <button> wrapping the Card/Text
+    const button = privacyText.closest("button")!;
+    fireEvent.click(button);
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      "https://aviary.gregbigelow.com/privacy",
+    );
+  });
+
+  it("renders Terms of Service link that opens in browser", () => {
+    renderWithProviders();
+    const tosText = screen.getByText("Terms of Service");
+    expect(tosText).toBeTruthy();
+    const button = tosText.closest("button")!;
+    fireEvent.click(button);
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      "https://aviary.gregbigelow.com/terms",
+    );
   });
 
   it("triggers delete account through Alert confirmation", async () => {

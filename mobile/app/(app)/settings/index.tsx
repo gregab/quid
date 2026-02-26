@@ -5,12 +5,14 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   useColorScheme,
   Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import { useAuth } from "../../../lib/auth";
 import {
   useCurrentUser,
@@ -206,6 +208,37 @@ export default function SettingsScreen() {
                 {colorScheme === "dark" ? "On" : "Off"} (follows system)
               </Text>
             </Card>
+          </View>
+
+          {/* Legal */}
+          <View className="mt-8 gap-3">
+            <Text className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              Legal
+            </Text>
+            <Pressable
+              onPress={() =>
+                Linking.openURL("https://aviary.gregbigelow.com/privacy")
+              }
+              accessibilityRole="link"
+            >
+              <Card className="px-4 py-3">
+                <Text className="text-sm text-stone-700 dark:text-stone-300">
+                  Privacy Policy
+                </Text>
+              </Card>
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                Linking.openURL("https://aviary.gregbigelow.com/terms")
+              }
+              accessibilityRole="link"
+            >
+              <Card className="px-4 py-3">
+                <Text className="text-sm text-stone-700 dark:text-stone-300">
+                  Terms of Service
+                </Text>
+              </Card>
+            </Pressable>
           </View>
 
           {/* Actions */}
