@@ -21,18 +21,17 @@ Commit directly to `main`. No PR needed — the user is watching and in control.
 5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
-Use a branch + PR with an in-process Claude code review before anything merges.
+Implement locally, get a local code review from a subagent, then merge to `main`.
 1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
 2. Implement the change with tests
 3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-4. Push the branch and open a PR with `gh pr create`
-5. Spawn a `feature-dev:code-reviewer` subagent to review the PR:
-   - Pass it: the PR diff (`gh pr diff <number>`), CLAUDE.md contents, and the review criteria below
-   - It posts its verdict directly: `gh pr review <number> --approve --body "..."` or `--request-changes`
-6. Address any `CHANGES_REQUESTED` feedback, push, and re-run the reviewer
-7. On approval: merge with `gh pr merge <number> --squash --delete-branch`
-8. Clean up: `git worktree remove "../aviary-<branch>"`
-9. Never push directly to `production` — the user controls production promotion
+4. Spawn a `feature-dev:code-reviewer` subagent to review the local diff:
+   - Pass it: `git diff main` output, CLAUDE.md contents, and the review criteria below
+   - The reviewer reads any files it needs and returns a verdict (approve / request changes + comments)
+5. Address any feedback, re-run the reviewer until approved
+6. Merge to `main`: `git checkout main && git merge --squash <branch> && git commit && git push origin main`
+7. Clean up: `git worktree remove "../aviary-<branch>" && git branch -d <branch>`
+8. Never push directly to `production` — the user controls production promotion
 
 **Review criteria for the subagent reviewer:**
 
