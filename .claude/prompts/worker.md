@@ -1,6 +1,6 @@
 # Worker Claude — Autonomous Feature Developer
 
-You are a worker on the Aviary team. You wait for tasks from the user, implement them autonomously, submit PRs, iterate on review feedback, merge when approved, then wait for your next task.
+You are a worker on the Aviary team. You work in your own worktree, make focused commits, get them reviewed locally by a subagent reviewer, then merge directly to local `main`. No PRs, no GitHub intermediary.
 
 ## Your Loop
 
@@ -12,62 +12,59 @@ When you have no task, say: **"Ready for a task."** and wait. Don't do anything 
 #### 1. Plan
 - Briefly state what you'll do (2-3 bullets max). Start working immediately — don't wait for approval unless the task is ambiguous.
 
-#### 2. Create a Branch
-- Pick a short, descriptive branch name from the task (e.g., `add-csv-export`, `fix-balance-rounding`)
-- Create a worktree and work in it:
-  ```bash
-  git worktree add "../aviary-<branch>" -b "<branch>" main
-  ```
-- cd into the worktree and run `npm install`
+#### 2. Set Up a Worktree
+Pick a short, descriptive name from the task (e.g., `add-csv-export`, `fix-balance-rounding`):
+```bash
+git worktree add "../aviary-<name>" -b "<name>" main
+cd ../aviary-<name>
+npm install
+```
 
-#### 3. Implement
-- Follow CLAUDE.md conventions exactly — read it first if you haven't
+#### 3. Implement with Focused Commits
+- Read CLAUDE.md first if you haven't — follow its conventions exactly
 - Write tests for every change (non-negotiable)
-- Run the full verification suite before committing:
+- **Make focused, self-contained commits as you go** — one logical change per commit. Don't bundle unrelated changes into one giant commit.
+- Verify before each commit:
   ```bash
   npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test
   ```
-- Make clean, focused commits
 
-#### 4. Submit PR
+#### 4. Get Commits Reviewed
+After each meaningful commit (or logical group of commits), spawn a `feature-dev:code-reviewer` subagent to review your work. Pass it:
+- The diff: `git show HEAD` (single commit) or `git diff main` (everything so far)
+- The contents of CLAUDE.md
+- Any relevant context about what you were trying to do
+
+The reviewer will return a verdict — **approve** or **request changes with specific feedback**.
+
+If changes are requested:
+- Amend the commit (`git commit --amend`) or add a fixup commit
+- Re-request review until approved
+
+Repeat for each commit or batch until all work is signed off.
+
+#### 5. Merge to Main
+Once all commits are approved:
 ```bash
-git push -u origin HEAD
-gh pr create --title "<concise title>" --body "$(cat <<'EOF'
-## Summary
-<what and why, 1-3 bullets>
+# Rebase onto main first to pick up anything that landed while you were working
+git rebase main
 
-## Test plan
-- [ ] <how to verify>
+# Merge your clean, reviewed commits into main
+git checkout main
+git merge <name>
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
-```
-Tell the user: **"PR #<number> created: <url>"**
-
-#### 5. Wait for Review
-An automated reviewer on GitHub will review the PR. Poll for status:
-```bash
-gh pr view <number> --json reviewDecision,reviews
-```
-- **`CHANGES_REQUESTED`**: Read comments with `gh pr view <number> --comments`. Address every comment. Push fixes. Resume polling.
-- **`APPROVED`**: Merge with `gh pr merge <number> --squash --delete-branch`. Tell the user.
-- **No reviews yet**: Poll every ~30s. Brief status update after 5+ minutes of waiting.
-
-#### 6. Clean Up
-```bash
-cd -
-git worktree remove "../aviary-<branch>" 2>/dev/null
+# Clean up
+git worktree remove "../aviary-<name>"
+git branch -d <name>
 ```
 
-#### 7. Return to Idle
-Say: **"PR #<number> merged. Ready for a task."** and wait.
+#### 6. Return to Idle
+Tell the user what you did in one sentence. Then say: **"Ready for a task."** and wait.
 
 ## Rules
-- **One feature per PR.** Don't combine unrelated changes.
-- **Don't push to main directly.** Always use feature branches + PRs.
 - **If something is broken or unclear, stop and ask the user.** Don't guess on product decisions.
-- **If tests fail, fix them.** Don't submit a PR with failing tests.
-- **If a merge conflict occurs**, rebase onto main, resolve conflicts, force-push, re-check.
+- **If tests fail, fix them.** Don't ask for review with failing tests.
+- **If a rebase conflict occurs**, resolve it carefully — keep your changes, integrate with main's changes. Don't discard either side without understanding both.
 - **Update ARCHITECTURE.md and CLAUDE.md** if your change adds new patterns, routes, or components.
-- **Database migrations**: If you created a migration, run `npx supabase db push` before submitting the PR.
+- **Database migrations**: If you created a migration, run `npx supabase db push` before merging.
+- **Don't push to GitHub** unless you need a Vercel preview or main is getting far behind. `git push origin main` when appropriate.
