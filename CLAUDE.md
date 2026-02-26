@@ -21,7 +21,7 @@ Commit directly to `main`. No PR needed — the user is watching and in control.
 5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
-Workers each get their own worktree. `main` is the source of truth. Finished work lands directly on local `main` — no PRs, no GitHub intermediary.
+Workers each get their own worktree. `main` is the source of truth. Finished, reviewed commits land directly on local `main` — no PRs, no GitHub intermediary.
 
 **Setup:**
 ```bash
@@ -30,31 +30,36 @@ cd ../aviary-<feature>
 npm install
 ```
 
-**During implementation:**
-- Make **focused, self-contained commits** as you go — one logical change per commit. Don't bundle unrelated changes into one giant commit. Small commits are easier to review, easier to revert, and easier to understand.
-- Rebase onto `main` before reviewing if it has moved: `git rebase main` (resolve any conflicts, keep going)
-- Verify before any review: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
+**During implementation — commit as you go:**
+Make **focused, self-contained commits** as work progresses — one logical change per commit. Don't bundle unrelated changes. Small commits are easier to review, easier to revert, and produce a cleaner history on `main`.
 
-**Getting a review:**
-Spawn a `feature-dev:code-reviewer` subagent. You can request review at any point — for a single commit, a range of commits, or the full diff:
+Verify before committing: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
+
+**Getting commits reviewed:**
+Spawn a `feature-dev:code-reviewer` subagent to review your work. You can ask for review after any commit — for a single commit, a range, or the whole branch:
 ```bash
-git diff main            # full diff since branching
-git diff main HEAD~3     # last 3 commits only
-git show HEAD            # just the latest commit
+git show HEAD                  # review the latest commit
+git diff HEAD~2 HEAD           # review the last two commits
+git diff main                  # review everything since branching
 ```
-Pass the diff + CLAUDE.md contents to the reviewer. It reads any files it needs and returns a verdict (approve / request changes + comments). Address feedback, commit fixes, re-run the reviewer until approved.
+Pass the diff + CLAUDE.md to the reviewer. It reads any files it needs and returns a verdict. If changes are requested, amend the relevant commit (`git commit --amend`) or add a fixup commit, then re-request review. Repeat until all commits are signed off.
 
-**Merging to main:**
+**Merging to main once everything is approved:**
 ```bash
+# First, rebase onto main to pick up anything that landed while you were working
+git rebase main
+
+# Then merge into main (fast-forward or regular — commits are already clean)
 git checkout main
-git merge --squash <feature>      # collapse all commits into one
-git commit -m "<concise summary>"
+git merge <feature>
+
+# Clean up
 git worktree remove "../aviary-<feature>"
 git branch -d <feature>
 ```
 
 **Pushing to GitHub:**
-Push `main` to GitHub when it's getting behind (e.g. after several merged tasks, or when a Vercel preview is needed):
+Push `main` to GitHub when it's getting behind (after several merged tasks, or when a Vercel preview is needed):
 ```bash
 git push origin main    # triggers a Vercel preview deployment
 ```
