@@ -13,24 +13,43 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 There are two modes depending on how Claude is being used:
 
 ### Interactive mode (default — user is present)
-**Workers always use a branch + PR, even in interactive mode.** Ask the user explicitly before committing directly to `main` — the default is always the PR flow.
+Commit directly to `main`. No PR needed — the user is watching and in control.
 1. Make changes and write tests
 2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-3. Push a branch and open a PR with `gh pr create`
-4. Wait for automated review (`APPROVED` or `CHANGES_REQUESTED`)
-5. On approval: merge with `gh pr merge <number> --squash --delete-branch`
-6. Pushing `main` triggers a Vercel **preview deployment** automatically
-7. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
+3. Commit to `main`
+4. Pushing `main` triggers a Vercel **preview deployment** automatically
+5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
-Use a branch + PR so automated review catches issues before anything merges.
+Use a branch + PR with an in-process Claude code review before anything merges.
 1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
 2. Implement the change with tests
 3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
 4. Push the branch and open a PR with `gh pr create`
-5. GitHub Actions runs an automated Claude review — wait for `APPROVED` or `CHANGES_REQUESTED`
-6. On approval: merge with `gh pr merge <number> --squash --delete-branch`
-7. Never push directly to `production` — the user controls production promotion
+5. Spawn a `feature-dev:code-reviewer` subagent to review the PR:
+   - Pass it: the PR diff (`gh pr diff <number>`), CLAUDE.md contents, and the review criteria below
+   - It posts its verdict directly: `gh pr review <number> --approve --body "..."` or `--request-changes`
+6. Address any `CHANGES_REQUESTED` feedback, push, and re-run the reviewer
+7. On approval: merge with `gh pr merge <number> --squash --delete-branch`
+8. Clean up: `git worktree remove "../aviary-<branch>"`
+9. Never push directly to `production` — the user controls production promotion
+
+**Review criteria for the subagent reviewer:**
+
+Hard blockers (request changes):
+- Missing tests for new behavior or bug fixes
+- Security issues: missing auth checks, RLS bypasses, SQL injection, XSS
+- Incorrect money handling (floats instead of cents)
+- Business logic that should be in @aviary/shared but isn't
+- TypeScript `any` types
+- Missing `await params` in Next.js 16 route handlers
+- Breaking API changes without migration
+- Missing database migration for schema changes
+
+Approve with comments (non-blocking):
+- Minor naming or style suggestions
+- Simplification opportunities
+- Non-critical edge cases
 
 **Never push directly to `main` in worker mode.** All work goes through a branch + PR. If you think pushing directly to `main` is genuinely the right call for a given situation, ask the user first — but default to the PR flow.
 
