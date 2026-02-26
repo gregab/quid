@@ -10,48 +10,18 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-There are two modes depending on how Claude is being used:
+**`origin/main` is the canonical source of truth.** All work ultimately lands on `origin/main`. Local `main` is just a local cache.
 
-### Interactive mode (default — user is present)
-Commit directly to `main`. No PR needed — the user is watching and in control.
-1. Make changes and write tests
-2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-3. Commit to `main`
-4. Pushing `main` triggers a Vercel **preview deployment** automatically
-5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
-
-### Worker mode (autonomous — user is not watching)
-Use a branch + PR with an in-process Claude code review before anything merges.
-1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
-2. Implement the change with tests
+### Default workflow
+1. Pull latest before starting: `git pull --rebase origin main`
+2. Make changes and write tests
 3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-4. Push the branch and open a PR with `gh pr create`
-5. Spawn a `feature-dev:code-reviewer` subagent to review the PR:
-   - Pass it: the PR diff (`gh pr diff <number>`), CLAUDE.md contents, and the review criteria below
-   - It posts its verdict directly: `gh pr review <number> --approve --body "..."` or `--request-changes`
-6. Address any `CHANGES_REQUESTED` feedback, push, and re-run the reviewer
-7. On approval: merge with `gh pr merge <number> --squash --delete-branch`
-8. Clean up: `git worktree remove "../aviary-<branch>"`
-9. Never push directly to `production` — the user controls production promotion
+4. Commit to local `main`
+5. `git push origin main` — triggers a Vercel **preview deployment** automatically
+6. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
-**Review criteria for the subagent reviewer:**
-
-Hard blockers (request changes):
-- Missing tests for new behavior or bug fixes
-- Security issues: missing auth checks, RLS bypasses, SQL injection, XSS
-- Incorrect money handling (floats instead of cents)
-- Business logic that should be in @aviary/shared but isn't
-- TypeScript `any` types
-- Missing `await params` in Next.js 16 route handlers
-- Breaking API changes without migration
-- Missing database migration for schema changes
-
-Approve with comments (non-blocking):
-- Minor naming or style suggestions
-- Simplification opportunities
-- Non-critical edge cases
-
-**Never push directly to `main` in worker mode.** All work goes through a branch + PR. If you think pushing directly to `main` is genuinely the right call for a given situation, ask the user first — but default to the PR flow.
+### Worker instances
+Workers are Claude instances spawned with the worker prompt (`~/.claude/prompts/worker.md`). They follow a different loop: branch from `origin/main`, implement, get subagent review, push directly to `origin/main`. See that file for the full flow.
 
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
@@ -61,7 +31,7 @@ Approve with comments (non-blocking):
 
 **Bug reports:** Just fix it. Investigate the root cause, write the fix, add tests, verify — zero hand-holding required. Don't ask clarifying questions when the bug is reproducible.
 
-**Before committing or opening a PR:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
+**Before committing:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
 
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
