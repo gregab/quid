@@ -23,6 +23,9 @@ cypress.env.json
 # production
 /build
 
+# expo
+.expo/
+
 # misc
 .DS_Store
 *.pem
