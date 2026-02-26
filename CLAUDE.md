@@ -30,6 +30,8 @@ Use a branch + PR so automated review catches issues before anything merges.
 6. On approval: merge with `gh pr merge <number> --squash --delete-branch`
 7. Never push directly to `production` — the user controls production promotion
 
+**Never push directly to `main` in worker mode.** All work goes through a branch + PR, no exceptions. If you catch yourself about to `git push origin main`, stop — push the branch instead and open a PR. Only ask the user for an exception if there's a genuine emergency (e.g. a broken prod deploy that needs an immediate hotfix).
+
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
 **Starting a task:** Use the "Where to Change Things" table below to find the right files. For larger tasks or unfamiliar areas, consult **ARCHITECTURE.md** for data models, API routes, and design decisions. **Be strategic with token usage** — targeted reads, not broad exploration.
