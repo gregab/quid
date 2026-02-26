@@ -28,15 +28,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
-
-            Review this PR against the project's CLAUDE.md standards.
-
-            Steps:
-            1. Run `gh pr diff $PR_NUMBER` to see the changes
-            2. Read CLAUDE.md for project standards
-            3. Analyze the diff for any issues
+            Review this PR against the project's CLAUDE.md standards. Focus on:
 
             **Hard blockers (request changes):**
             - Missing tests for new behavior or bug fixes
@@ -53,11 +45,7 @@ jobs:
             - Simplification opportunities
             - Non-critical edge cases
 
-            After reviewing, post your verdict using ONE of:
-            - `gh pr review $PR_NUMBER --approve --body "your review"` (if no hard blockers)
-            - `gh pr review $PR_NUMBER --request-changes --body "your review"` (if hard blockers found)
-
             Be concise. One round of feedback — catch everything the first time.
             Don't nitpick style if the logic is correct.
             Don't request changes beyond the PR's scope.
-          claude_args: "--max-turns 10"
+          claude_args: "--max-turns 5"
