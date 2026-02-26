@@ -20,7 +20,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const {
       data: { user },
+      error: exchangeError,
     } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (exchangeError) {
+      console.error("[auth/callback] exchangeCodeForSession failed:", exchangeError.message);
+      const url = new URL(`${siteUrl}/login`);
+      url.searchParams.set("error", "auth_failed");
+      if (next && isSafePath(next)) url.searchParams.set("next", next);
+      return NextResponse.redirect(url.toString());
+    }
 
     // Ensure a User row exists as soon as the email is confirmed.
     // Without this, the user can't be added as a group member until they've
