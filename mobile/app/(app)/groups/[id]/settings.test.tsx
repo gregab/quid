@@ -11,9 +11,12 @@ import {
 // Must mock lucide at test level to prevent loading react-native-svg
 vi.mock("lucide-react-native", () => ({
   ChevronLeft: () => null,
+  ChevronRight: () => null,
   Link: () => null,
   UserPlus: () => null,
   LogOut: () => null,
+  Users: () => null,
+  Hash: () => null,
 }));
 
 import GroupSettingsScreen from "./settings";
@@ -69,12 +72,13 @@ describe("GroupSettingsScreen", () => {
   it("renders group name", () => {
     renderWithProviders();
     expect(screen.getByText("Test Group")).toBeTruthy();
-    expect(screen.getByText("Group settings")).toBeTruthy();
+    expect(screen.getByText("Settings")).toBeTruthy();
   });
 
   it("shows member count", () => {
     renderWithProviders();
-    expect(screen.getByText("2 members")).toBeTruthy();
+    expect(screen.getByText("Members")).toBeTruthy();
+    expect(screen.getByText("2")).toBeTruthy();
   });
 
   it("shows loading state", () => {
@@ -83,7 +87,7 @@ describe("GroupSettingsScreen", () => {
       isLoading: true,
     });
     renderWithProviders();
-    expect(screen.queryByText("Group settings")).toBeNull();
+    expect(screen.queryByText("Settings")).toBeNull();
   });
 
   it("renders share invite link action", () => {

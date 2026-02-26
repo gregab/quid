@@ -13,6 +13,7 @@ vi.mock("lucide-react-native", () => ({
   ChevronLeft: () => null,
   ChevronRight: () => null,
   CheckCircle: () => null,
+  ArrowRight: () => null,
 }));
 
 import RecordPaymentScreen from "./record-payment";
@@ -105,7 +106,7 @@ describe("RecordPaymentScreen", () => {
       isLoading: false,
     });
     renderWithProviders();
-    expect(screen.getByText("Select who you want to pay.")).toBeTruthy();
+    expect(screen.getByText("Select a balance to settle.")).toBeTruthy();
     expect(screen.getByText("Bob S.")).toBeTruthy();
     expect(screen.getByText("$25.00")).toBeTruthy();
   });
@@ -126,8 +127,9 @@ describe("RecordPaymentScreen", () => {
     });
     renderWithProviders();
     fireEvent.click(screen.getByText(/Record other payment/));
-    expect(screen.getByText("Record a payment")).toBeTruthy();
+    // Header still says "Settle up"; form step shows amount input
     expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
+    expect(screen.getByText("Amount")).toBeTruthy();
   });
 
   it("shows validation error for empty amount", async () => {
@@ -149,14 +151,14 @@ describe("RecordPaymentScreen", () => {
     ).toBeTruthy();
   });
 
-  it("renders Cancel button in form step", () => {
+  it("renders Back button in form step (non-preset)", () => {
     mockUseGroupExpenses.mockReturnValue({
       data: [],
       isLoading: false,
     });
     renderWithProviders();
     fireEvent.click(screen.getByText(/Record other payment/));
-    // Two cancel buttons: header and form
-    expect(screen.getAllByText("Cancel").length).toBeGreaterThan(0);
+    // Non-preset form step shows "Back" to return to pick step
+    expect(screen.getByText("Back")).toBeTruthy();
   });
 });

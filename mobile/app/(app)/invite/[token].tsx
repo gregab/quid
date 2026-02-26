@@ -13,7 +13,11 @@ export default function InviteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const router = useRouter();
   const { session } = useAuth();
-  const { data: preview, isLoading, error: previewError } = useInvitePreview(token!);
+  const {
+    data: preview,
+    isLoading,
+    error: previewError,
+  } = useInvitePreview(token!);
   const joinGroup = useJoinGroup();
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +48,9 @@ export default function InviteScreen() {
       );
       router.replace(`/(app)/groups/${result.groupId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to join group.");
+      setError(
+        err instanceof Error ? err.message : "Failed to join group.",
+      );
     }
   };
 
@@ -60,10 +66,11 @@ export default function InviteScreen() {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
         <View className="flex-1 items-center justify-center px-4">
+          <Text className="mb-2 text-4xl">🐦</Text>
           <Text className="text-lg font-semibold text-stone-800 dark:text-stone-200">
             Invalid invite link
           </Text>
-          <Text className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+          <Text className="mt-2 text-center text-sm text-stone-500 dark:text-stone-400">
             This invite link may have expired or is invalid.
           </Text>
           <View className="mt-6">
@@ -79,30 +86,39 @@ export default function InviteScreen() {
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <View className="flex-1 items-center justify-center px-4">
-        <Card className="w-full max-w-sm items-center px-6 py-8">
-          <Text className="text-4xl">🐦</Text>
-          <Text className="mt-3 text-xl font-bold text-stone-900 dark:text-white">
-            {preview.name}
-          </Text>
-          <Text className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-            {preview.memberCount}{" "}
-            {preview.memberCount === 1 ? "member" : "members"}
-          </Text>
-
-          <Text className="mt-4 text-center text-sm text-stone-600 dark:text-stone-400">
-            You've been invited to join this group on Aviary.
-          </Text>
-
-          {error && (
-            <Text className="mt-3 text-sm text-red-600 dark:text-red-400">
-              {error}
+        <Card className="w-full max-w-sm overflow-hidden">
+          {/* Amber accent header */}
+          <View className="items-center bg-amber-600 px-6 pb-6 pt-8 dark:bg-amber-700">
+            <Text className="font-serif-logo text-xl text-white/80">
+              Aviary
             </Text>
-          )}
+            <Text className="mt-3 text-4xl">🐦</Text>
+          </View>
 
-          <View className="mt-6 w-full">
-            <Button onPress={handleJoin} loading={joinGroup.isPending}>
-              Join {preview.name}
-            </Button>
+          <View className="items-center px-6 pb-8 pt-5">
+            <Text className="text-xl font-bold text-stone-900 dark:text-white">
+              {preview.name}
+            </Text>
+            <Text className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+              {preview.memberCount}{" "}
+              {preview.memberCount === 1 ? "member" : "members"}
+            </Text>
+
+            <Text className="mt-4 text-center text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+              You've been invited to join this group on Aviary.
+            </Text>
+
+            {error && (
+              <Text className="mt-3 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </Text>
+            )}
+
+            <View className="mt-6 w-full">
+              <Button onPress={handleJoin} loading={joinGroup.isPending}>
+                Join {preview.name}
+              </Button>
+            </View>
           </View>
         </Card>
       </View>

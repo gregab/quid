@@ -2,14 +2,15 @@ import { useState, useMemo } from "react";
 import {
   View,
   Text,
+  TextInput,
   Pressable,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, ChevronRight, CheckCircle } from "lucide-react-native";
+import { ChevronLeft, ArrowRight, CheckCircle } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../lib/auth";
 import {
@@ -18,7 +19,6 @@ import {
   useCreatePayment,
 } from "../../../../lib/queries";
 import { Button } from "../../../../components/ui/Button";
-import { Input } from "../../../../components/ui/Input";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import {
   buildRawDebts,
@@ -41,8 +41,10 @@ export default function RecordPaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { data: group, isLoading: groupLoading } = useGroupDetail(id!);
-  const { data: expenses, isLoading: expensesLoading } = useGroupExpenses(id!);
+  const { data: expenses, isLoading: expensesLoading } =
+    useGroupExpenses(id!);
   const createPayment = useCreatePayment(id!);
 
   const [step, setStep] = useState<Step>("pick");
@@ -69,7 +71,6 @@ export default function RecordPaymentScreen() {
     });
   }, [group]);
 
-  // Compute debts the current user owes
   const userOwesDebts: UserOwesDebt[] = useMemo(() => {
     if (!expenses || !user) return [];
     const simplified = simplifyDebts(buildRawDebts(expenses));
@@ -145,122 +146,165 @@ export default function RecordPaymentScreen() {
       );
       router.back();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to record payment.");
+      setError(
+        err instanceof Error ? err.message : "Failed to record payment.",
+      );
     }
   };
 
+  const fromMember = members.find((m) => m.userId === fromUserId);
+  const toMember = members.find((m) => m.userId === toUserId);
+
   if (groupLoading || expensesLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <View className="flex-1 items-center justify-center bg-[#faf9f7] dark:bg-[#0c0a09]">
         <LoadingSpinner />
-      </SafeAreaView>
+      </View>
     );
   }
 
-  const currentUserName =
-    members.find((m) => m.userId === user?.id)?.displayName ?? "";
-
   return (
-    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+    <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
+        {/* Header */}
+        <View
+          style={{ paddingTop: insets.top + 8 }}
+          className="flex-row items-center justify-between border-b border-stone-100 px-4 pb-3 dark:border-stone-800/60"
+        >
+          <Pressable
+            onPress={() => {
+              if (step === "form" && !isPreset) {
+                setStep("pick");
+              } else {
+                router.back();
+              }
+            }}
+            className="flex-row items-center gap-1"
+          >
+            <ChevronLeft size={20} color="#78716c" />
+            <Text className="text-sm text-stone-500">
+              {step === "form" && !isPreset ? "Back" : "Cancel"}
+            </Text>
+          </Pressable>
+          <Text className="text-base font-semibold text-stone-900 dark:text-white">
+            Settle up
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
+
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View className="mb-5 flex-row items-center justify-between">
-            <Pressable
-              onPress={() => {
-                if (step === "form" && !isPreset) {
-                  setStep("pick");
-                } else {
-                  router.back();
-                }
-              }}
-              className="flex-row items-center gap-1"
-            >
-              <ChevronLeft size={20} color="#78716c" />
-              <Text className="text-sm text-stone-500">
-                {step === "form" && !isPreset ? "Back" : "Cancel"}
-              </Text>
-            </Pressable>
-          </View>
-
           {step === "pick" ? (
-            /* Step 1: Pick who to pay */
             <>
-              <Text className="mb-1 text-xl font-bold text-stone-900 dark:text-white">
-                Settle up
+              <Text className="mb-1 text-xl font-bold tracking-tight text-stone-900 dark:text-white">
+                Who do you want to pay?
               </Text>
               {userOwesDebts.length > 0 && (
-                <Text className="mb-4 text-sm text-stone-400">
-                  Select who you want to pay.
+                <Text className="mb-5 text-sm text-stone-400">
+                  Select a balance to settle.
                 </Text>
               )}
 
               {userOwesDebts.length > 0 ? (
-                <View className="mb-4 gap-2">
-                  {userOwesDebts.map((debt) => (
-                    <Pressable
-                      key={debt.toId}
-                      onPress={() => handleSelectDebt(debt)}
-                      className="flex-row items-center justify-between rounded-xl border border-stone-200 bg-stone-50 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800"
-                    >
-                      <View>
-                        <Text className="text-sm font-semibold text-stone-900 dark:text-white">
-                          {debt.toName}
+                <View className="mb-4 gap-2.5">
+                  {userOwesDebts.map((debt) => {
+                    const toM = members.find((m) => m.userId === debt.toId);
+                    return (
+                      <Pressable
+                        key={debt.toId}
+                        onPress={() => handleSelectDebt(debt)}
+                        className="flex-row items-center rounded-xl border border-stone-200 bg-white px-4 py-3.5 dark:border-stone-700 dark:bg-stone-900"
+                      >
+                        <Text className="mr-2.5 text-lg">
+                          {toM?.emoji ?? "🐦"}
                         </Text>
-                        <Text className="mt-0.5 text-xs text-stone-400">
-                          you owe
-                        </Text>
-                      </View>
-                      <View className="flex-row items-center gap-2">
-                        <Text className="text-sm font-bold text-red-600 dark:text-red-400">
+                        <View className="flex-1">
+                          <Text className="text-sm font-semibold text-stone-900 dark:text-white">
+                            {debt.toName}
+                          </Text>
+                          <Text className="mt-0.5 text-xs text-stone-400">
+                            you owe
+                          </Text>
+                        </View>
+                        <Text className="text-sm font-bold text-rose-600 dark:text-rose-400">
                           {formatCents(debt.amountCents)}
                         </Text>
-                        <ChevronRight size={16} color="#d6d3d1" />
-                      </View>
-                    </Pressable>
-                  ))}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               ) : (
-                <View className="mb-4 flex-row items-center gap-2">
-                  <CheckCircle size={16} color="#16a34a" />
+                <View className="mb-5 flex-row items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+                  <CheckCircle size={18} color="#16a34a" />
                   <Text className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                     You're all settled up!
                   </Text>
                 </View>
               )}
 
-              <Pressable onPress={handleRecordOther}>
-                <Text className="text-sm text-stone-400 dark:text-stone-500">
+              <Pressable
+                onPress={handleRecordOther}
+                className="mt-2"
+              >
+                <Text className="text-sm font-medium text-amber-600 dark:text-amber-400">
                   Record other payment →
                 </Text>
               </Pressable>
             </>
           ) : (
-            /* Step 2: Payment form */
             <>
-              <Text className="mb-4 text-xl font-bold text-stone-900 dark:text-white">
-                {presetToName ? `Pay ${presetToName}` : "Record a payment"}
-              </Text>
-
-              <View className="gap-4">
+              {/* From → To visual */}
+              <View className="mb-6 flex-row items-center justify-center gap-4 rounded-2xl border border-stone-200 bg-white px-5 py-5 dark:border-stone-700 dark:bg-stone-900">
                 {/* From */}
-                <View>
-                  <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                    From
+                <View className="items-center">
+                  <View className="mb-2 h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                    <Text className="text-xl">
+                      {fromMember?.emoji ?? "🐦"}
+                    </Text>
+                  </View>
+                  <Text
+                    className="max-w-[80px] text-center text-xs font-medium text-stone-700 dark:text-stone-300"
+                    numberOfLines={1}
+                  >
+                    {fromMember
+                      ? formatDisplayName(fromMember.displayName)
+                      : "You"}
                   </Text>
-                  {isPreset ? (
-                    <View className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800">
-                      <Text className="text-sm text-stone-700 dark:text-stone-300">
-                        {currentUserName} (you)
-                      </Text>
-                    </View>
-                  ) : (
+                </View>
+
+                <ArrowRight size={20} color="#d97706" />
+
+                {/* To */}
+                <View className="items-center">
+                  <View className="mb-2 h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
+                    <Text className="text-xl">
+                      {toMember?.emoji ?? "🐦"}
+                    </Text>
+                  </View>
+                  <Text
+                    className="max-w-[80px] text-center text-xs font-medium text-stone-700 dark:text-stone-300"
+                    numberOfLines={1}
+                  >
+                    {presetToName ??
+                      (toMember
+                        ? formatDisplayName(toMember.displayName)
+                        : "—")}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Member selectors (non-preset only) */}
+              {!isPreset && (
+                <View className="mb-5 gap-4">
+                  <View>
+                    <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                      From
+                    </Text>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -278,12 +322,13 @@ export default function RecordPaymentScreen() {
                               setToUserId(other?.userId ?? null);
                             }
                           }}
-                          className={`rounded-full px-3 py-1.5 ${
+                          className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${
                             fromUserId === m.userId
                               ? "bg-amber-600 dark:bg-amber-500"
                               : "bg-stone-100 dark:bg-stone-800"
                           }`}
                         >
+                          <Text className="text-sm">{m.emoji}</Text>
                           <Text
                             className={`text-xs font-medium ${
                               fromUserId === m.userId
@@ -297,21 +342,12 @@ export default function RecordPaymentScreen() {
                         </Pressable>
                       ))}
                     </ScrollView>
-                  )}
-                </View>
+                  </View>
 
-                {/* To */}
-                <View>
-                  <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                    To
-                  </Text>
-                  {isPreset ? (
-                    <View className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-stone-700 dark:bg-stone-800">
-                      <Text className="text-sm text-stone-700 dark:text-stone-300">
-                        {presetToName}
-                      </Text>
-                    </View>
-                  ) : (
+                  <View>
+                    <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                      To
+                    </Text>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -323,12 +359,13 @@ export default function RecordPaymentScreen() {
                           <Pressable
                             key={m.userId}
                             onPress={() => setToUserId(m.userId)}
-                            className={`rounded-full px-3 py-1.5 ${
+                            className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${
                               toUserId === m.userId
                                 ? "bg-emerald-600 dark:bg-emerald-500"
                                 : "bg-stone-100 dark:bg-stone-800"
                             }`}
                           >
+                            <Text className="text-sm">{m.emoji}</Text>
                             <Text
                               className={`text-xs font-medium ${
                                 toUserId === m.userId
@@ -341,55 +378,70 @@ export default function RecordPaymentScreen() {
                           </Pressable>
                         ))}
                     </ScrollView>
-                  )}
+                  </View>
                 </View>
+              )}
 
-                {/* Amount */}
-                <Input
-                  label="Amount ($)"
-                  placeholder="0.00"
-                  value={amount}
-                  onChangeText={(text) => {
-                    setAmount(filterAmountInput(text));
-                    setAmountError(null);
-                    setError(null);
-                  }}
-                  keyboardType="decimal-pad"
-                  autoFocus
-                  error={amountError ?? undefined}
-                />
+              {/* Amount — centered large input */}
+              <View className="mb-5 items-center py-4">
+                <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                  Amount
+                </Text>
+                <View className="flex-row items-baseline">
+                  <Text className="text-3xl font-bold text-stone-300 dark:text-stone-600">
+                    $
+                  </Text>
+                  <TextInput
+                    className="min-w-[80px] text-center text-4xl font-bold text-stone-900 dark:text-white"
+                    placeholder="0.00"
+                    placeholderTextColor="#d6d3d1"
+                    value={amount}
+                    onChangeText={(text) => {
+                      setAmount(filterAmountInput(text));
+                      setAmountError(null);
+                      setError(null);
+                    }}
+                    keyboardType="decimal-pad"
+                    autoFocus={!isPreset}
+                  />
+                </View>
+                {amountError && (
+                  <Text className="mt-2 text-xs text-red-500">
+                    {amountError}
+                  </Text>
+                )}
                 {isPreset && !amountError && (
-                  <Text className="text-xs text-stone-400 dark:text-stone-500">
-                    Full balance owed — you can pay a partial amount too.
+                  <Text className="mt-2 text-xs text-stone-400 dark:text-stone-500">
+                    Full balance — you can enter a partial amount too
                   </Text>
                 )}
-
-                {error && (
-                  <Text className="text-sm text-red-600 dark:text-red-400">
-                    {error}
-                  </Text>
-                )}
-
-                <View className="flex-row gap-2">
-                  <View className="flex-1">
-                    <Button variant="ghost" onPress={() => router.back()}>
-                      Cancel
-                    </Button>
-                  </View>
-                  <View className="flex-1">
-                    <Button
-                      onPress={handleSubmit}
-                      loading={createPayment.isPending}
-                    >
-                      Record payment
-                    </Button>
-                  </View>
-                </View>
               </View>
+
+              {error && (
+                <Text className="mb-4 text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </Text>
+              )}
             </>
           )}
         </ScrollView>
+
+        {/* Fixed bottom button (form step only) */}
+        {step === "form" && (
+          <View
+            style={{ paddingBottom: insets.bottom + 8 }}
+            className="border-t border-stone-100 bg-[#faf9f7] px-4 pt-3 dark:border-stone-800/60 dark:bg-[#0c0a09]"
+          >
+            <Button
+              onPress={handleSubmit}
+              loading={createPayment.isPending}
+              className="bg-emerald-600 dark:bg-emerald-500"
+            >
+              Record payment
+            </Button>
+          </View>
+        )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

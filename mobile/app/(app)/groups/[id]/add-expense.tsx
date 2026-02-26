@@ -2,15 +2,17 @@ import { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   Pressable,
   KeyboardAvoidingView,
   Platform,
   Switch,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { ChevronLeft, Check } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../lib/auth";
 import {
@@ -37,10 +39,20 @@ import type { Member } from "../../../../lib/types";
 
 type SplitType = "equal" | "percentage" | "custom";
 
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function formatShortDate(d: Date): string {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export default function AddExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { data: group, isLoading } = useGroupDetail(id!);
   const createExpense = useCreateExpense(id!);
 
@@ -67,7 +79,6 @@ export default function AddExpenseScreen() {
   const [amountError, setAmountError] = useState<string | null>(null);
   const initialized = useRef(false);
 
-  // Build members
   const members: Member[] = useMemo(() => {
     if (!group) return [];
     const gm = (group as Record<string, unknown>).GroupMember as
@@ -97,23 +108,26 @@ export default function AddExpenseScreen() {
     return Math.round(num * 100);
   }, [amount]);
 
-  // Compute split amounts for display
   const splitDisplay = useMemo(() => {
     const ids = Array.from(participantIds);
-    if (ids.length === 0 || parsedCents === 0) return new Map<string, number>();
+    if (ids.length === 0 || parsedCents === 0)
+      return new Map<string, number>();
 
     if (splitType === "equal") {
       const amounts = splitAmount(parsedCents, ids.length);
-      return new Map(ids.map((id, i) => [id, amounts[i]!]));
+      return new Map(ids.map((uid, i) => [uid, amounts[i]!]));
     }
     if (splitType === "percentage") {
       return percentagesToCents(percentages, ids, parsedCents);
     }
-    // custom
     return new Map(
-      ids.map((id) => [
-        id,
-        Math.round(parseFloat(stripAmountFormatting(customAmounts.get(id) ?? "0")) * 100),
+      ids.map((uid) => [
+        uid,
+        Math.round(
+          parseFloat(
+            stripAmountFormatting(customAmounts.get(uid) ?? "0"),
+          ) * 100,
+        ),
       ]),
     );
   }, [splitType, participantIds, parsedCents, percentages, customAmounts]);
@@ -176,7 +190,7 @@ export default function AddExpenseScreen() {
     let splitAmounts: number[] | undefined;
 
     if (splitType === "custom" || splitType === "percentage") {
-      splitAmounts = ids.map((id) => splitDisplay.get(id) ?? 0);
+      splitAmounts = ids.map((uid) => splitDisplay.get(uid) ?? 0);
       const sum = splitAmounts.reduce((a, b) => a + b, 0);
       if (sum !== parsedCents) {
         setError(
@@ -214,347 +228,414 @@ export default function AddExpenseScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <View className="flex-1 items-center justify-center bg-[#faf9f7] dark:bg-[#0c0a09]">
         <LoadingSpinner />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+    <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
+        {/* Header */}
+        <View
+          style={{ paddingTop: insets.top + 8 }}
+          className="flex-row items-center justify-between border-b border-stone-100 px-4 pb-3 dark:border-stone-800/60"
+        >
+          <Pressable
+            onPress={() => router.back()}
+            className="flex-row items-center gap-1"
+          >
+            <ChevronLeft size={20} color="#78716c" />
+            <Text className="text-sm text-stone-500">Cancel</Text>
+          </Pressable>
+          <Text className="text-base font-semibold text-stone-900 dark:text-white">
+            Add expense
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
+
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View className="mb-5 flex-row items-center justify-between">
-            <Text className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">
-              Add expense
+          {/* Amount — prominent centered input */}
+          <View className="mb-6 items-center py-4">
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Amount
             </Text>
-            <Button variant="ghost" onPress={() => router.back()}>
-              Cancel
-            </Button>
+            <View className="flex-row items-baseline">
+              <Text className="text-3xl font-bold text-stone-300 dark:text-stone-600">
+                $
+              </Text>
+              <TextInput
+                className="min-w-[80px] text-center text-4xl font-bold text-stone-900 dark:text-white"
+                placeholder="0.00"
+                placeholderTextColor="#d6d3d1"
+                value={amount}
+                onChangeText={(text) => {
+                  setAmount(filterAmountInput(text));
+                  setAmountError(null);
+                }}
+                onBlur={handleAmountBlur}
+                keyboardType="decimal-pad"
+                autoFocus
+              />
+            </View>
+            {amountError && (
+              <Text className="mt-2 text-xs text-red-500">{amountError}</Text>
+            )}
           </View>
 
-          <View className="gap-4">
-            {/* Description */}
+          {/* Description */}
+          <View className="mb-5">
+            <Text className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Description
+            </Text>
             <Input
-              label="Description"
               placeholder="What's this for?"
               value={description}
               onChangeText={setDescription}
               maxLength={MAX_EXPENSE_DESCRIPTION}
-              autoFocus
             />
+          </View>
 
-            {/* Amount */}
-            <Input
-              label="Amount ($)"
-              placeholder="0.00"
-              value={amount}
-              onChangeText={(text) => {
-                setAmount(filterAmountInput(text));
-                setAmountError(null);
-              }}
-              onBlur={handleAmountBlur}
-              keyboardType="decimal-pad"
-              error={amountError ?? undefined}
-            />
+          {/* Date */}
+          <View className="mb-5">
+            <Text className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Date
+            </Text>
+            {Platform.OS === "android" && (
+              <Pressable
+                onPress={() => setShowDatePicker(true)}
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900"
+              >
+                <Text className="text-base text-stone-900 dark:text-stone-100">
+                  {formatShortDate(date)}
+                </Text>
+              </Pressable>
+            )}
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === "ios" ? "compact" : "default"}
+                onChange={(_event, selectedDate) => {
+                  if (Platform.OS === "android") setShowDatePicker(false);
+                  if (selectedDate) setDate(selectedDate);
+                }}
+              />
+            )}
+          </View>
 
-            {/* Date */}
-            <View>
-              <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Date
-              </Text>
-              {Platform.OS === "android" && (
+          {/* Paid by */}
+          <View className="mb-5">
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Paid by
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8 }}
+            >
+              {members.map((m) => (
                 <Pressable
-                  onPress={() => setShowDatePicker(true)}
-                  className="rounded-lg border border-stone-300 px-3 py-2.5 dark:border-stone-700"
+                  key={m.userId}
+                  onPress={() => setPaidById(m.userId)}
+                  className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${
+                    paidById === m.userId
+                      ? "bg-amber-600 dark:bg-amber-500"
+                      : "bg-stone-100 dark:bg-stone-800"
+                  }`}
                 >
-                  <Text className="text-base text-stone-900 dark:text-stone-100">
-                    {date.toLocaleDateString()}
+                  <Text className="text-sm">{m.emoji}</Text>
+                  <Text
+                    className={`text-xs font-medium ${
+                      paidById === m.userId
+                        ? "text-white"
+                        : "text-stone-700 dark:text-stone-300"
+                    }`}
+                  >
+                    {formatDisplayName(m.displayName)}
+                    {m.userId === user?.id ? " (you)" : ""}
                   </Text>
                 </Pressable>
-              )}
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "compact" : "default"}
-                  onChange={(_event, selectedDate) => {
-                    if (Platform.OS === "android") setShowDatePicker(false);
-                    if (selectedDate) setDate(selectedDate);
-                  }}
-                />
-              )}
-            </View>
+              ))}
+            </ScrollView>
+          </View>
 
-            {/* Paid by */}
-            <View>
-              <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Paid by
-              </Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}
-              >
-                {members.map((m) => (
+          {/* Split type — segmented control */}
+          <View className="mb-4">
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Split type
+            </Text>
+            <View className="flex-row rounded-lg bg-stone-100 p-1 dark:bg-stone-800">
+              {(["equal", "custom", "percentage"] as const).map((type) => (
+                <Pressable
+                  key={type}
+                  onPress={() => setSplitType(type)}
+                  className={`flex-1 items-center rounded-md py-2 ${
+                    splitType === type
+                      ? "bg-amber-600 shadow-sm dark:bg-amber-500"
+                      : ""
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-semibold ${
+                      splitType === type
+                        ? "text-white"
+                        : "text-stone-500 dark:text-stone-400"
+                    }`}
+                  >
+                    {type === "percentage"
+                      ? "%"
+                      : type.charAt(0).toUpperCase() + type.slice(1)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Participants */}
+          <View className="mb-5">
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              Split between
+            </Text>
+            <View className="gap-1.5">
+              {members.map((m) => {
+                const isSelected = participantIds.has(m.userId);
+                return (
                   <Pressable
                     key={m.userId}
-                    onPress={() => setPaidById(m.userId)}
-                    className={`rounded-full px-3 py-1.5 ${
-                      paidById === m.userId
-                        ? "bg-amber-600 dark:bg-amber-500"
-                        : "bg-stone-100 dark:bg-stone-800"
+                    onPress={() => toggleParticipant(m.userId)}
+                    className={`flex-row items-center rounded-xl border px-3.5 py-3 ${
+                      isSelected
+                        ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20"
+                        : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <Text className="mr-2.5 text-base">{m.emoji}</Text>
+                    <Text
+                      className="flex-1 text-sm font-medium text-stone-900 dark:text-stone-100"
+                      numberOfLines={1}
+                    >
+                      {formatDisplayName(m.displayName)}
+                      {m.userId === user?.id ? " (you)" : ""}
+                    </Text>
+
+                    {/* Split amount */}
+                    {isSelected &&
+                      parsedCents > 0 &&
+                      splitType === "equal" && (
+                        <Text className="mr-2.5 text-xs text-stone-400">
+                          {formatAmountDisplay(
+                            String(
+                              (splitDisplay.get(m.userId) ?? 0) / 100,
+                            ),
+                          )}
+                        </Text>
+                      )}
+
+                    {/* Checkmark */}
+                    <View
+                      className={`h-5 w-5 items-center justify-center rounded ${
+                        isSelected
+                          ? "bg-amber-600 dark:bg-amber-500"
+                          : "border border-stone-300 dark:border-stone-600"
+                      }`}
+                    >
+                      {isSelected && (
+                        <Check size={12} color="#fff" strokeWidth={3} />
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Custom amounts */}
+          {splitType === "custom" && (
+            <View className="mb-5 gap-2.5">
+              {Array.from(participantIds).map((uid) => {
+                const m = members.find((mem) => mem.userId === uid);
+                return (
+                  <View
+                    key={uid}
+                    className="flex-row items-center gap-2.5"
+                  >
+                    <Text className="text-sm">{m?.emoji}</Text>
+                    <Text
+                      className="flex-1 text-sm text-stone-700 dark:text-stone-300"
+                      numberOfLines={1}
+                    >
+                      {formatDisplayName(m?.displayName ?? UNKNOWN_USER)}
+                    </Text>
+                    <View className="w-24">
+                      <Input
+                        placeholder="0.00"
+                        value={customAmounts.get(uid) ?? ""}
+                        onChangeText={(text) => {
+                          setCustomAmounts((prev) => {
+                            const next = new Map(prev);
+                            next.set(uid, filterAmountInput(text));
+                            return next;
+                          });
+                        }}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+              <View
+                className={`flex-row items-center justify-end rounded-lg px-3 py-2 ${
+                  customTotal === parsedCents
+                    ? "bg-emerald-50 dark:bg-emerald-900/20"
+                    : "bg-rose-50 dark:bg-rose-900/20"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-medium ${
+                    customTotal === parsedCents
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {formatAmountDisplay(String(customTotal / 100))} /{" "}
+                  {formatAmountDisplay(String(parsedCents / 100))}
+                  {customTotal === parsedCents ? " ✓" : " — doesn't match"}
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Percentages */}
+          {splitType === "percentage" && (
+            <View className="mb-5 gap-2.5">
+              {Array.from(participantIds).map((uid) => {
+                const m = members.find((mem) => mem.userId === uid);
+                return (
+                  <View
+                    key={uid}
+                    className="flex-row items-center gap-2.5"
+                  >
+                    <Text className="text-sm">{m?.emoji}</Text>
+                    <Text
+                      className="flex-1 text-sm text-stone-700 dark:text-stone-300"
+                      numberOfLines={1}
+                    >
+                      {formatDisplayName(m?.displayName ?? UNKNOWN_USER)}
+                    </Text>
+                    <View className="w-20">
+                      <Input
+                        placeholder="0"
+                        value={percentages.get(uid) ?? ""}
+                        onChangeText={(text) => {
+                          setPercentages((prev) => {
+                            const next = new Map(prev);
+                            next.set(uid, text.replace(/[^0-9]/g, ""));
+                            return next;
+                          });
+                        }}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                    <Text className="text-xs text-stone-400">%</Text>
+                  </View>
+                );
+              })}
+              {(() => {
+                let total = 0;
+                for (const uid of participantIds) {
+                  total += parseInt(percentages.get(uid) ?? "0", 10) || 0;
+                }
+                return (
+                  <View
+                    className={`flex-row items-center justify-end rounded-lg px-3 py-2 ${
+                      total === 100
+                        ? "bg-emerald-50 dark:bg-emerald-900/20"
+                        : "bg-rose-50 dark:bg-rose-900/20"
                     }`}
                   >
                     <Text
                       className={`text-xs font-medium ${
-                        paidById === m.userId
-                          ? "text-white"
-                          : "text-stone-700 dark:text-stone-300"
+                        total === 100
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-rose-600 dark:text-rose-400"
                       }`}
                     >
-                      {m.emoji} {formatDisplayName(m.displayName)}
-                      {m.userId === user?.id ? " (you)" : ""}
+                      {total}% / 100%
+                      {total === 100 ? " ✓" : ""}
                     </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
+                  </View>
+                );
+              })()}
             </View>
+          )}
 
-            {/* Participants */}
-            <View>
-              <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Split between
-              </Text>
-              <View className="gap-1">
-                {members.map((m) => {
-                  const isSelected = participantIds.has(m.userId);
-                  return (
-                    <Pressable
-                      key={m.userId}
-                      onPress={() => toggleParticipant(m.userId)}
-                      className={`flex-row items-center justify-between rounded-lg border px-3 py-2.5 ${
-                        isSelected
-                          ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20"
-                          : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
-                      }`}
-                    >
-                      <Text className="text-sm text-stone-900 dark:text-stone-100">
-                        {m.emoji} {formatDisplayName(m.displayName)}
-                        {m.userId === user?.id ? " (you)" : ""}
-                      </Text>
-                      <View className="flex-row items-center gap-2">
-                        {isSelected &&
-                          parsedCents > 0 &&
-                          splitType === "equal" && (
-                            <Text className="text-xs text-stone-400">
-                              {formatAmountDisplay(
-                                String(
-                                  (splitDisplay.get(m.userId) ?? 0) / 100,
-                                ),
-                              )}
-                            </Text>
-                          )}
-                        <View
-                          className={`h-5 w-5 items-center justify-center rounded ${
-                            isSelected
-                              ? "bg-amber-600 dark:bg-amber-500"
-                              : "border border-stone-300 dark:border-stone-600"
-                          }`}
-                        >
-                          {isSelected && (
-                            <Text className="text-xs text-white">✓</Text>
-                          )}
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-
-            {/* Split type toggle */}
-            <View>
-              <Text className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Split type
-              </Text>
-              <View className="flex-row gap-2">
-                {(["equal", "custom", "percentage"] as const).map((type) => (
-                  <Pressable
-                    key={type}
-                    onPress={() => setSplitType(type)}
-                    className={`flex-1 items-center rounded-lg py-2 ${
-                      splitType === type
-                        ? "bg-amber-600 dark:bg-amber-500"
-                        : "bg-stone-100 dark:bg-stone-800"
-                    }`}
-                  >
-                    <Text
-                      className={`text-xs font-medium capitalize ${
-                        splitType === type
-                          ? "text-white"
-                          : "text-stone-600 dark:text-stone-400"
-                      }`}
-                    >
-                      {type === "percentage" ? "%" : type}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Custom amounts */}
-            {splitType === "custom" && (
-              <View className="gap-2">
-                {Array.from(participantIds).map((uid) => {
-                  const m = members.find((mem) => mem.userId === uid);
-                  return (
-                    <View key={uid} className="flex-row items-center gap-2">
-                      <Text
-                        className="flex-1 text-sm text-stone-700 dark:text-stone-300"
-                        numberOfLines={1}
-                      >
-                        {m?.emoji} {formatDisplayName(m?.displayName ?? UNKNOWN_USER)}
-                      </Text>
-                      <View className="w-24">
-                        <Input
-                          placeholder="0.00"
-                          value={customAmounts.get(uid) ?? ""}
-                          onChangeText={(text) => {
-                            setCustomAmounts((prev) => {
-                              const next = new Map(prev);
-                              next.set(uid, filterAmountInput(text));
-                              return next;
-                            });
-                          }}
-                          keyboardType="decimal-pad"
-                        />
-                      </View>
-                    </View>
-                  );
-                })}
-                <Text
-                  className={`text-xs ${
-                    customTotal === parsedCents
-                      ? "text-emerald-600"
-                      : "text-rose-500"
+          {/* Recurring */}
+          <View className="mb-5 flex-row items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
+            <Text className="text-sm font-medium text-stone-700 dark:text-stone-300">
+              Recurring expense
+            </Text>
+            <Switch
+              value={recurring}
+              onValueChange={setRecurring}
+              trackColor={{ true: "#d97706" }}
+            />
+          </View>
+          {recurring && (
+            <View className="mb-5 flex-row rounded-lg bg-stone-100 p-1 dark:bg-stone-800">
+              {(["weekly", "monthly", "yearly"] as const).map((freq) => (
+                <Pressable
+                  key={freq}
+                  onPress={() => setRecurringFrequency(freq)}
+                  className={`flex-1 items-center rounded-md py-2 ${
+                    recurringFrequency === freq
+                      ? "bg-amber-600 shadow-sm dark:bg-amber-500"
+                      : ""
                   }`}
                 >
-                  Total: {formatAmountDisplay(String(customTotal / 100))} /{" "}
-                  {formatAmountDisplay(String(parsedCents / 100))}
-                </Text>
-              </View>
-            )}
-
-            {/* Percentages */}
-            {splitType === "percentage" && (
-              <View className="gap-2">
-                {Array.from(participantIds).map((uid) => {
-                  const m = members.find((mem) => mem.userId === uid);
-                  return (
-                    <View key={uid} className="flex-row items-center gap-2">
-                      <Text
-                        className="flex-1 text-sm text-stone-700 dark:text-stone-300"
-                        numberOfLines={1}
-                      >
-                        {m?.emoji} {formatDisplayName(m?.displayName ?? UNKNOWN_USER)}
-                      </Text>
-                      <View className="w-20">
-                        <Input
-                          placeholder="0"
-                          value={percentages.get(uid) ?? ""}
-                          onChangeText={(text) => {
-                            setPercentages((prev) => {
-                              const next = new Map(prev);
-                              next.set(uid, text.replace(/[^0-9]/g, ""));
-                              return next;
-                            });
-                          }}
-                          keyboardType="number-pad"
-                        />
-                      </View>
-                      <Text className="text-xs text-stone-400">%</Text>
-                    </View>
-                  );
-                })}
-                {(() => {
-                  let total = 0;
-                  for (const uid of participantIds) {
-                    total += parseInt(percentages.get(uid) ?? "0", 10) || 0;
-                  }
-                  return (
-                    <Text
-                      className={`text-xs ${
-                        total === 100 ? "text-emerald-600" : "text-rose-500"
-                      }`}
-                    >
-                      Total: {total}% / 100%
-                    </Text>
-                  );
-                })()}
-              </View>
-            )}
-
-            {/* Recurring */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-sm text-stone-700 dark:text-stone-300">
-                Recurring expense
-              </Text>
-              <Switch
-                value={recurring}
-                onValueChange={setRecurring}
-                trackColor={{ true: "#d97706" }}
-              />
-            </View>
-            {recurring && (
-              <View className="flex-row gap-2">
-                {(["weekly", "monthly", "yearly"] as const).map((freq) => (
-                  <Pressable
-                    key={freq}
-                    onPress={() => setRecurringFrequency(freq)}
-                    className={`flex-1 items-center rounded-lg py-2 ${
+                  <Text
+                    className={`text-xs font-semibold capitalize ${
                       recurringFrequency === freq
-                        ? "bg-amber-600 dark:bg-amber-500"
-                        : "bg-stone-100 dark:bg-stone-800"
+                        ? "text-white"
+                        : "text-stone-500 dark:text-stone-400"
                     }`}
                   >
-                    <Text
-                      className={`text-xs font-medium capitalize ${
-                        recurringFrequency === freq
-                          ? "text-white"
-                          : "text-stone-600 dark:text-stone-400"
-                      }`}
-                    >
-                      {freq}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
+                    {freq}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
-            {error && (
-              <Text className="text-sm text-red-600 dark:text-red-400">
-                {error}
-              </Text>
-            )}
-
-            <Button
-              onPress={handleSubmit}
-              loading={createExpense.isPending}
-              disabled={!description.trim() || parsedCents <= 0}
-            >
-              Add expense
-            </Button>
-          </View>
+          {error && (
+            <Text className="mb-4 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </Text>
+          )}
         </ScrollView>
+
+        {/* Fixed bottom button */}
+        <View
+          style={{ paddingBottom: insets.bottom + 8 }}
+          className="border-t border-stone-100 bg-[#faf9f7] px-4 pt-3 dark:border-stone-800/60 dark:bg-[#0c0a09]"
+        >
+          <Button
+            onPress={handleSubmit}
+            loading={createExpense.isPending}
+            disabled={!description.trim() || parsedCents <= 0}
+          >
+            Add expense
+          </Button>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

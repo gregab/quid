@@ -3,6 +3,14 @@ import { render, screen, cleanup, fireEvent, act } from "@testing-library/react"
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { createTestQueryClient } from "../../../../lib/test-utils";
+
+// Must mock lucide at test level to prevent loading react-native-svg
+vi.mock("lucide-react-native", () => ({
+  ChevronLeft: () => null,
+  CheckCircle2: () => null,
+  UserPlus: () => null,
+}));
+
 import AddMemberScreen from "./add-member";
 
 const mockMutateAsync = vi.fn();
