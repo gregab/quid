@@ -4,7 +4,7 @@
  * Maps RN primitives → HTML elements so @testing-library/react can
  * query them with getByText, getByPlaceholderText, etc.
  */
-import { forwardRef, type ReactNode, type ChangeEvent, type MouseEventHandler } from "react";
+import React, { forwardRef, type ReactNode, type ChangeEvent, type MouseEventHandler } from "react";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Props = Record<string, any> & { children?: ReactNode };
@@ -79,12 +79,15 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(
 );
 
 export const Pressable = forwardRef<HTMLButtonElement, Props>(
-  function MockPressable({ onPress, children, testID, className, ...rest }, ref) {
+  function MockPressable({ onPress, children, testID, className, style, ...rest }, ref) {
+    // Resolve function-style style props (RN Pressable accepts ({ pressed }) => style)
+    const resolvedStyle = typeof style === "function" ? style({ pressed: false }) : style;
     return (
       <button
         onClick={onPress as MouseEventHandler}
         data-testid={testID as string}
         className={className as string}
+        style={resolvedStyle as React.CSSProperties}
         ref={ref}
         type="button"
         {...rest}

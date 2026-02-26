@@ -77,7 +77,7 @@ export function useGroups() {
         });
       }
 
-      return groups.map((g) => ({
+      const results: import("@aviary/shared").GroupSummary[] = groups.map((g) => ({
         id: g.id as string,
         name: g.name as string,
         createdAt: g.createdAt as string,
@@ -91,6 +91,33 @@ export function useGroups() {
         ),
         isFriendGroup: (g.isFriendGroup as boolean) ?? false,
       }));
+
+      // Fetch the other member's name for friend groups
+      const friendGroupIds = results.filter((g) => g.isFriendGroup).map((g) => g.id);
+      if (friendGroupIds.length > 0) {
+        const { data: friendMembers } = await supabase
+          .from("GroupMember")
+          .select("groupId, userId, User(displayName)")
+          .in("groupId", friendGroupIds)
+          .neq("userId", user.id);
+
+        const friendNameByGroup = new Map<string, string>();
+        for (const m of friendMembers ?? []) {
+          const name =
+            ((m.User as Record<string, unknown>)?.displayName as string) ??
+            UNKNOWN_USER;
+          friendNameByGroup.set(m.groupId, name);
+        }
+
+        return results.map((g) => ({
+          ...g,
+          friendName: g.isFriendGroup
+            ? (friendNameByGroup.get(g.id) ?? null)
+            : undefined,
+        }));
+      }
+
+      return results;
     },
   });
 }

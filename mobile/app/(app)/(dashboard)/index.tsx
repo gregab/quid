@@ -8,12 +8,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronRight, Plus, Settings, UserPlus } from "lucide-react-native";
+import { ChevronRight, Plus, Settings } from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
 import { useGroups, useCurrentUser, useContacts } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
-import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
+import { DashboardSkeleton } from "../../../components/ui/SkeletonLoader";
 import { formatCents, BIRD_FACTS, formatDisplayName } from "../../../lib/queries/shared";
 import type { GroupSummary } from "../../../lib/types";
 
@@ -27,13 +27,21 @@ interface FriendInfo {
 
 function GroupCard({ group }: { group: GroupSummary }) {
   const router = useRouter();
+  const monthLabel = new Date(group.createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <Pressable
       onPress={() => router.push(`/(app)/groups/${group.id}`)}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.72 : 1,
+        transform: [{ scale: pressed ? 0.985 : 1 }],
+      })}
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
-      {/* Thumbnail placeholder */}
+      {/* Thumbnail */}
       <View className="h-11 w-11 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
         <Text className="text-lg">{group.emoji ?? "🐦"}</Text>
       </View>
@@ -46,36 +54,42 @@ function GroupCard({ group }: { group: GroupSummary }) {
         >
           {group.name}
         </Text>
-        <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
+        <Text className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
           {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
+          {" · "}
+          {monthLabel}
         </Text>
       </View>
 
       {/* Balance */}
       <View className="flex-row items-center gap-1.5">
-        {group.balanceCents !== 0 && (
+        {group.balanceCents === 0 ? (
+          <Text className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+            settled
+          </Text>
+        ) : (
           <View className="items-end">
             <Text
               className={`text-[11px] ${
                 group.balanceCents > 0
                   ? "text-emerald-600/70 dark:text-emerald-400/70"
-                  : "text-rose-600/70 dark:text-rose-400/70"
+                  : "text-rose-500/70 dark:text-rose-400/70"
               }`}
             >
               {group.balanceCents > 0 ? "you are owed" : "you owe"}
             </Text>
             <Text
-              className={`text-sm font-semibold ${
+              className={`text-sm font-bold ${
                 group.balanceCents > 0
                   ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-600 dark:text-rose-400"
+                  : "text-rose-500 dark:text-rose-400"
               }`}
             >
               {formatCents(Math.abs(group.balanceCents))}
             </Text>
           </View>
         )}
-        <ChevronRight size={16} color="#d6d3d1" />
+        <ChevronRight size={15} color="#a8a29e" />
       </View>
     </Pressable>
   );
@@ -87,6 +101,10 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
   return (
     <Pressable
       onPress={() => router.push(`/(app)/groups/${friend.groupId}`)}
+      style={({ pressed }) => ({
+        opacity: pressed ? 0.72 : 1,
+        transform: [{ scale: pressed ? 0.985 : 1 }],
+      })}
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
       {/* Avatar */}
@@ -106,29 +124,33 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
 
       {/* Balance */}
       <View className="flex-row items-center gap-1.5">
-        {friend.balanceCents !== 0 && (
+        {friend.balanceCents === 0 ? (
+          <Text className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+            settled
+          </Text>
+        ) : (
           <View className="items-end">
             <Text
               className={`text-[11px] ${
                 friend.balanceCents > 0
                   ? "text-emerald-600/70 dark:text-emerald-400/70"
-                  : "text-rose-600/70 dark:text-rose-400/70"
+                  : "text-rose-500/70 dark:text-rose-400/70"
               }`}
             >
               {friend.balanceCents > 0 ? "you are owed" : "you owe"}
             </Text>
             <Text
-              className={`text-sm font-semibold ${
+              className={`text-sm font-bold ${
                 friend.balanceCents > 0
                   ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-600 dark:text-rose-400"
+                  : "text-rose-500 dark:text-rose-400"
               }`}
             >
               {formatCents(Math.abs(friend.balanceCents))}
             </Text>
           </View>
         )}
-        <ChevronRight size={16} color="#d6d3d1" />
+        <ChevronRight size={15} color="#a8a29e" />
       </View>
     </Pressable>
   );
@@ -157,14 +179,11 @@ export default function DashboardScreen() {
     [groups],
   );
 
-  // Build friend info from friend groups
-  // Note: for friend groups, the group name is "User A & User B" — we'll use it for now
-  // TODO: fetch actual friend member data for avatar/emoji
   const friends: FriendInfo[] = useMemo(
     () =>
       friendGroups.map((g) => ({
-        userId: g.id, // placeholder — we don't have the friend's userId easily
-        displayName: g.name, // "User A & User B" — good enough for now
+        userId: g.id,
+        displayName: g.friendName ?? g.name,
         emoji: g.emoji,
         groupId: g.id,
         balanceCents: g.balanceCents,
@@ -189,12 +208,10 @@ export default function DashboardScreen() {
     setRefreshing(false);
   };
 
-  const hasContacts = (contacts ?? []).length > 0;
-
   if (isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-        <LoadingSpinner text="Loading groups..." />
+        <DashboardSkeleton />
       </SafeAreaView>
     );
   }
@@ -211,29 +228,45 @@ export default function DashboardScreen() {
             tintColor="#d97706"
           />
         }
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 120 }}
         ListHeaderComponent={
           <>
             {/* Header */}
-            <View className="mb-4 mt-2 flex-row items-center justify-between">
+            <View className="mb-4 mt-3 flex-row items-center justify-between">
               <Text className="font-serif-logo text-2xl text-stone-800 dark:text-stone-100">
                 Aviary
               </Text>
-              <Pressable onPress={() => router.push("/(app)/settings")}>
+              <Pressable
+                onPress={() => router.push("/(app)/settings")}
+                style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
+              >
                 <Settings size={22} color="#78716c" />
               </Pressable>
             </View>
 
             {/* Hero card */}
-            <Card className="mb-6 overflow-hidden">
-              <View className="bg-amber-600 px-5 pb-5 pt-8 dark:bg-amber-700">
-                <Text className="text-2xl font-bold tracking-tight text-white">
+            <Card className="mb-6 overflow-hidden rounded-2xl">
+              <View className="relative bg-amber-600 px-5 pb-6 pt-7 dark:bg-amber-700">
+                {/* Decorative circles for depth */}
+                <View
+                  className="absolute right-[-20px] top-[-30px] h-28 w-28 rounded-full bg-amber-500/40 dark:bg-amber-600/30"
+                  pointerEvents="none"
+                />
+                <View
+                  className="absolute bottom-[-10px] right-[60px] h-16 w-16 rounded-full bg-amber-700/30 dark:bg-amber-800/30"
+                  pointerEvents="none"
+                />
+
+                <Text className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-200/80">
+                  Your balance
+                </Text>
+                <Text className="text-[26px] font-bold leading-tight tracking-tight text-white">
                   Hey {displayName}.
                 </Text>
                 {(groups ?? []).length > 0 && (
-                  <Text className="mt-1 text-base text-white/90">
+                  <Text className="mt-1.5 text-[15px] font-medium text-white/85">
                     {totalBalance === 0
-                      ? "You're all settled up!"
+                      ? "You're all settled up 🎉"
                       : totalBalance > 0
                         ? `You are owed ${formatCents(totalBalance)}`
                         : `You owe ${formatCents(Math.abs(totalBalance))}`}
@@ -243,16 +276,17 @@ export default function DashboardScreen() {
             </Card>
 
             {/* Section header */}
-            <View className="mb-3 flex-row items-center justify-between">
-              <Text className="text-lg font-bold tracking-tight text-stone-900 dark:text-white">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
                 Your groups
               </Text>
               <Pressable
                 onPress={() => router.push("/(app)/(dashboard)/create-group")}
-                className="flex-row items-center gap-1 rounded-full bg-amber-600 px-3.5 py-1.5 dark:bg-amber-500"
+                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+                className="flex-row items-center gap-1 rounded-full bg-amber-600 px-3 py-1.5 dark:bg-amber-500"
               >
-                <Plus size={14} color="#fff" strokeWidth={3} />
-                <Text className="text-xs font-semibold text-white">
+                <Plus size={12} color="#fff" strokeWidth={3} />
+                <Text className="text-[11px] font-bold tracking-wide text-white">
                   New group
                 </Text>
               </Pressable>
@@ -275,38 +309,17 @@ export default function DashboardScreen() {
         ListFooterComponent={
           <>
             {/* Friends section */}
-            {(friends.length > 0 || hasContacts) && (
+            {friends.length > 0 && (
               <View className="mt-6">
-                <View className="mb-3 flex-row items-center justify-between">
-                  <Text className="text-lg font-bold tracking-tight text-stone-900 dark:text-white">
+                <View className="mb-2 flex-row items-center">
+                  <Text className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
                     Friends
                   </Text>
-                  {hasContacts && (
-                    <Pressable
-                      onPress={() =>
-                        router.push("/(app)/(dashboard)/add-friend-expense")
-                      }
-                      className="flex-row items-center gap-1 rounded-full bg-amber-600 px-3.5 py-1.5 dark:bg-amber-500"
-                    >
-                      <UserPlus size={12} color="#fff" strokeWidth={3} />
-                      <Text className="text-xs font-semibold text-white">
-                        Add expense
-                      </Text>
-                    </Pressable>
-                  )}
                 </View>
 
-                {friends.length === 0 ? (
-                  <Card className="items-center px-4 py-6">
-                    <Text className="text-sm text-stone-500 dark:text-stone-400 text-center">
-                      Add an expense with a friend to start tracking debts individually.
-                    </Text>
-                  </Card>
-                ) : (
-                  friends.map((friend) => (
-                    <FriendCard key={friend.groupId} friend={friend} />
-                  ))
-                )}
+                {friends.map((friend) => (
+                  <FriendCard key={friend.groupId} friend={friend} />
+                ))}
               </View>
             )}
 

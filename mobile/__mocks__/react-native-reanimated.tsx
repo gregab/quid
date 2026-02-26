@@ -16,10 +16,29 @@ export function useAnimatedStyle(updater: () => Record<string, unknown>) {
 
 export function withSpring(toValue: number) { return toValue; }
 export function withTiming(toValue: number) { return toValue; }
+export function withRepeat(animation: unknown) { return animation; }
 export function withDelay(_delay: number, animation: unknown) { return animation; }
 export function withSequence(...animations: unknown[]) { return animations[animations.length - 1]; }
 export function runOnJS<T extends (...args: unknown[]) => unknown>(fn: T): T { return fn; }
 export function createAnimatedComponent<T>(component: T): T { return component; }
+
+const identity = (x: number) => x;
+export const Easing = {
+  linear: identity,
+  ease: identity,
+  quad: identity,
+  cubic: identity,
+  sin: identity,
+  circle: identity,
+  exp: identity,
+  elastic: () => identity,
+  back: () => identity,
+  bounce: identity,
+  bezier: () => identity,
+  inOut: (fn: (x: number) => number) => fn,
+  in: (fn: (x: number) => number) => fn,
+  out: (fn: (x: number) => number) => fn,
+};
 
 const AnimatedView = forwardRef<HTMLDivElement, Props>(
   function AnimatedView({ children, ...props }, ref) {

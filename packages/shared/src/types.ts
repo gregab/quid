@@ -63,6 +63,7 @@ export interface GroupSummary {
   memberCount: number;
   balanceCents: number;
   isFriendGroup?: boolean;
+  friendName?: string | null; // the other user's displayName, for friend groups
 }
 
 /** A contact (user from shared groups) available for friend expenses. */
