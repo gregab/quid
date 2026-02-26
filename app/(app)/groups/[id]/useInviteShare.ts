@@ -10,7 +10,10 @@ export function useInviteShare(inviteToken: string) {
     setCanShare(typeof navigator !== "undefined" && !!navigator.share);
   }, []);
 
-  const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/invite/${inviteToken}`;
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : "http://localhost:3000");
+  const inviteUrl = `${siteUrl}/invite/${inviteToken}`;
 
   const share = useCallback(async () => {
     if (canShare) {

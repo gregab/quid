@@ -10,7 +10,7 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-For any change: make changes, write tests, run tests, commit. **Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy by running `deploy` in their terminal.
+For any change: make changes, write tests, run tests, commit. **Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy. Pushing to `main` creates a preview deployment; `vercel --prod` (or `vercel promote <url>`) deploys to production.
 
 **Don't commit during planning.** Commits are for shipping code — features, bug fixes, refactors, doc updates tied to code changes. If you're exploring the codebase, researching approaches, or drafting a plan, don't create commits. Only commit when there's actual deliverable work.
 
@@ -34,7 +34,9 @@ npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
 npm run db:types                        # Regenerate Supabase types → lib/supabase/database.types.ts
-git push origin main                    # Deploy to production
+git push origin main                    # Triggers a Preview deployment on Vercel (NOT production)
+vercel --prod                           # Deploy current build to production
+vercel promote <preview-url>            # Promote an existing preview to production (no rebuild)
 
 # Mobile app
 cd mobile && npx expo start            # Start Expo dev server
