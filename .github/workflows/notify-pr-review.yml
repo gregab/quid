@@ -1,0 +1,31 @@
+name: Notify PR Review
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to ntfy.sh
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+          REVIEWER: ${{ github.event.review.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          case "$REVIEW_STATE" in
+            approved)          TAGS="white_check_mark"; PRIORITY="default" ;;
+            changes_requested) TAGS="x";               PRIORITY="high" ;;
+            *)                 TAGS="speech_balloon";  PRIORITY="low" ;;
+          esac
+
+          curl -sS --fail -X POST "https://ntfy.sh/$NTFY_TOPIC" \
+            -H "Title: PR #$PR_NUMBER $REVIEW_STATE" \
+            -H "Tags: $TAGS" \
+            -H "Priority: $PRIORITY" \
+            -d "$REVIEW_STATE by $REVIEWER: $PR_TITLE
+$PR_URL"

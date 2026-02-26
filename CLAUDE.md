@@ -26,7 +26,11 @@ Use a branch + PR so automated review catches issues before anything merges.
 2. Implement the change with tests
 3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
 4. Push the branch and open a PR with `gh pr create`
-5. GitHub Actions runs an automated Claude review — wait for `APPROVED` or `CHANGES_REQUESTED`
+5. Wait for review using the background notification script (do NOT poll manually):
+   ```bash
+   bash ~/.claude/scripts/wait-for-pr-review.sh <pr-number>
+   ```
+   Run this via the Bash tool with `run_in_background=true`. You'll be notified automatically when a review arrives via ntfy.sh push — no polling loop needed.
 6. On approval: merge with `gh pr merge <number> --squash --delete-branch`
 7. Never push directly to `production` — the user controls production promotion
 
