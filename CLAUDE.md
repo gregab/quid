@@ -13,12 +13,14 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 There are two modes depending on how Claude is being used:
 
 ### Interactive mode (default — user is present)
-Commit directly to `main`. No PR needed — the user is watching and in control.
+**Workers always use a branch + PR, even in interactive mode.** Ask the user explicitly before committing directly to `main` — the default is always the PR flow.
 1. Make changes and write tests
 2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-3. Commit to `main`
-4. Pushing `main` triggers a Vercel **preview deployment** automatically
-5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
+3. Push a branch and open a PR with `gh pr create`
+4. Wait for automated review (`APPROVED` or `CHANGES_REQUESTED`)
+5. On approval: merge with `gh pr merge <number> --squash --delete-branch`
+6. Pushing `main` triggers a Vercel **preview deployment** automatically
+7. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
 Use a branch + PR so automated review catches issues before anything merges.

@@ -2,7 +2,10 @@
   "name": "aviary",
   "version": "0.1.0",
   "private": true,
-  "workspaces": ["packages/*", "mobile"],
+  "workspaces": [
+    "packages/*",
+    "mobile"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -25,6 +28,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zod": "^4.3.6"
+  },
+  "overrides": {
+    "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
