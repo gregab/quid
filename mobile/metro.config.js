@@ -48,9 +48,25 @@ config.resolver.nodeModulesPaths = [
 // They use Node.js-specific syntax (import.meta.resolve) that Hermes can't
 // handle. Resolve them as empty modules so they're never bundled.
 const SERVER_ONLY_MODULES = /^(vite|vitest)(\/|$)/;
+
+// React and React Native must resolve to a single instance to avoid the
+// "Invalid hook call" / duplicate React error in monorepos. Pin them to
+// mobile/node_modules so every package (including react-native-css-interop)
+// sees the same copy as the renderer.
+// Matches: "react", "react/...", "react-native", "react-native/..."
+// Does NOT match: "react-query", "react-native-gesture-handler", etc.
+const PINNED_TO_MOBILE = /^react(-native)?(\/|$)/;
+
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (SERVER_ONLY_MODULES.test(moduleName)) {
     return { type: "empty" };
+  }
+  if (PINNED_TO_MOBILE.test(moduleName)) {
+    return context.resolveRequest(
+      { ...context, nodeModulesPaths: [path.resolve(projectRoot, "node_modules")] },
+      moduleName,
+      platform
+    );
   }
   return context.resolveRequest(context, moduleName, platform);
 };
