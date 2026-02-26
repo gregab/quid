@@ -6,6 +6,7 @@ export type {
   SplitEntry,
   ResolvedDebt,
   GroupSummary,
+  Contact,
 } from "@aviary/shared";
 
 // Platform-specific types (mobile uses color names, web uses Tailwind class objects)

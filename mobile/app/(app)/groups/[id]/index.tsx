@@ -405,6 +405,17 @@ export default function GroupDetailScreen() {
   }
 
   const groupName = (group as Record<string, unknown>).name as string;
+  const isFriendGroup = ((group as Record<string, unknown>).isFriendGroup as boolean) ?? false;
+
+  // For friend groups, find the friend's display name
+  const friendDisplayName = isFriendGroup
+    ? (() => {
+        const gm = (group as Record<string, unknown>).GroupMember as Array<Record<string, unknown>> | null;
+        const friend = (gm ?? []).find((m) => m.userId !== user?.id);
+        const u = friend?.User as Record<string, unknown> | null;
+        return (u?.displayName as string) ?? groupName;
+      })()
+    : groupName;
 
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
@@ -427,39 +438,43 @@ export default function GroupDetailScreen() {
             <ChevronLeft size={20} color="#78716c" />
             <Text className="text-sm text-stone-500">Back</Text>
           </Pressable>
-          <Pressable
-            onPress={() => router.push(`/(app)/groups/${id}/settings`)}
-          >
-            <Settings size={20} color="#78716c" />
-          </Pressable>
+          {!isFriendGroup && (
+            <Pressable
+              onPress={() => router.push(`/(app)/groups/${id}/settings`)}
+            >
+              <Settings size={20} color="#78716c" />
+            </Pressable>
+          )}
         </View>
 
         {/* Group title */}
         <View className="px-4 pb-2 pt-3">
           <Text className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">
-            {groupName}
+            {isFriendGroup ? friendDisplayName : groupName}
           </Text>
         </View>
 
-        {/* Member pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="px-4 pb-4"
-          contentContainerStyle={{ gap: 8 }}
-        >
-          {members.map((m) => (
-            <MemberPill
-              key={m.userId}
-              emoji={m.emoji ?? "🐦"}
-              displayName={formatDisplayName(m.displayName)}
-              isCurrentUser={m.userId === user?.id}
-            />
-          ))}
-        </ScrollView>
+        {/* Member pills — hidden for friend groups */}
+        {!isFriendGroup && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="px-4 pb-4"
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {members.map((m) => (
+              <MemberPill
+                key={m.userId}
+                emoji={m.emoji ?? "🐦"}
+                displayName={formatDisplayName(m.displayName)}
+                isCurrentUser={m.userId === user?.id}
+              />
+            ))}
+          </ScrollView>
+        )}
 
-        {/* Invite link */}
-        {inviteToken && (
+        {/* Invite link — hidden for friend groups */}
+        {!isFriendGroup && inviteToken && (
           <View className="px-4 pb-4">
             <Pressable
               onPress={handleShareInvite}
@@ -536,17 +551,19 @@ export default function GroupDetailScreen() {
               Expenses
             </Text>
             <View className="flex-row gap-2">
-              <Pressable
-                onPress={() =>
-                  router.push(`/(app)/groups/${id}/recurring`)
-                }
-                className="flex-row items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-700 dark:bg-stone-800"
-              >
-                <Repeat size={12} color="#78716c" />
-                <Text className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                  Recurring
-                </Text>
-              </Pressable>
+              {!isFriendGroup && (
+                <Pressable
+                  onPress={() =>
+                    router.push(`/(app)/groups/${id}/recurring`)
+                  }
+                  className="flex-row items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-700 dark:bg-stone-800"
+                >
+                  <Repeat size={12} color="#78716c" />
+                  <Text className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                    Recurring
+                  </Text>
+                </Pressable>
+              )}
               <Pressable
                 onPress={() =>
                   router.push(`/(app)/groups/${id}/record-payment`)

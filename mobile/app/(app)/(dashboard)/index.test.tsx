@@ -11,6 +11,7 @@ vi.mock("lucide-react-native", () => ({
   ChevronRight: () => null,
   Plus: () => null,
   Settings: () => null,
+  UserPlus: () => null,
 }));
 
 // Mock auth
@@ -31,10 +32,12 @@ vi.mock("../../../lib/auth", () => ({
 // Mock queries
 const mockUseGroups = vi.fn();
 const mockUseCurrentUser = vi.fn();
+const mockUseContacts = vi.fn();
 
 vi.mock("../../../lib/queries", () => ({
   useGroups: () => mockUseGroups(),
   useCurrentUser: () => mockUseCurrentUser(),
+  useContacts: () => mockUseContacts(),
 }));
 
 afterEach(cleanup);
@@ -53,6 +56,10 @@ describe("DashboardScreen", () => {
     vi.clearAllMocks();
     mockUseCurrentUser.mockReturnValue({
       data: { displayName: "Alice" },
+      isLoading: false,
+    });
+    mockUseContacts.mockReturnValue({
+      data: [],
       isLoading: false,
     });
   });

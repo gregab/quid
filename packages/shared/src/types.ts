@@ -62,4 +62,12 @@ export interface GroupSummary {
   emoji: string | null;
   memberCount: number;
   balanceCents: number;
+  isFriendGroup?: boolean;
+}
+
+/** A contact (user from shared groups) available for friend expenses. */
+export interface Contact {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
 }

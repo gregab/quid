@@ -307,4 +307,72 @@ describe("GroupDetailScreen", () => {
     renderWithProviders();
     expect(screen.getByText("Share invite link")).toBeTruthy();
   });
+
+  describe("friend group conditional rendering", () => {
+    const friendGroupDetail = makeGroupDetail({
+      isFriendGroup: true,
+      name: "Alice & Bob",
+      inviteToken: "abc",
+      GroupMember: [
+        { userId: "user-1", User: { displayName: "Alice Wonderland", avatarUrl: null } },
+        { userId: "user-2", User: { displayName: "Bob Smith", avatarUrl: null } },
+      ],
+    });
+
+    beforeEach(() => {
+      mockUseGroupExpenses.mockReturnValue({
+        data: [],
+        isLoading: false,
+        refetch: vi.fn(),
+      });
+    });
+
+    it("shows friend name instead of group name", () => {
+      mockUseGroupDetail.mockReturnValue({
+        data: friendGroupDetail,
+        isLoading: false,
+      });
+      renderWithProviders();
+      expect(screen.getByText("Bob Smith")).toBeTruthy();
+      expect(screen.queryByText("Alice & Bob")).toBeNull();
+    });
+
+    it("hides member pills", () => {
+      mockUseGroupDetail.mockReturnValue({
+        data: friendGroupDetail,
+        isLoading: false,
+      });
+      renderWithProviders();
+      expect(screen.queryByText("Alice W.")).toBeNull();
+      expect(screen.queryByText("Bob S.")).toBeNull();
+    });
+
+    it("hides invite link", () => {
+      mockUseGroupDetail.mockReturnValue({
+        data: friendGroupDetail,
+        isLoading: false,
+      });
+      renderWithProviders();
+      expect(screen.queryByText("Share invite link")).toBeNull();
+    });
+
+    it("hides recurring button", () => {
+      mockUseGroupDetail.mockReturnValue({
+        data: friendGroupDetail,
+        isLoading: false,
+      });
+      renderWithProviders();
+      expect(screen.queryByText("Recurring")).toBeNull();
+    });
+
+    it("still shows settle up and add buttons", () => {
+      mockUseGroupDetail.mockReturnValue({
+        data: friendGroupDetail,
+        isLoading: false,
+      });
+      renderWithProviders();
+      expect(screen.getByText("Settle up")).toBeTruthy();
+      expect(screen.getByText("Add")).toBeTruthy();
+    });
+  });
 });

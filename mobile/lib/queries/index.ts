@@ -7,3 +7,5 @@ export { useActivityLogs } from "./activity";
 export { useCurrentUser, useUpdateProfile, useDeleteAccount } from "./user";
 export { useInvitePreview, useJoinGroup } from "./invite";
 export { useRecurringExpenses, useStopRecurringExpense } from "./recurring";
+export { useContacts, contactKeys } from "./contacts";
+export { useCreateFriendExpense } from "./friends";

@@ -8,6 +8,10 @@ export default function DashboardLayout() {
         name="create-group"
         options={{ presentation: "modal" }}
       />
+      <Stack.Screen
+        name="add-friend-expense"
+        options={{ presentation: "modal" }}
+      />
     </Stack>
   );
 }

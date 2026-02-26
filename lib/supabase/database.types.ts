@@ -156,6 +156,13 @@ export type Database = {
             referencedRelation: "RecurringExpense"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "Expense_recurringExpenseId_fkey"
+            columns: ["recurringExpenseId"]
+            isOneToOne: false
+            referencedRelation: "RecurringExpenseMasked"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ExpenseSplit: {
@@ -183,6 +190,13 @@ export type Database = {
             columns: ["expenseId"]
             isOneToOne: false
             referencedRelation: "Expense"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ExpenseSplit_expenseId_fkey"
+            columns: ["expenseId"]
+            isOneToOne: false
+            referencedRelation: "ExpenseMasked"
             referencedColumns: ["id"]
           },
           {
@@ -234,6 +248,7 @@ export type Database = {
           emoji: string | null
           id: string
           inviteToken: string
+          isFriendGroup: boolean
           name: string
           patternSeed: number
         }
@@ -244,6 +259,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           inviteToken?: string
+          isFriendGroup?: boolean
           name: string
           patternSeed?: number
         }
@@ -254,6 +270,7 @@ export type Database = {
           emoji?: string | null
           id?: string
           inviteToken?: string
+          isFriendGroup?: boolean
           name?: string
           patternSeed?: number
         }
@@ -405,9 +422,208 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ActivityLogMasked: {
+        Row: {
+          action: string | null
+          actorId: string | null
+          createdAt: string | null
+          groupId: string | null
+          id: string | null
+          payload: string | null
+        }
+        Insert: {
+          action?: string | null
+          actorId?: string | null
+          createdAt?: string | null
+          groupId?: string | null
+          id?: string | null
+          payload?: never
+        }
+        Update: {
+          action?: string | null
+          actorId?: string | null
+          createdAt?: string | null
+          groupId?: string | null
+          id?: string | null
+          payload?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ActivityLog_actorId_fkey"
+            columns: ["actorId"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ActivityLog_groupId_fkey"
+            columns: ["groupId"]
+            isOneToOne: false
+            referencedRelation: "Group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ExpenseMasked: {
+        Row: {
+          amountCents: number | null
+          createdAt: string | null
+          createdById: string | null
+          date: string | null
+          description: string | null
+          groupId: string | null
+          id: string | null
+          isPayment: boolean | null
+          paidById: string | null
+          recurringExpenseId: string | null
+          settledUp: boolean | null
+          splitType: string | null
+          updatedAt: string | null
+        }
+        Insert: {
+          amountCents?: number | null
+          createdAt?: string | null
+          createdById?: string | null
+          date?: string | null
+          description?: never
+          groupId?: string | null
+          id?: string | null
+          isPayment?: boolean | null
+          paidById?: string | null
+          recurringExpenseId?: string | null
+          settledUp?: boolean | null
+          splitType?: string | null
+          updatedAt?: string | null
+        }
+        Update: {
+          amountCents?: number | null
+          createdAt?: string | null
+          createdById?: string | null
+          date?: string | null
+          description?: never
+          groupId?: string | null
+          id?: string | null
+          isPayment?: boolean | null
+          paidById?: string | null
+          recurringExpenseId?: string | null
+          settledUp?: boolean | null
+          splitType?: string | null
+          updatedAt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "Expense_createdById_fkey"
+            columns: ["createdById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Expense_groupId_fkey"
+            columns: ["groupId"]
+            isOneToOne: false
+            referencedRelation: "Group"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Expense_paidById_fkey"
+            columns: ["paidById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Expense_recurringExpenseId_fkey"
+            columns: ["recurringExpenseId"]
+            isOneToOne: false
+            referencedRelation: "RecurringExpense"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "Expense_recurringExpenseId_fkey"
+            columns: ["recurringExpenseId"]
+            isOneToOne: false
+            referencedRelation: "RecurringExpenseMasked"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      RecurringExpenseMasked: {
+        Row: {
+          amountCents: number | null
+          createdAt: string | null
+          createdById: string | null
+          customSplits: Json | null
+          description: string | null
+          frequency: string | null
+          groupId: string | null
+          id: string | null
+          isActive: boolean | null
+          nextDueDate: string | null
+          paidById: string | null
+          participantIds: string[] | null
+          splitType: string | null
+        }
+        Insert: {
+          amountCents?: number | null
+          createdAt?: string | null
+          createdById?: string | null
+          customSplits?: Json | null
+          description?: never
+          frequency?: string | null
+          groupId?: string | null
+          id?: string | null
+          isActive?: boolean | null
+          nextDueDate?: string | null
+          paidById?: string | null
+          participantIds?: string[] | null
+          splitType?: string | null
+        }
+        Update: {
+          amountCents?: number | null
+          createdAt?: string | null
+          createdById?: string | null
+          customSplits?: Json | null
+          description?: never
+          frequency?: string | null
+          groupId?: string | null
+          id?: string | null
+          isActive?: boolean | null
+          nextDueDate?: string | null
+          paidById?: string | null
+          participantIds?: string[] | null
+          splitType?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "RecurringExpense_createdById_fkey"
+            columns: ["createdById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "RecurringExpense_groupId_fkey"
+            columns: ["groupId"]
+            isOneToOne: false
+            referencedRelation: "Group"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "RecurringExpense_paidById_fkey"
+            columns: ["paidById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      add_member_by_email: {
+        Args: { _email: string; _group_id: string }
+        Returns: Json
+      }
       create_expense: {
         Args: {
           _amount_cents: number
@@ -467,6 +683,10 @@ export type Database = {
         Returns: undefined
       }
       get_group_by_invite_token: { Args: { _token: string }; Returns: Json }
+      get_or_create_friend_group: {
+        Args: { _other_user_id: string }
+        Returns: string
+      }
       is_group_member: { Args: { _group_id: string }; Returns: boolean }
       join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }

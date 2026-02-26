@@ -42,6 +42,7 @@ export type {
   SplitEntry,
   ResolvedDebt,
   GroupSummary,
+  Contact,
 } from "./types";
 
 // Validation schemas
@@ -49,6 +50,7 @@ export {
   createExpenseSchema,
   updateExpenseSchema,
   createPaymentSchema,
+  createFriendExpenseSchema,
   createGroupSchema,
   updateSettingsSchema,
   addMemberSchema,

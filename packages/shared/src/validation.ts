@@ -49,6 +49,16 @@ export const createPaymentSchema = z.object({
   settledUp: z.boolean().optional(),
 });
 
+// ── Friend expense schema ──────────────────────────────────────────
+
+export const createFriendExpenseSchema = z.object({
+  friendIds: z.array(z.string().uuid()).min(1, "Select at least one friend"),
+  description: z.string().min(1).max(MAX_EXPENSE_DESCRIPTION),
+  amountCents,
+  date: dateString,
+  paidById: z.string().uuid().optional(),
+});
+
 // ── Group schemas ──────────────────────────────────────────────────
 
 export const createGroupSchema = z.object({

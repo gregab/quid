@@ -89,6 +89,7 @@ export function useGroups() {
           expensesByGroup.get(g.id as string) ?? [],
           user.id,
         ),
+        isFriendGroup: (g.isFriendGroup as boolean) ?? false,
       }));
     },
   });

@@ -76,6 +76,7 @@ npm run cy:run                          # Cypress headless
 | **Auth middleware** (route protection) | `proxy.ts` (**not** `middleware.ts` — Next.js 16 convention) |
 | **Styling / dark mode** | Tailwind `dark:` variants; globals in `app/globals.css` |
 | **E2E tests** | `cypress/e2e/` — specs; `cypress/support/commands.ts` — `cy.login()` |
+| **Friends** (friend expenses, dashboard) | `DashboardAddExpenseForm.tsx` (dashboard), `app/api/friends/expenses/route.ts` (API), `mobile/lib/queries/friends.ts` + `contacts.ts` (mobile hooks), group detail conditional rendering via `isFriendGroup` |
 | **Shared business logic** | `packages/shared/src/` — source of truth; `lib/` files are re-export barrels for web |
 | **Mobile app screens** | `mobile/app/` — Expo Router file-based routing (same convention as Next.js) |
 | **Mobile data layer** | `mobile/lib/queries/` — TanStack Query hooks, direct-to-Supabase |
