@@ -107,13 +107,13 @@ export default async function DashboardPage() {
     }
   }
 
-  // Build contacts: all unique users across regular groups (excluding self)
+  // Build contacts: all unique users across ALL groups (excluding self)
   const contacts: DashboardContact[] = [];
-  if (regularGroups.length > 0) {
+  if (allGroups.length > 0) {
     const { data: contactMembers } = await supabase
       .from("GroupMember")
       .select("userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
-      .in("groupId", regularGroups.map((g) => g.id));
+      .in("groupId", allGroups.map((g) => g.id));
 
     const seen = new Set<string>();
     for (const m of contactMembers ?? []) {
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {friends.length === 0 ? (
+        {friends.filter((f) => f.hasExpenses).length === 0 ? (
           <div className="rounded-2xl border border-stone-200/60 bg-stone-50/50 px-5 py-8 text-center dark:border-stone-700/40 dark:bg-stone-900/20">
             <p className="text-sm text-stone-500 dark:text-stone-400">
               {contacts.length > 0
@@ -294,12 +294,12 @@ export default async function DashboardPage() {
           </div>
         ) : (
             <div>
-              {friends.map((friend, i) => (
+              {friends.filter((f) => f.hasExpenses).map((friend, i, arr) => (
                 <Link
                   key={friend.groupId}
                   href={`/groups/${friend.groupId}`}
                   prefetch={false}
-                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < friends.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
+                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < arr.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {/* Avatar */}

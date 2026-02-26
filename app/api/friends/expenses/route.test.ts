@@ -154,17 +154,15 @@ describe("POST /api/friends/expenses", () => {
     );
     expect(createCalls.length).toBe(3);
 
-    // splitAmount(3001, 4) = [751, 750, 750, 750]
-    // index 0 = user's share (751), indices 1,2,3 = friend shares (750 each)
-    // Each friend group: myShare = 3001 - friendShare, friendShare
+    // Each friend-group expense is a 2-person split: splitAmount(3001, 2) = [1501, 1500]
     const p1 = createCalls[0]![1] as Record<string, unknown>;
-    expect(p1._split_amounts).toEqual([2251, 750]);
+    expect(p1._split_amounts).toEqual([1501, 1500]);
 
     const p2 = createCalls[1]![1] as Record<string, unknown>;
-    expect(p2._split_amounts).toEqual([2251, 750]);
+    expect(p2._split_amounts).toEqual([1501, 1500]);
 
     const p3 = createCalls[2]![1] as Record<string, unknown>;
-    expect(p3._split_amounts).toEqual([2251, 750]);
+    expect(p3._split_amounts).toEqual([1501, 1500]);
   });
 
   it("allows friend as payer when exactly 1 friend selected", async () => {

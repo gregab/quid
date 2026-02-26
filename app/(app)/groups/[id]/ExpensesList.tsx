@@ -441,7 +441,7 @@ export function ExpensesList({
       </div>
 
       {expenses.length === 0 ? (
-        needsMembers ? (
+        needsMembers && !isFriendGroup ? (
           /* Empty state: solo group — encourage inviting people */
           <Card className="px-5 py-10 text-center">
             <svg className="mx-auto h-10 w-10 text-amber-300 dark:text-amber-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>

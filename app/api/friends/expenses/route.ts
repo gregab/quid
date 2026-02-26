@@ -44,10 +44,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Compute per-person shares: you + all friends
-  const totalParticipants = friendIds.length + 1;
-  const shares = splitAmount(amountCents, totalParticipants);
-
   // Fetch current user's display name for activity log
   const { data: currentUserProfile } = await supabase
     .from("User")
@@ -60,7 +56,12 @@ export async function POST(request: NextRequest) {
 
   for (let i = 0; i < friendIds.length; i++) {
     const friendId = friendIds[i]!;
-    const friendShare = shares[i + 1]!; // friend gets share at index i+1 (index 0 is current user's share, but may get +1 cent from remainder)
+
+    // Each friend-group expense is between 2 people: you + this friend.
+    // Split the full amount equally between the pair.
+    const pairShares = splitAmount(amountCents, 2);
+    const myShare = pairShares[0]!;
+    const friendShare = pairShares[1]!;
 
     // Get or create the friend group
     const { data: groupId, error: groupError } = await supabase.rpc(
@@ -85,9 +86,6 @@ export async function POST(request: NextRequest) {
       .single();
     const friendDisplayName = friendProfile?.displayName ?? "Unknown";
 
-    // Determine split amounts for the 2-person expense
-    // The expense total is the full amount. Splits determine individual liability.
-    const myShare = amountCents - friendShare;
     const participantIds = [user.id, friendId];
     const splitAmounts = [myShare, friendShare];
     const participantDisplayNames = [currentUserDisplayName, friendDisplayName];

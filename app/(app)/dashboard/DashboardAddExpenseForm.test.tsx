@@ -38,64 +38,89 @@ describe("DashboardAddExpenseForm", () => {
   it("opens modal on button click", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
-    expect(screen.getByText("Add expense with friends")).toBeTruthy();
+    expect(screen.getByText("Add friend expense")).toBeTruthy();
   });
 
-  it("shows all contacts as selectable pills", () => {
+  it("shows typeahead search input when no friend selected", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
+    expect(screen.getByPlaceholderText("Search friends...")).toBeTruthy();
+  });
+
+  it("filters contacts by search query", () => {
+    render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
+    fireEvent.click(screen.getByText("Add expense"));
+
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.change(searchInput, { target: { value: "Bob" } });
+
+    // Bob should appear, Carol and Dave should not
     expect(screen.getByText("Bob S.")).toBeTruthy();
-    expect(screen.getByText("Carol J.")).toBeTruthy();
-    expect(screen.getByText("Dave L.")).toBeTruthy();
+    expect(screen.queryByText("Carol J.")).toBeNull();
+    expect(screen.queryByText("Dave L.")).toBeNull();
   });
 
-  it("toggles friend selection", () => {
+  it("selects a friend from typeahead dropdown", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    const bobPill = screen.getByText("Bob S.");
-    fireEvent.click(bobPill);
-    // After selection, a checkmark SVG should appear (within the same button)
-    const bobButton = bobPill.closest("button")!;
-    expect(bobButton.querySelector("svg")).toBeTruthy();
+    // Focus the search to open the dropdown
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.focus(searchInput);
 
-    // Click again to deselect
-    fireEvent.click(bobPill);
-  });
-
-  it("hides payer selector when multiple friends selected", () => {
-    render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
-    fireEvent.click(screen.getByText("Add expense"));
-
-    // Select 2 friends
+    // Click on Bob
     fireEvent.click(screen.getByText("Bob S."));
-    fireEvent.click(screen.getByText("Carol J."));
 
-    // Payer selector should not be visible
-    expect(screen.queryByText("Paid by")).toBeNull();
+    // Search input should be gone, Bob should be shown as selected
+    expect(screen.queryByPlaceholderText("Search friends...")).toBeNull();
+    // Bob S. should appear in selected chip and paid-by selector
+    expect(screen.getAllByText("Bob S.").length).toBeGreaterThanOrEqual(1);
+    // Paid by selector should show "You" and "Bob S."
+    expect(screen.getByText("Paid by")).toBeTruthy();
+    expect(screen.getByText("You")).toBeTruthy();
   });
 
-  it("shows payer selector when exactly 1 friend selected", () => {
+  it("can clear selected friend and go back to search", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    // Select 1 friend
+    // Select Bob
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.focus(searchInput);
+    fireEvent.click(screen.getByText("Bob S."));
+
+    // Clear the selection
+    const removeButton = screen.getByLabelText("Remove friend");
+    fireEvent.click(removeButton);
+
+    // Search input should be back
+    expect(screen.getByPlaceholderText("Search friends...")).toBeTruthy();
+  });
+
+  it("shows payer selector when friend is selected", () => {
+    render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
+    fireEvent.click(screen.getByText("Add expense"));
+
+    // Select Bob
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.focus(searchInput);
     fireEvent.click(screen.getByText("Bob S."));
 
     // Payer selector should show "You" and "Bob S."
     expect(screen.getByText("Paid by")).toBeTruthy();
     expect(screen.getByText("You")).toBeTruthy();
-    // "Bob S." appears as both a contact pill and payer option — find at least 2
-    expect(screen.getAllByText("Bob S.").length).toBeGreaterThanOrEqual(2);
+    // Bob appears in selected area and paid-by selector
+    const bobElements = screen.getAllByText("Bob S.");
+    expect(bobElements.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("shows error when submitting without selecting friends", async () => {
+  it("shows error when submitting without selecting a friend", async () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    // The submit button should be disabled when no friends are selected
-    const submitButtons = screen.getAllByText("Add expense");
-    const submitButton = submitButtons[submitButtons.length - 1]!;
+    // The submit button should be disabled when no friend is selected
+    const addButton = screen.getAllByText("Add expense");
+    const submitButton = addButton[addButton.length - 1]!;
     expect((submitButton.closest("button") as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -108,7 +133,9 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    // Select friend
+    // Select friend via typeahead
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.focus(searchInput);
     fireEvent.click(screen.getByText("Bob S."));
 
     // Fill in description
@@ -116,7 +143,7 @@ describe("DashboardAddExpenseForm", () => {
     fireEvent.change(descInput, { target: { value: "Coffee" } });
 
     // Fill in amount
-    const amountInput = screen.getByPlaceholderText("$0.00");
+    const amountInput = screen.getByPlaceholderText("0.00");
     fireEvent.change(amountInput, { target: { value: "12.50" } });
 
     // Submit
@@ -143,5 +170,21 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm currentUserId="user-1" contacts={[]} />);
     fireEvent.click(screen.getByText("Add expense"));
     expect(screen.getByText(/No contacts yet/)).toBeTruthy();
+  });
+
+  it("supports keyboard navigation in typeahead", () => {
+    render(<DashboardAddExpenseForm currentUserId="user-1" contacts={contacts} />);
+    fireEvent.click(screen.getByText("Add expense"));
+
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.focus(searchInput);
+
+    // Press ArrowDown to highlight second item, then Enter to select
+    fireEvent.keyDown(searchInput, { key: "ArrowDown" });
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+
+    // Carol (index 1) should be selected — appears in selected chip and paid-by
+    expect(screen.getAllByText("Carol J.").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Paid by")).toBeTruthy();
   });
 });
