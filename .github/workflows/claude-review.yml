@@ -1,0 +1,44 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+    steps:
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          model: claude-sonnet-4-6
+          prompt: |
+            Review this PR against the project's CLAUDE.md standards. Focus on:
+
+            **Hard blockers (request changes):**
+            - Missing tests for new behavior or bug fixes
+            - Security issues: missing auth checks, RLS bypasses, SQL injection, XSS
+            - Incorrect money handling (floats instead of cents)
+            - Business logic that should be in @aviary/shared but isn't
+            - TypeScript `any` types
+            - Missing `await params` in Next.js 16 route handlers
+            - Breaking API changes without migration
+            - Missing database migration for schema changes
+
+            **Approve with comments (non-blocking):**
+            - Minor naming or style suggestions
+            - Simplification opportunities
+            - Non-critical edge cases
+
+            Be concise. One round of feedback — catch everything the first time.
+            Don't nitpick style if the logic is correct.
+            Don't request changes beyond the PR's scope.
+          claude_args: "--max-turns 5"
