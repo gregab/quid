@@ -10,11 +10,11 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-For any change: understand the code first, make changes, write tests, run tests, commit. **Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy by running `deploy` in their terminal.
+For any change: make changes, write tests, run tests, commit. **Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy by running `deploy` in their terminal.
 
 **Don't commit during planning.** Commits are for shipping code — features, bug fixes, refactors, doc updates tied to code changes. If you're exploring the codebase, researching approaches, or drafting a plan, don't create commits. Only commit when there's actual deliverable work.
 
-**Starting a task:** Read **ARCHITECTURE.md** first — it's the single source of truth for data models, API routes, auth flow, component hierarchy, shared logic inventory, and key design decisions. It should tell you exactly which files to read without broad exploration. Use the "Where to Change Things" table below to find the right files. **Be strategic with token usage** — targeted reads, not broad exploration. If you have to explore more than 5-10 files to understand a feature, ARCHITECTURE.md is probably missing something and should be updated after your task.
+**Starting a task:** Use the "Where to Change Things" table below to find the right files. For larger tasks or unfamiliar areas, consult **ARCHITECTURE.md** for data models, API routes, and design decisions. **Be strategic with token usage** — targeted reads, not broad exploration.
 
 **If something goes sideways, STOP and re-plan.** Don't keep pushing through a broken approach — step back, reassess, and course-correct.
 
