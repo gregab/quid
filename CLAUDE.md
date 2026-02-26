@@ -21,17 +21,44 @@ Commit directly to `main`. No PR needed — the user is watching and in control.
 5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
 
 ### Worker mode (autonomous — user is not watching)
-Implement locally, get a local code review from a subagent, then merge to `main`.
-1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
-2. Implement the change with tests
-3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-4. Spawn a `feature-dev:code-reviewer` subagent to review the local diff:
-   - Pass it: `git diff main` output, CLAUDE.md contents, and the review criteria below
-   - The reviewer reads any files it needs and returns a verdict (approve / request changes + comments)
-5. Address any feedback, re-run the reviewer until approved
-6. Merge to `main`: `git checkout main && git merge --squash <branch> && git commit && git push origin main`
-7. Clean up: `git worktree remove "../aviary-<branch>" && git branch -d <branch>`
-8. Never push directly to `production` — the user controls production promotion
+Workers each get their own worktree. `main` is the source of truth. Finished work lands directly on local `main` — no PRs, no GitHub intermediary.
+
+**Setup:**
+```bash
+git worktree add "../aviary-<feature>" -b "<feature>" main
+cd ../aviary-<feature>
+npm install
+```
+
+**During implementation:**
+- Make **focused, self-contained commits** as you go — one logical change per commit. Don't bundle unrelated changes into one giant commit. Small commits are easier to review, easier to revert, and easier to understand.
+- Rebase onto `main` before reviewing if it has moved: `git rebase main` (resolve any conflicts, keep going)
+- Verify before any review: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
+
+**Getting a review:**
+Spawn a `feature-dev:code-reviewer` subagent. You can request review at any point — for a single commit, a range of commits, or the full diff:
+```bash
+git diff main            # full diff since branching
+git diff main HEAD~3     # last 3 commits only
+git show HEAD            # just the latest commit
+```
+Pass the diff + CLAUDE.md contents to the reviewer. It reads any files it needs and returns a verdict (approve / request changes + comments). Address feedback, commit fixes, re-run the reviewer until approved.
+
+**Merging to main:**
+```bash
+git checkout main
+git merge --squash <feature>      # collapse all commits into one
+git commit -m "<concise summary>"
+git worktree remove "../aviary-<feature>"
+git branch -d <feature>
+```
+
+**Pushing to GitHub:**
+Push `main` to GitHub when it's getting behind (e.g. after several merged tasks, or when a Vercel preview is needed):
+```bash
+git push origin main    # triggers a Vercel preview deployment
+```
+Never push to `production` — the user controls production promotion.
 
 **Review criteria for the subagent reviewer:**
 
@@ -50,8 +77,6 @@ Approve with comments (non-blocking):
 - Simplification opportunities
 - Non-critical edge cases
 
-**Never push directly to `main` in worker mode.** All work goes through a branch + PR. If you think pushing directly to `main` is genuinely the right call for a given situation, ask the user first — but default to the PR flow.
-
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
 **Starting a task:** Use the "Where to Change Things" table below to find the right files. For larger tasks or unfamiliar areas, consult **ARCHITECTURE.md** for data models, API routes, and design decisions. **Be strategic with token usage** — targeted reads, not broad exploration.
@@ -60,7 +85,7 @@ Approve with comments (non-blocking):
 
 **Bug reports:** Just fix it. Investigate the root cause, write the fix, add tests, verify — zero hand-holding required. Don't ask clarifying questions when the bug is reproducible.
 
-**Before committing or opening a PR:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
+**Before committing:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
 
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
