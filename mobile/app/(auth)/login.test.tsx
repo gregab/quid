@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import LoginScreen from "./login";
 
@@ -103,5 +103,70 @@ describe("LoginScreen", () => {
     });
 
     expect(screen.getByText("Incorrect email or password. Please try again.")).toBeTruthy();
+  });
+
+  it("redirects to next param after successful login", async () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+    vi.mocked(useLocalSearchParams).mockReturnValue({ next: "/invite/invite-abc" });
+
+    const mockSignIn = vi.mocked(supabase.auth.signInWithPassword);
+    mockSignIn.mockResolvedValueOnce({
+      data: { session: null, user: null },
+      error: null,
+    } as never);
+
+    render(<LoginScreen />);
+
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Log In"));
+    });
+
+    expect(replace).toHaveBeenCalledWith("/invite/invite-abc");
+  });
+
+  it("does not redirect after successful login when no next param", async () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+    vi.mocked(useLocalSearchParams).mockReturnValue({});
+
+    const mockSignIn = vi.mocked(supabase.auth.signInWithPassword);
+    mockSignIn.mockResolvedValueOnce({
+      data: { session: null, user: null },
+      error: null,
+    } as never);
+
+    render(<LoginScreen />);
+
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Log In"));
+    });
+
+    // Login screen does not redirect — the auth layout handles dashboard redirect
+    expect(replace).not.toHaveBeenCalled();
   });
 });

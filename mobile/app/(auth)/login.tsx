@@ -7,7 +7,7 @@ import {
   ScrollView,
   Pressable,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
@@ -15,6 +15,8 @@ import { Input } from "../../components/ui/Input";
 import { friendlyAuthError } from "../../lib/authErrors";
 
 export default function LoginScreen() {
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -38,6 +40,8 @@ export default function LoginScreen() {
 
     if (authError) {
       setError(friendlyAuthError(authError.message));
+    } else if (next) {
+      router.replace(next as `/${string}`);
     }
   };
 

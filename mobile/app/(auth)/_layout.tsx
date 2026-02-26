@@ -1,17 +1,22 @@
 import { useEffect } from "react";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useAuth } from "../../lib/auth";
 import { LoadingSpinner } from "../../components/ui/LoadingSpinner";
 
 export default function AuthLayout() {
   const { session, loading } = useAuth();
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
 
   useEffect(() => {
     if (!loading && session) {
-      router.replace("/(app)/(dashboard)");
+      if (next) {
+        router.replace(next as `/${string}`);
+      } else {
+        router.replace("/(app)/(dashboard)");
+      }
     }
-  }, [session, loading, router]);
+  }, [session, loading, router, next]);
 
   if (loading || session) {
     return <LoadingSpinner text="Loading..." />;
