@@ -342,22 +342,23 @@ export default async function DashboardPage() {
       </div>
 
       {/* Friends section */}
-      {(friends.length > 0 || contacts.length > 0) && (
-        <div>
-          <div className="mb-4">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Friends</h2>
-              <DashboardAddExpenseForm currentUserId={user.id} contacts={contacts} />
-            </div>
+      <div>
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Friends</h2>
+            <DashboardAddExpenseForm currentUserId={user.id} contacts={contacts} />
           </div>
+        </div>
 
-          {friends.length === 0 ? (
-            <div className="rounded-2xl border border-stone-200/60 bg-stone-50/50 px-5 py-8 text-center dark:border-stone-700/40 dark:bg-stone-900/20">
-              <p className="text-sm text-stone-500 dark:text-stone-400">
-                Add an expense with a friend to start tracking debts individually.
-              </p>
-            </div>
-          ) : (
+        {friends.length === 0 ? (
+          <div className="rounded-2xl border border-stone-200/60 bg-stone-50/50 px-5 py-8 text-center dark:border-stone-700/40 dark:bg-stone-900/20">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              {contacts.length > 0
+                ? "Add an expense with a friend to start tracking debts individually."
+                : "Join a group with others to start adding friend expenses."}
+            </p>
+          </div>
+        ) : (
             <div>
               {friends.map((friend, i) => (
                 <Link
@@ -429,7 +430,7 @@ export default async function DashboardPage() {
             </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* PWA install prompt — mobile only, hidden if already using PWA */}
       <InstallPrompt />
