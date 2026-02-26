@@ -10,6 +10,7 @@ import { AuthProvider } from "../lib/auth";
 import { queryClient } from "../lib/queryClient";
 import { fontAssets } from "../lib/fonts";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { ToastProvider } from "../lib/toast";
 import "../global.css";
 
 // Keep splash visible while fonts load
@@ -33,13 +34,15 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <BottomSheetModalProvider>
-              <StatusBar style="auto" />
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(app)" />
-              </Stack>
-            </BottomSheetModalProvider>
+            <ToastProvider>
+              <BottomSheetModalProvider>
+                <StatusBar style="auto" />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(app)" />
+                </Stack>
+              </BottomSheetModalProvider>
+            </ToastProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

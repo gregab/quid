@@ -50,6 +50,7 @@ export const FadeInDown = makeEnteringAnimation();
 export const FadeInUp = makeEnteringAnimation();
 export const FadeIn = makeEnteringAnimation();
 export const FadeOut = makeEnteringAnimation();
+export const FadeOutUp = makeEnteringAnimation();
 export const SlideInDown = makeEnteringAnimation();
 export const SlideInUp = makeEnteringAnimation();
 

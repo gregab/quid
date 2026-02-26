@@ -6,13 +6,13 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Check } from "lucide-react-native";
 import { useContacts, useCreateFriendExpense } from "../../../lib/queries";
 import { useAuth } from "../../../lib/auth";
+import { useToast } from "../../../lib/toast";
 import { Button } from "../../../components/ui/Button";
 import { Input } from "../../../components/ui/Input";
 import {
@@ -26,6 +26,8 @@ export default function AddFriendExpenseScreen() {
   const { user } = useAuth();
   const { data: contacts } = useContacts();
   const createFriendExpense = useCreateFriendExpense();
+
+  const { showToast } = useToast();
 
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(
     new Set(),
@@ -66,22 +68,22 @@ export default function AddFriendExpenseScreen() {
   const handleSubmit = async () => {
     const friendIds = Array.from(selectedFriends);
     if (friendIds.length === 0) {
-      Alert.alert("Error", "Select at least one friend.");
+      showToast({ message: "Select at least one friend.", type: "error" });
       return;
     }
 
     const trimmedDesc = description.trim();
     if (!trimmedDesc) {
-      Alert.alert("Error", "Description is required.");
+      showToast({ message: "Description is required.", type: "error" });
       return;
     }
 
     if (amountCents <= 0) {
-      Alert.alert("Error", "Enter a valid amount.");
+      showToast({ message: "Enter a valid amount.", type: "error" });
       return;
     }
     if (amountCents > MAX_AMOUNT_CENTS) {
-      Alert.alert("Error", "Amount is too large.");
+      showToast({ message: "Amount is too large.", type: "error" });
       return;
     }
 
@@ -95,10 +97,10 @@ export default function AddFriendExpenseScreen() {
       });
       router.back();
     } catch (err) {
-      Alert.alert(
-        "Error",
-        err instanceof Error ? err.message : "Failed to add expense.",
-      );
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to add expense.",
+        type: "error",
+      });
     }
   };
 

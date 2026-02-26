@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Trash2, Pencil, Repeat } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../../lib/auth";
+import { useToast } from "../../../../../lib/toast";
 import {
   useGroupDetail,
   useGroupExpenses,
@@ -49,6 +50,8 @@ export default function ExpenseDetailScreen() {
   const { data: expenses, isLoading } = useGroupExpenses(id!);
   const updateExpense = useUpdateExpense(id!);
   const deleteExpense = useDeleteExpense(id!);
+
+  const { showToast } = useToast();
 
   const [mode, setMode] = useState<Mode>("view");
   const [editDescription, setEditDescription] = useState("");
@@ -156,7 +159,10 @@ export default function ExpenseDetailScreen() {
               void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               router.back();
             } catch (err) {
-              Alert.alert("Error", err instanceof Error ? err.message : "Failed to delete.");
+              showToast({
+                message: err instanceof Error ? err.message : "Failed to delete.",
+                type: "error",
+              });
             }
           },
         },

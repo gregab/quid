@@ -22,6 +22,7 @@ import {
   Trash2,
 } from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
+import { useToast } from "../../../lib/toast";
 import {
   useCurrentUser,
   useUpdateProfile,
@@ -88,6 +89,8 @@ export default function SettingsScreen() {
 
   const colorScheme = useColorScheme();
 
+  const { showToast } = useToast();
+
   const [editingName, setEditingName] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
@@ -150,12 +153,12 @@ export default function SettingsScreen() {
                     await deleteAccount.mutateAsync();
                     router.replace("/(auth)/login");
                   } catch (err) {
-                    Alert.alert(
-                      "Error",
-                      err instanceof Error
+                    showToast({
+                      message: err instanceof Error
                         ? err.message
                         : "Failed to delete account.",
-                    );
+                      type: "error",
+                    });
                   }
                 },
               },
@@ -192,7 +195,7 @@ export default function SettingsScreen() {
           <View className="mb-6 items-center">
             <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
               <Text className="text-3xl">
-                {profile?.emoji ?? "🐦"}
+                {profile?.defaultEmoji ?? "🐦"}
               </Text>
             </View>
             <Text className="text-lg font-bold text-stone-900 dark:text-white">

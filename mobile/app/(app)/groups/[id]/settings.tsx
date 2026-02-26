@@ -13,6 +13,7 @@ import {
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../lib/auth";
+import { useToast } from "../../../../lib/toast";
 import {
   useGroupDetail,
   useGroupExpenses,
@@ -72,6 +73,8 @@ export default function GroupSettingsScreen() {
   const { data: expenses } = useGroupExpenses(id!);
   const leaveGroup = useLeaveGroup(id!);
 
+  const { showToast } = useToast();
+
   const [leaving, setLeaving] = useState(false);
 
   const outstandingCents = useMemo(() => {
@@ -103,10 +106,10 @@ export default function GroupSettingsScreen() {
 
   const handleLeave = () => {
     if (outstandingCents > 0) {
-      Alert.alert(
-        "Outstanding balance",
-        `You owe ${formatCents(outstandingCents)} in this group. Please settle up before leaving.`,
-      );
+      showToast({
+        message: `You owe ${formatCents(outstandingCents)} in this group. Please settle up before leaving.`,
+        type: "info",
+      });
       return;
     }
 
@@ -132,12 +135,12 @@ export default function GroupSettingsScreen() {
               router.replace("/(app)/(dashboard)");
             } catch (err) {
               setLeaving(false);
-              Alert.alert(
-                "Error",
-                err instanceof Error
+              showToast({
+                message: err instanceof Error
                   ? err.message
                   : "Failed to leave group.",
-              );
+                type: "error",
+              });
             }
           },
         },
