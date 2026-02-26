@@ -753,7 +753,7 @@ These features extend the core expense-splitting functionality:
 
 | Feature | Key files | Notes |
 |---------|-----------|-------|
-| **Recurring expenses** | `RecurringExpense` table, `api/cron/process-recurring/`, `api/groups/[id]/recurring/` | Weekly/monthly/yearly auto-creation via cron |
+| **Recurring expenses** | `RecurringExpense` table, `api/cron/process-recurring/`, `api/groups/[id]/recurring/`, `mobile/app/(app)/groups/[id]/recurring.tsx`, `mobile/lib/queries/recurring.ts` | Weekly/monthly/yearly auto-creation via cron; mobile: view + stop |
 | **Group settings** | `GroupSettingsButton.tsx`, `GroupSettingsModal.tsx`, `api/groups/[id]/settings/` | Rename group, upload custom banner image |
 | **Profile pictures** | `SettingsClient.tsx`, `api/account/profile-picture/`, `lib/compressImage.ts` | Client-side compression → Supabase storage |
 | **Group patterns** | `lib/groupPattern.ts`, `GroupThumbnail.tsx` | Deterministic SVG thumbnails + banners from `patternSeed` |
@@ -815,7 +815,7 @@ The web app routes mutations through Next.js API routes (`fetch('/api/groups/...
 
 All data fetching uses TanStack Query hooks in `mobile/lib/queries/`:
 - **Query key factory** (`keys.ts`): Centralized keys like `groupKeys.all`, `groupKeys.expenses(id)` for consistent cache invalidation
-- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, etc.
+- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, `useRecurringExpenses(id)`, `useStopRecurringExpense(id)`, etc.
 - **Mutations** invalidate relevant query keys on success (e.g., creating an expense invalidates `groupKeys.expenses(id)` and `groupKeys.all`)
 - **Shared imports**: `mobile/lib/queries/shared.ts` re-exports from `@aviary/shared` — single seam for all shared logic imports
 
