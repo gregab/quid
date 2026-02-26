@@ -4,25 +4,43 @@
 
 AVIARY_ROOT="${AVIARY_ROOT:-$HOME/workspace/aviary}"
 
-# Short wordlist for auto-naming workers
-_WORKER_NAMES=(alpha bravo charlie delta echo foxtrot golf hotel)
-_WORKER_INDEX=0
-
-# Launch a worker Claude that waits for tasks.
-# Usage: worker [name]
-# Examples:
-#   worker           → auto-named "alpha", "bravo", etc.
-#   worker sparrow   → named "sparrow"
-worker() {
-  local name="${1:-${_WORKER_NAMES[$_WORKER_INDEX]}}"
-  _WORKER_INDEX=$(( (_WORKER_INDEX + 1) % ${#_WORKER_NAMES[@]} ))
-
+# Promote the latest ready Vercel preview deployment to production.
+# Usage: deploy
+deploy() {
   cd "$AVIARY_ROOT" || return 1
 
-  echo "Starting worker '$name'..."
+  echo "Finding latest preview deployment..."
+  local url
+  url=$(vercel ls 2>/dev/null | awk '$5 == "Ready" && $6 == "Preview" { print $3; exit }')
+
+  if [[ -z "$url" ]]; then
+    echo "No ready preview deployment found."
+    echo "Check 'vercel ls' — the latest build may still be in progress or errored."
+    return 1
+  fi
+
+  echo ""
+  echo "  Preview: $url"
+  echo "  Target:  https://aviary.gregbigelow.com"
+  echo ""
+  echo -n "Promote to production? [y/N] "
+  read -r confirm
+  if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    vercel promote "$url"
+  else
+    echo "Aborted."
+  fi
+}
+
+# Launch a worker Claude that waits for tasks.
+# Usage: worker
+worker() {
+  cd "$AVIARY_ROOT" || return 1
+
+  echo "Starting worker..."
 
   claude \
     --append-system-prompt "$(cat "$AVIARY_ROOT/.claude/prompts/worker.md")" \
     --permission-mode acceptEdits \
-    "You are worker '$name'. Say hello and that you're ready for a task."
+    "Welcome to the team! We're glad you're here. Ready for a task whenever you are."
 }
