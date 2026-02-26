@@ -5,6 +5,12 @@ module.exports = function (api) {
       ["babel-preset-expo", { jsxImportSource: "nativewind" }],
       "nativewind/babel",
     ],
-    plugins: ["react-native-reanimated/plugin"],
+    plugins: [
+      // Explicitly register the expo-router babel plugin because babel-preset-expo's
+      // auto-detection (hasModule('expo-router')) fails in the monorepo — babel-preset-expo
+      // is hoisted to root node_modules/ but expo-router is in mobile/node_modules/.
+      require("babel-preset-expo/build/expo-router-plugin").expoRouterBabelPlugin,
+      "react-native-reanimated/plugin",
+    ],
   };
 };
