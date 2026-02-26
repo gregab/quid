@@ -280,7 +280,7 @@ export default async function DashboardPage() {
         <div className="mb-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Friends</h2>
-            <DashboardAddExpenseForm currentUserId={user.id} contacts={contacts} />
+            <DashboardAddExpenseForm currentUserId={user.id} currentUserDisplayName={displayName} contacts={contacts} />
           </div>
         </div>
 

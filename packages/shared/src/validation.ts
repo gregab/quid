@@ -57,6 +57,8 @@ export const createFriendExpenseSchema = z.object({
   amountCents,
   date: dateString,
   paidById: z.string().uuid().optional(),
+  splitType: z.enum(["equal", "custom"]).optional(),
+  customSplits: customSplits.optional(),
 });
 
 // ── Group schemas ──────────────────────────────────────────────────

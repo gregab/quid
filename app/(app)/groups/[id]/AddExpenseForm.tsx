@@ -11,14 +11,27 @@ import { MAX_AMOUNT_CENTS, MAX_AMOUNT_DOLLARS, formatAmountDisplay, stripAmountF
 import { percentagesToCents, centsToPercentages } from "@/lib/percentageSplit";
 import { MAX_EXPENSE_DESCRIPTION } from "@/lib/constants";
 
+/** Validated form data passed to onCustomSubmit. */
+export interface ExpenseSubmitData {
+  description: string;
+  amountCents: number;
+  date: string;
+  paidById: string;
+  participantIds: string[];
+  splitType: "equal" | "custom";
+  customSplits?: Array<{ userId: string; amountCents: number }>;
+  recurring?: { frequency: "weekly" | "monthly" | "yearly" };
+}
+
 interface AddExpenseFormProps {
-  groupId: string;
+  groupId?: string;
   currentUserId: string;
   currentUserDisplayName: string;
   members: Member[];
-  onOptimisticAdd: (expense: ExpenseRow) => void;
-  onSettled: (pendingId?: string, realId?: string) => void;
-  onOptimisticActivity: (log: ActivityLog) => void;
+  onOptimisticAdd?: (expense: ExpenseRow) => void;
+  onSettled?: (pendingId?: string, realId?: string) => void;
+  onOptimisticActivity?: (log: ActivityLog) => void;
+  onCustomSubmit?: (data: ExpenseSubmitData) => Promise<void>;
   renderTrigger?: (props: { onClick: () => void; loading: boolean }) => React.ReactNode;
 }
 
@@ -125,6 +138,7 @@ export function AddExpenseForm({
   onOptimisticAdd,
   onSettled,
   onOptimisticActivity,
+  onCustomSubmit,
   renderTrigger,
 }: AddExpenseFormProps) {
   const allMemberIds = members.map((m) => m.userId);
@@ -405,16 +419,48 @@ export function AddExpenseForm({
     const submittedSplitType = resolvedSplitType;
     const submittedCustomAmounts = resolvedCustomAmounts;
 
+    const buildCustomSplits = () =>
+      submittedParticipantIds.map((id) => ({
+        userId: id,
+        amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
+      }));
+
+    // ── Custom submit path (used by dashboard friend expenses) ──
+    if (onCustomSubmit) {
+      const submitData: ExpenseSubmitData = {
+        description: submittedDescription,
+        amountCents,
+        date: submittedDate,
+        paidById: submittedPaidByUserId,
+        participantIds: submittedParticipantIds,
+        splitType: submittedSplitType,
+      };
+      if (submittedSplitType === "custom") {
+        submitData.customSplits = buildCustomSplits();
+      }
+      if (recurring) {
+        submitData.recurring = { frequency: recurringFrequency };
+      }
+
+      setOpen(false);
+      resetForm();
+      setLoading(true);
+      try {
+        await onCustomSubmit(submitData);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Default path: group expense with optimistic UI ──
     const paidByMember = members.find((m) => m.userId === submittedPaidByUserId);
     const paidByDisplayName = paidByMember?.displayName ?? currentUserDisplayName;
 
     // Build splits for optimistic row
     const optimisticSplits =
       submittedSplitType === "custom"
-        ? submittedParticipantIds.map((id) => ({
-            userId: id,
-            amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
-          }))
+        ? buildCustomSplits()
         : splitAmount(amountCents, submittedParticipantIds.length).map((amt, i) => ({
             userId: submittedParticipantIds[i]!,
             amountCents: amt,
@@ -426,7 +472,7 @@ export function AddExpenseForm({
 
     // Add optimistic expense to the list
     const pendingId = `pending-${Date.now()}`;
-    onOptimisticAdd({
+    onOptimisticAdd?.({
       id: pendingId,
       description: submittedDescription,
       amountCents,
@@ -442,7 +488,7 @@ export function AddExpenseForm({
     });
 
     // Add optimistic activity log
-    onOptimisticActivity({
+    onOptimisticActivity?.({
       id: `activity-${pendingId}`,
       action: "expense_added",
       payload: { description: submittedDescription, amountCents, paidByDisplayName },
@@ -462,10 +508,7 @@ export function AddExpenseForm({
       splitType: submittedSplitType,
     };
     if (submittedSplitType === "custom") {
-      body.customSplits = submittedParticipantIds.map((id) => ({
-        userId: id,
-        amountCents: Math.round(parseFloat(submittedCustomAmounts.get(id) ?? "0") * 100),
-      }));
+      body.customSplits = buildCustomSplits();
     }
     if (recurring) {
       body.recurring = { frequency: recurringFrequency };
@@ -486,7 +529,7 @@ export function AddExpenseForm({
       const json = await res.json();
       realId = json?.data?.id;
     } catch { /* non-critical — refresh will reconcile anyway */ }
-    onSettled(pendingId, realId);
+    onSettled?.(pendingId, realId);
   }
 
   function resetForm() {

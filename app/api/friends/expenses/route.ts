@@ -23,17 +23,23 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { friendIds, description, amountCents, date, paidById: rawPaidById } = parsed.data;
+  const {
+    friendIds,
+    description,
+    amountCents,
+    date,
+    paidById: rawPaidById,
+    splitType: rawSplitType,
+    customSplits,
+  } = parsed.data;
 
-  // Validate paidById: must be current user, or (when exactly 1 friend) that friend
+  // Validate paidById: must be current user or a selected friend
   const paidById = rawPaidById ?? user.id;
-  if (paidById !== user.id) {
-    if (friendIds.length !== 1 || paidById !== friendIds[0]) {
-      return NextResponse.json(
-        { data: null, error: "Invalid payer — must be you or the selected friend (when only 1 friend)" },
-        { status: 400 },
-      );
-    }
+  if (paidById !== user.id && !friendIds.includes(paidById)) {
+    return NextResponse.json(
+      { data: null, error: "Invalid payer — must be you or a selected friend" },
+      { status: 400 },
+    );
   }
 
   // Cannot add yourself as a friend
@@ -42,6 +48,28 @@ export async function POST(request: NextRequest) {
       { data: null, error: "Cannot add an expense with yourself" },
       { status: 400 },
     );
+  }
+
+  // Build a per-user split map from customSplits or equal split
+  const allParticipantIds = [user.id, ...friendIds];
+  const splitMap = new Map<string, number>();
+
+  if (rawSplitType === "custom" && customSplits) {
+    // Validate custom splits sum to amountCents
+    const sum = customSplits.reduce((s, cs) => s + cs.amountCents, 0);
+    if (sum !== amountCents) {
+      return NextResponse.json(
+        { data: null, error: `Custom splits must sum to ${amountCents} cents, got ${sum}` },
+        { status: 400 },
+      );
+    }
+    for (const cs of customSplits) {
+      splitMap.set(cs.userId, cs.amountCents);
+    }
+  } else {
+    // Equal split among all participants
+    const shares = splitAmount(amountCents, allParticipantIds.length);
+    allParticipantIds.forEach((id, i) => splitMap.set(id, shares[i]!));
   }
 
   // Fetch current user's display name for activity log
@@ -54,14 +82,9 @@ export async function POST(request: NextRequest) {
 
   const friendGroupIds: string[] = [];
 
-  for (let i = 0; i < friendIds.length; i++) {
-    const friendId = friendIds[i]!;
-
-    // Each friend-group expense is between 2 people: you + this friend.
-    // Split the full amount equally between the pair.
-    const pairShares = splitAmount(amountCents, 2);
-    const myShare = pairShares[0]!;
-    const friendShare = pairShares[1]!;
+  for (const friendId of friendIds) {
+    const myShare = splitMap.get(user.id) ?? 0;
+    const friendShare = splitMap.get(friendId) ?? 0;
 
     // Get or create the friend group
     const { data: groupId, error: groupError } = await supabase.rpc(
