@@ -10,20 +10,7 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-**`origin/main` is the canonical source of truth.** All work — interactive or autonomous — ultimately lands on `origin/main`. Local `main` is just a local cache; don't treat it as authoritative.
-
-There are two modes depending on how Claude is being used:
-
-### Interactive mode (default — user is present)
-Commit directly to local `main`, then push to `origin/main` when ready.
-1. Make changes and write tests
-2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-3. Commit to local `main`
-4. `git push origin main` triggers a Vercel **preview deployment** automatically
-5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
-
-### Worker mode (autonomous — user is not watching)
-Workers branch from `origin/main`, implement, get subagent review, then push commits directly back to `origin/main`. No PRs. See `~/.claude/prompts/worker.md` for the full loop.
+**`origin/main` is the canonical source of truth.** Always start from `origin/main` and push approved work back to `origin/main` when done. `git push origin main` triggers a Vercel preview deployment. The user controls production promotion: `deploy` (shell shortcut) or `vercel --prod`.
 
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
