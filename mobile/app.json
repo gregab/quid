@@ -3,6 +3,7 @@
     "name": "Aviary",
     "slug": "aviary",
     "owner": "sive-natura",
+    "description": "Split expenses with friends and groups. Track who owes what and settle up easily.",
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -21,10 +22,12 @@
     },
     "ios": {
       "bundleIdentifier": "com.gregbigelow.aviary",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
       "package": "com.gregbigelow.aviary",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#faf9f7"
       }
