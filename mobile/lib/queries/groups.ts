@@ -179,17 +179,27 @@ export function useGroupExpenses(groupId: string) {
   });
 }
 
-/** Create a new group. */
+/** Create a new group, optionally setting an emoji after creation. */
 export function useCreateGroup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async ({ name, emoji }: { name: string; emoji?: string }) => {
       const { data, error } = await supabase.rpc("create_group", {
         _name: name,
       });
       if (error) throw error;
-      return data as string; // returns group ID
+      const groupId = data as string;
+
+      // Set emoji if provided (RLS allows members to update their group)
+      if (emoji) {
+        await supabase
+          .from("Group")
+          .update({ emoji })
+          .eq("id", groupId);
+      }
+
+      return groupId;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: groupKeys.all });

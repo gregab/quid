@@ -4,7 +4,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../lib/auth";
 import { useInvitePreview, useJoinGroup } from "../../../lib/queries";
-import { Card } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { LoadingSpinner } from "../../../components/ui/LoadingSpinner";
 import { useState, useEffect } from "react";
@@ -65,15 +64,15 @@ export default function InviteScreen() {
   if (previewError || !preview) {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-        <View className="flex-1 items-center justify-center px-4">
-          <Text className="mb-2 text-4xl">🐦</Text>
-          <Text className="text-lg font-semibold text-stone-800 dark:text-stone-200">
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="mb-3 text-5xl">🐦</Text>
+          <Text className="text-lg font-bold text-stone-800 dark:text-stone-200">
             Invalid invite link
           </Text>
-          <Text className="mt-2 text-center text-sm text-stone-500 dark:text-stone-400">
+          <Text className="mt-2 text-center text-sm leading-relaxed text-stone-500 dark:text-stone-400">
             This invite link may have expired or is invalid.
           </Text>
-          <View className="mt-6">
+          <View className="mt-6 w-full">
             <Button onPress={() => router.replace("/(app)/(dashboard)")}>
               Go to dashboard
             </Button>
@@ -85,42 +84,50 @@ export default function InviteScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-      <View className="flex-1 items-center justify-center px-4">
-        <Card className="w-full max-w-sm overflow-hidden">
-          {/* Amber accent header */}
-          <View className="items-center bg-amber-600 px-6 pb-6 pt-8 dark:bg-amber-700">
+      <View className="flex-1 items-center justify-center px-6">
+        {/* Amber header band */}
+        <View className="w-full overflow-hidden rounded-2xl">
+          <View className="items-center bg-amber-600 px-6 pb-8 pt-10 dark:bg-amber-700">
             <Text className="font-serif-logo text-xl text-white/80">
               Aviary
             </Text>
-            <Text className="mt-3 text-4xl">🐦</Text>
+            <Text className="mt-4 text-5xl">🐦</Text>
+            <Text className="mt-3 text-sm font-medium text-amber-100">
+              You've been invited to join
+            </Text>
           </View>
 
-          <View className="items-center px-6 pb-8 pt-5">
-            <Text className="text-xl font-bold text-stone-900 dark:text-white">
+          {/* Content area */}
+          <View className="items-center rounded-b-2xl bg-white px-6 pb-8 pt-6 dark:bg-stone-900">
+            <Text className="text-2xl font-bold text-stone-900 dark:text-white">
               {preview.name}
             </Text>
-            <Text className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+            <Text className="mt-1.5 text-sm text-stone-500 dark:text-stone-400">
               {preview.memberCount}{" "}
               {preview.memberCount === 1 ? "member" : "members"}
             </Text>
 
-            <Text className="mt-4 text-center text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-              You've been invited to join this group on Aviary.
-            </Text>
-
             {error && (
-              <Text className="mt-3 text-sm text-red-600 dark:text-red-400">
+              <Text className="mt-4 text-sm text-red-600 dark:text-red-400">
                 {error}
               </Text>
             )}
 
             <View className="mt-6 w-full">
-              <Button onPress={handleJoin} loading={joinGroup.isPending}>
+              <Button
+                onPress={handleJoin}
+                loading={joinGroup.isPending}
+                size="lg"
+              >
                 Join {preview.name}
               </Button>
             </View>
+
+            <Text className="mt-4 text-center text-xs leading-relaxed text-stone-400 dark:text-stone-500">
+              By joining, you'll be able to share expenses with this group.
+            </Text>
           </View>
-        </Card>
+        </View>
       </View>
     </SafeAreaView>
   );

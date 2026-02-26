@@ -220,7 +220,7 @@ describe("useCreateGroup", () => {
       wrapper: createWrapper(queryClient),
     });
 
-    await result.current.mutateAsync("My Group");
+    await result.current.mutateAsync({ name: "My Group" });
 
     expect(mockRpc).toHaveBeenCalledWith("create_group", { _name: "My Group" });
     expect(invalidateSpy).toHaveBeenCalledWith({
@@ -239,7 +239,7 @@ describe("useCreateGroup", () => {
       wrapper: createWrapper(),
     });
 
-    await expect(result.current.mutateAsync("x".repeat(100))).rejects.toEqual({
+    await expect(result.current.mutateAsync({ name: "x".repeat(100) })).rejects.toEqual({
       message: "Group name too long",
     });
   });

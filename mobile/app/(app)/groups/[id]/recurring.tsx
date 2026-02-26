@@ -1,15 +1,17 @@
-import { View, Text, Pressable, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, Square } from "lucide-react-native";
+import { Square, Plus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import {
   useRecurringExpenses,
   useStopRecurringExpense,
 } from "../../../../lib/queries";
 import { Card } from "../../../../components/ui/Card";
+import { ScreenHeader } from "../../../../components/ui/ScreenHeader";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
+import { Button } from "../../../../components/ui/Button";
 import { formatCents } from "../../../../lib/queries/shared";
 import type { RecurringExpenseRow } from "../../../../lib/queries/recurring";
 
@@ -17,6 +19,21 @@ const FREQUENCY_LABELS: Record<string, string> = {
   weekly: "Weekly",
   monthly: "Monthly",
   yearly: "Yearly",
+};
+
+const FREQUENCY_COLORS: Record<string, { bg: string; text: string }> = {
+  weekly: {
+    bg: "bg-sky-100 dark:bg-sky-900/30",
+    text: "text-sky-700 dark:text-sky-300",
+  },
+  monthly: {
+    bg: "bg-amber-100 dark:bg-amber-900/30",
+    text: "text-amber-700 dark:text-amber-300",
+  },
+  yearly: {
+    bg: "bg-violet-100 dark:bg-violet-900/30",
+    text: "text-violet-700 dark:text-violet-300",
+  },
 };
 
 function RecurringExpenseItem({
@@ -43,24 +60,33 @@ function RecurringExpenseItem({
     );
   };
 
+  const freq = FREQUENCY_COLORS[item.frequency] ?? FREQUENCY_COLORS.monthly!;
+
   return (
-    <Card className="mb-3 px-4 py-3">
+    <Card className="mb-3 px-4 py-3.5">
       <View className="flex-row items-start justify-between">
         <View className="min-w-0 flex-1">
-          <Text
-            className="text-sm font-semibold text-stone-900 dark:text-white"
-            numberOfLines={1}
-          >
-            {item.description}
-          </Text>
-          <Text className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
-            {formatCents(item.amountCents)} {FREQUENCY_LABELS[item.frequency] ?? item.frequency}
+          <View className="mb-1.5 flex-row items-center gap-2">
+            <Text
+              className="text-sm font-semibold text-stone-900 dark:text-white"
+              numberOfLines={1}
+            >
+              {item.description}
+            </Text>
+            <View className={`rounded-full px-2 py-0.5 ${freq.bg}`}>
+              <Text className={`text-[10px] font-bold uppercase tracking-wide ${freq.text}`}>
+                {FREQUENCY_LABELS[item.frequency] ?? item.frequency}
+              </Text>
+            </View>
+          </View>
+          <Text className="text-base font-bold text-stone-800 dark:text-stone-100">
+            {formatCents(item.amountCents)}
           </Text>
           <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
             Paid by {item.paidByDisplayName}
           </Text>
-          <Text className="mt-1 text-xs text-stone-400 dark:text-stone-500">
-            Next due: {item.nextDueDate}
+          <Text className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+            Next due {item.nextDueDate}
           </Text>
         </View>
         <Pressable
@@ -91,30 +117,15 @@ export default function RecurringExpensesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-      {/* Header */}
-      <View className="flex-row items-center px-4 pt-2 pb-3">
-        <Pressable
-          onPress={() => router.back()}
-          className="flex-row items-center gap-1"
-        >
-          <ChevronLeft size={20} color="#78716c" />
-          <Text className="text-sm text-stone-500">Back</Text>
-        </Pressable>
-      </View>
-
-      <View className="px-4 pb-4">
-        <Text className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">
-          Recurring Expenses
-        </Text>
-        <Text className="mt-1 text-xs text-stone-400 dark:text-stone-500">
-          Active recurring expenses that automatically generate new expenses.
-        </Text>
-      </View>
+      <ScreenHeader
+        title="Recurring Expenses"
+        onBack={() => router.back()}
+      />
 
       {isLoading ? (
         <LoadingSpinner text="Loading recurring expenses..." />
       ) : (recurring ?? []).length === 0 ? (
-        <View className="px-4">
+        <View className="flex-1 px-4 pt-6">
           <EmptyState
             icon={<Text className="text-2xl">🔄</Text>}
             title="No recurring expenses"
@@ -122,7 +133,9 @@ export default function RecurringExpensesScreen() {
           />
         </View>
       ) : (
-        <View className="px-4">
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        >
           {(recurring ?? []).map((item) => (
             <RecurringExpenseItem
               key={item.id}
@@ -134,8 +147,23 @@ export default function RecurringExpensesScreen() {
               }
             />
           ))}
-        </View>
+        </ScrollView>
       )}
+
+      {/* Add recurring button */}
+      <View className="absolute bottom-0 left-0 right-0 border-t border-stone-100 bg-[#faf9f7] px-4 pb-10 pt-3 dark:border-stone-800/60 dark:bg-[#0c0a09]">
+        <Button
+          onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
+          size="lg"
+        >
+          <View className="flex-row items-center gap-2">
+            <Plus size={18} color="#fff" />
+            <Text className="text-base font-semibold text-white">
+              Add recurring expense
+            </Text>
+          </View>
+        </Button>
+      </View>
     </SafeAreaView>
   );
 }
