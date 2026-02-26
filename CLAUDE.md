@@ -10,17 +10,25 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-All changes go through a PR — never commit directly to `main` or `production`.
+There are two modes depending on how Claude is being used:
 
-**Standard loop:**
+### Interactive mode (default — user is present)
+Commit directly to `main`. No PR needed — the user is watching and in control.
+1. Make changes and write tests
+2. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
+3. Commit to `main`
+4. Pushing `main` triggers a Vercel **preview deployment** automatically
+5. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
+
+### Worker mode (autonomous — user is not watching)
+Use a branch + PR so automated review catches issues before anything merges.
 1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
 2. Implement the change with tests
 3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
 4. Push the branch and open a PR with `gh pr create`
 5. GitHub Actions runs an automated Claude review — wait for `APPROVED` or `CHANGES_REQUESTED`
 6. On approval: merge with `gh pr merge <number> --squash --delete-branch`
-7. Merging to `main` triggers a Vercel **preview deployment** automatically
-8. The user promotes to production when satisfied: `vercel promote <preview-url>` or `vercel --prod`
+7. Never push directly to `production` — the user controls production promotion
 
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
@@ -30,7 +38,7 @@ All changes go through a PR — never commit directly to `main` or `production`.
 
 **Bug reports:** Just fix it. Investigate the root cause, write the fix, add tests, verify — zero hand-holding required. Don't ask clarifying questions when the bug is reproducible.
 
-**Before opening a PR:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
+**Before committing or opening a PR:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
 
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
