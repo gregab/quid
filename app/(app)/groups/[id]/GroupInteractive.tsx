@@ -111,6 +111,7 @@ interface GroupInteractiveProps {
   members: Member[];
   allUserNames: Record<string, string>;
   inviteToken: string;
+  isFriendGroup?: boolean;
 }
 
 
@@ -125,6 +126,7 @@ export function GroupInteractive({
   members,
   allUserNames,
   inviteToken,
+  isFriendGroup,
 }: GroupInteractiveProps) {
   const { logs, addOptimisticLog, hasMore, isLoadingMore, loadMore } =
     useActivityLogs(initialLogs, groupId, hasMoreLogs);
@@ -265,6 +267,7 @@ export function GroupInteractive({
         onCelebration={handleCelebration}
         onRefresh={handleRefresh}
         refreshing={refreshing}
+        isFriendGroup={isFriendGroup}
       />
       <ActivityFeed
         logs={logs}

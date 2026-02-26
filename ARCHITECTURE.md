@@ -208,6 +208,7 @@ Group
   inviteToken   String    @default(uuid)   // shareable invite link token
   patternSeed   Int       @default(random) // seed for deterministic SVG pattern generation
   bannerUrl     String?                    // user-uploaded group banner image
+  isFriendGroup Boolean   @default(false)  // true for 2-person friend groups (created via get_or_create_friend_group)
 
 GroupMember
   id            String    @id @default(uuid)
@@ -334,6 +335,9 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
 | `create_payment(...)` | Creates payment expense + single split for recipient + activity log | `POST /api/groups/[id]/payments` |
 | `add_member_by_email(_group_id, _email)` | Looks up user by email, adds as group member. Atomic: auth check → user lookup → duplicate check → insert. Returns `{ userId, displayName, groupId, joinedAt }` | Mobile `add-member.tsx` (direct RPC) |
+| `get_or_create_friend_group(_other_user_id)` | Finds or creates a 2-person friend group (`isFriendGroup=true`) between the caller and another user. Uses `pg_advisory_xact_lock` to prevent duplicate friend groups from concurrent requests. Returns the group ID. | `POST /api/friends/expenses` |
+
+**Note:** `join_group_by_token` now blocks friend groups — attempting to join via invite token returns an error if the group has `isFriendGroup=true`.
 
 Split computation (integer division + remainder distribution) is replicated in PL/pgSQL to match the JS logic exactly.
 
@@ -416,8 +420,14 @@ Submits user feedback.
 ### `POST /api/cron/process-recurring`
 Cron endpoint that auto-creates expenses from active recurring templates whose `nextOccurrence` has passed. Advances `nextOccurrence` after processing.
 
+### `POST /api/friends/expenses`
+Creates expenses across friend groups (fan-out). For each friend, calls `get_or_create_friend_group` to find or create the 2-person friend group, then `create_expense` to add the expense.
+- Body: `{ friendIds: string[], description: string, amountCents: number, date: "YYYY-MM-DD", paidById?: string }`
+- `paidById` defaults to the current user
+- Creates one expense per friend group (one per friend in `friendIds`)
+
 ### `POST /api/invite/[token]/join`
-Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member).
+Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member). Blocked for friend groups (`isFriendGroup=true`).
 - Returns: `{ data: { groupId, alreadyMember }, error: null }`
 
 ## Data Flow
@@ -468,12 +478,22 @@ Pending items render with fade animations. The `isPending` flag prevents user in
 
 **Client-side balance computation:** `GroupInteractive` replicates the server's equal-split formula (`base = floor(amountCents / n)`, remainder distributed 1 cent at a time to first N participants) to derive raw debts from `ExpenseRow[]`, then passes them through `simplifyDebts`. The result is approximate for existing expenses (split order may differ from DB creation order) but corrects to authoritative values after `router.refresh()`.
 
+### Component Hierarchy (Dashboard Page)
+```
+page.tsx (server)                         ← Fetches groups, splits into regular vs friend groups
+  ├─ Regular groups section               ← Standard group cards with balance summaries
+  ├─ Friend groups section                ← Friend group cards (isFriendGroup=true)
+  ├─ CreateGroupButton (client)           ← "Create group" modal
+  └─ DashboardAddExpenseForm (client)     ← Modal: add expense with friends from dashboard;
+                                            selects friends, calls POST /api/friends/expenses
+```
+
 ### Component Hierarchy (Group Detail Page)
 ```
 page.tsx (server)                         ← Fetches all data via Supabase
   ├─ Banner hero                          ← Uploaded image or generated SVG pattern
   ├─ MemberPill (×N)                      ← Colored chips with avatar/emoji + name
-  ├─ CopyInviteLinkButton                 ← Copy/share invite link
+  ├─ CopyInviteLinkButton                 ← Copy/share invite link (hidden for friend groups)
   ├─ GroupInteractive (client)            ← Manages expense, activity, and balance state
   │    ├─ Balances section                ← Client-rendered; recomputes on every expense change
   │    ├─ ExpensesList                    ← Renders expenses with optimistic updates
@@ -483,9 +503,11 @@ page.tsx (server)                         ← Fetches all data via Supabase
   │    │    └─ ExpenseActions (×N)        ← Edit/delete + optimistic activity log
   │    ├─ ActivityFeed                    ← Renders activity log (paginated)
   │    └─ ExportButton                   ← Download group as Excel
-  ├─ GroupSettingsButton → GroupSettingsModal  ← Rename group, change banner
-  └─ LeaveGroupButton (client)            ← Confirmation dialog, DELETE call, redirect
+  ├─ GroupSettingsButton → GroupSettingsModal  ← Rename group, change banner (hidden for friend groups)
+  └─ LeaveGroupButton (client)            ← Confirmation dialog, DELETE call, redirect (hidden for friend groups)
 ```
+
+**Friend group conditional rendering:** When `isFriendGroup=true`, the group detail page hides the settings button, member list, invite link, and leave button — since friend groups are always exactly 2 people and managed automatically.
 
 ### Client-Side fetch Pattern
 All client-side `fetch()` calls use root-relative paths:
@@ -831,6 +853,20 @@ See `mobile/TESTING.md` for the full testing guide. Key points:
 - Expo modules mocked globally in `vitest.setup.ts`
 - Mobile tests run separately: `cd mobile && npm test`
 - Root vitest config excludes `mobile/**` to prevent cross-contamination
+
+## Mobile App (React Native / Expo)
+
+React Native mobile app using Expo SDK 52, Expo Router v4, NativeWind v4, and TanStack Query v5. Calls Supabase directly (no API intermediary). Shares business logic from `@aviary/shared`.
+
+### Friends Feature (Mobile)
+
+| File | Purpose |
+|------|---------|
+| `mobile/app/add-friend-expense.tsx` | Modal screen for adding an expense with friends |
+| `mobile/lib/queries/contacts.ts` | `useContacts` hook — fetches user's friends/contacts |
+| `mobile/lib/queries/friends.ts` | `useCreateFriendExpense` hook — calls `get_or_create_friend_group` + `create_expense` per friend |
+
+**Conditional friend-group rendering:** Mobile group detail screen also conditionally hides settings, members, invite, and leave UI when `isFriendGroup=true`, matching the web behavior.
 
 ## Open Questions
 

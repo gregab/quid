@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
+import { DashboardAddExpenseForm } from "./DashboardAddExpenseForm";
+import type { DashboardContact } from "./DashboardAddExpenseForm";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
+import { formatDisplayName } from "@/lib/formatDisplayName";
 import { GroupThumbnail } from "@/components/GroupThumbnail";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BIRD_FACTS } from "@aviary/shared";
@@ -23,17 +26,21 @@ export default async function DashboardPage() {
     .eq("userId", user.id);
 
   // Sort by group createdAt descending (Supabase doesn't support ordering by joined relation)
-  const groups = (memberships ?? [])
+  const allGroups = (memberships ?? [])
     .map((m) => m.Group!)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  // Split into regular groups and friend groups
+  const regularGroups = allGroups.filter((g) => !g.isFriendGroup);
+  const friendGroupList = allGroups.filter((g) => g.isFriendGroup);
+
   // Fetch member counts per group
   const memberCountMap = new Map<string, number>();
-  if (groups.length > 0) {
+  if (allGroups.length > 0) {
     const { data: allMembers } = await supabase
       .from("GroupMember")
       .select("groupId")
-      .in("groupId", groups.map((g) => g.id));
+      .in("groupId", allGroups.map((g) => g.id));
     for (const m of allMembers ?? []) {
       memberCountMap.set(m.groupId, (memberCountMap.get(m.groupId) ?? 0) + 1);
     }
@@ -42,11 +49,11 @@ export default async function DashboardPage() {
   // Fetch expenses with splits for balance computation
   const balanceMap = new Map<string, number>();
   const groupsWithExpenses = new Set<string>();
-  if (groups.length > 0) {
+  if (allGroups.length > 0) {
     const { data: expenses } = await supabase
       .from("Expense")
       .select("groupId, paidById, ExpenseSplit(userId, amountCents)")
-      .in("groupId", groups.map((g) => g.id));
+      .in("groupId", allGroups.map((g) => g.id));
     if (expenses) {
       // Group expenses by groupId
       const byGroup = new Map<string, Array<{ paidById: string; splits: Array<{ userId: string; amountCents: number }> }>>();
@@ -65,13 +72,72 @@ export default async function DashboardPage() {
     }
   }
 
+  // For friend groups: fetch members to identify the "friend" (the other person)
+  interface FriendInfo {
+    userId: string;
+    displayName: string;
+    avatarUrl: string | null;
+    emoji: string | null;
+    groupId: string;
+    balance: number;
+    hasExpenses: boolean;
+  }
+  const friends: FriendInfo[] = [];
+
+  if (friendGroupList.length > 0) {
+    const { data: friendMembers } = await supabase
+      .from("GroupMember")
+      .select("groupId, userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
+      .in("groupId", friendGroupList.map((g) => g.id));
+
+    for (const fg of friendGroupList) {
+      const members = (friendMembers ?? []).filter((m) => m.groupId === fg.id);
+      const friend = members.find((m) => m.userId !== user.id);
+      if (friend?.User) {
+        friends.push({
+          userId: friend.userId,
+          displayName: friend.User.displayName,
+          avatarUrl: friend.User.profilePictureUrl ?? friend.User.avatarUrl,
+          emoji: friend.User.defaultEmoji,
+          groupId: fg.id,
+          balance: balanceMap.get(fg.id) ?? 0,
+          hasExpenses: groupsWithExpenses.has(fg.id),
+        });
+      }
+    }
+  }
+
+  // Build contacts: all unique users across regular groups (excluding self)
+  const contacts: DashboardContact[] = [];
+  if (regularGroups.length > 0) {
+    const { data: contactMembers } = await supabase
+      .from("GroupMember")
+      .select("userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
+      .in("groupId", regularGroups.map((g) => g.id));
+
+    const seen = new Set<string>();
+    for (const m of contactMembers ?? []) {
+      if (m.userId === user.id || seen.has(m.userId)) continue;
+      seen.add(m.userId);
+      if (m.User) {
+        contacts.push({
+          userId: m.userId,
+          displayName: m.User.displayName,
+          avatarUrl: m.User.profilePictureUrl ?? m.User.avatarUrl,
+          emoji: m.User.defaultEmoji,
+        });
+      }
+    }
+    contacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }
+
   const displayName =
     (user.user_metadata?.display_name as string | undefined) ??
     user.email?.split("@")[0] ??
     "friend";
 
   // Overall balance across all groups (for summary display)
-  const totalBalance = groups.reduce((sum, g) => sum + (balanceMap.get(g.id) ?? 0), 0);
+  const totalBalance = allGroups.reduce((sum, g) => sum + (balanceMap.get(g.id) ?? 0), 0);
   const hasAnyExpenses = groupsWithExpenses.size > 0;
 
   return (
@@ -108,7 +174,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {groups.length === 0 ? (
+        {regularGroups.length === 0 ? (
           <div className="relative overflow-hidden rounded-2xl border border-stone-200/80 bg-gradient-to-br from-amber-50/60 via-stone-50 to-white px-5 py-12 sm:px-8 sm:py-16 text-center dark:border-stone-700/50 dark:from-amber-950/20 dark:via-stone-900/40 dark:to-stone-900/20">
             {/* Decorative background texture */}
             <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")" }} />
@@ -133,7 +199,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div>
-            {groups.map((group, i) => {
+            {regularGroups.map((group, i) => {
               const memberCount = memberCountMap.get(group.id) ?? 0;
               const balance = balanceMap.get(group.id) ?? 0;
               const hasExpenses = groupsWithExpenses.has(group.id);
@@ -143,7 +209,7 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < groups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
+                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < regularGroups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {/* Thumbnail */}
@@ -207,6 +273,97 @@ export default async function DashboardPage() {
             })}
           </div>
         )}
+      </div>
+
+      {/* Friends section */}
+      <div>
+        <div className="mb-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Friends</h2>
+            <DashboardAddExpenseForm currentUserId={user.id} contacts={contacts} />
+          </div>
+        </div>
+
+        {friends.length === 0 ? (
+          <div className="rounded-2xl border border-stone-200/60 bg-stone-50/50 px-5 py-8 text-center dark:border-stone-700/40 dark:bg-stone-900/20">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
+              {contacts.length > 0
+                ? "Add an expense with a friend to start tracking debts individually."
+                : "Join a group with others to start adding friend expenses."}
+            </p>
+          </div>
+        ) : (
+            <div>
+              {friends.map((friend, i) => (
+                <Link
+                  key={friend.groupId}
+                  href={`/groups/${friend.groupId}`}
+                  prefetch={false}
+                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < friends.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  {/* Avatar */}
+                  {friend.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={friend.avatarUrl}
+                      alt=""
+                      className="h-11 w-11 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
+                      <span className="text-lg">{friend.emoji ?? "🐦"}</span>
+                    </div>
+                  )}
+
+                  {/* Name */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base sm:text-[15px] font-semibold text-stone-900 dark:text-white">
+                      {formatDisplayName(friend.displayName)}
+                    </p>
+                  </div>
+
+                  {/* Balance + chevron */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {friend.balance !== 0 && (
+                      <div className="text-right">
+                        <p className={`text-[11px] ${
+                          friend.balance > 0
+                            ? "text-emerald-600/70 dark:text-emerald-400/70"
+                            : "text-rose-600/70 dark:text-rose-400/70"
+                        }`}>
+                          {friend.balance > 0 ? "you are owed" : "you owe"}
+                        </p>
+                        <p className={`text-sm font-semibold ${
+                          friend.balance > 0
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}>
+                          {formatCents(Math.abs(friend.balance))}
+                        </p>
+                      </div>
+                    )}
+                    {friend.balance === 0 && friend.hasExpenses && (
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                          settled
+                        </p>
+                      </div>
+                    )}
+                    <svg
+                      className="h-4 w-4 text-stone-300 dark:text-stone-600 transition-transform duration-150 group-hover:translate-x-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* PWA install prompt — mobile only, hidden if already using PWA */}
