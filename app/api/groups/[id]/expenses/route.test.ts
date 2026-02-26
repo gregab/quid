@@ -64,9 +64,10 @@ describe("POST /api/groups/[id]/expenses — recurring date validation", () => {
     mockRpc.mockResolvedValue({ data: "expense-1", error: null });
   });
 
-  it("rejects recurring expense with date more than 3 months in the past", async () => {
+  it("rejects recurring expense with date more than 1 year in the past", async () => {
     const pastDate = new Date();
-    pastDate.setMonth(pastDate.getMonth() - 4);
+    pastDate.setFullYear(pastDate.getFullYear() - 1);
+    pastDate.setMonth(pastDate.getMonth() - 1); // 13 months ago
     const dateStr = pastDate.toISOString().split("T")[0];
 
     const res = await POST(makeRequest({
@@ -78,12 +79,12 @@ describe("POST /api/groups/[id]/expenses — recurring date validation", () => {
 
     expect(res.status).toBe(400);
     const json = (await res.json()) as { error: string };
-    expect(json.error).toContain("3 months in the past");
+    expect(json.error).toContain("1 year in the past");
   });
 
-  it("allows recurring expense with recent past date", async () => {
+  it("allows recurring expense with date within the past year", async () => {
     const recentDate = new Date();
-    recentDate.setMonth(recentDate.getMonth() - 1);
+    recentDate.setMonth(recentDate.getMonth() - 6);
     const dateStr = recentDate.toISOString().split("T")[0];
 
     const res = await POST(makeRequest({

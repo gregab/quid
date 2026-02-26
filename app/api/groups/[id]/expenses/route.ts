@@ -110,18 +110,20 @@ export async function POST(
   let expenseId: string | null = null;
 
   if (recurring) {
-    // Reject recurring expenses with dates too far in the past (would generate massive backfill)
+    // Reject recurring expenses with dates too far in the past.
+    // The RPC caps at 52 backfill instances, but we also reject dates > 1 year
+    // in the past as a UI-level sanity check.
     const expenseDate = new Date(date + "T00:00:00");
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    if (expenseDate < threeMonthsAgo) {
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    if (expenseDate < oneYearAgo) {
       return NextResponse.json(
-        { data: null, error: "Recurring expenses cannot start more than 3 months in the past" },
+        { data: null, error: "Recurring expenses cannot start more than 1 year in the past" },
         { status: 400 }
       );
     }
 
-    // Create a recurring expense template + first instance
+    // Create a recurring expense template + first instance (backfills past-due automatically)
     const { data, error } = await supabase.rpc("create_recurring_expense", {
       _group_id: groupId,
       _description: description,
