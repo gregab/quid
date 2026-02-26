@@ -52,7 +52,7 @@ export const createPaymentSchema = z.object({
 // ── Friend expense schema ──────────────────────────────────────────
 
 export const createFriendExpenseSchema = z.object({
-  friendIds: z.array(z.string().uuid()).min(1, "Select at least one friend"),
+  friendIds: z.array(z.string().uuid()).min(1, "Select a friend").max(1, "Only one friend per expense"),
   description: z.string().min(1).max(MAX_EXPENSE_DESCRIPTION),
   amountCents,
   date: dateString,

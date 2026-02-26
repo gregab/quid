@@ -29,39 +29,16 @@ export function DashboardAddExpenseForm({
 }: DashboardAddExpenseFormProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<"closed" | "picking" | "form">("closed");
-  const [selectedFriends, setSelectedFriends] = useState<DashboardContact[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedFriend, setSelectedFriend] = useState<DashboardContact | null>(null);
 
-  // Typeahead state
+  // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const selectedIds = new Set(selectedFriends.map((f) => f.userId));
   const filteredContacts = contacts.filter(
-    (c) =>
-      !selectedIds.has(c.userId) &&
-      (!searchQuery.trim() || c.displayName.toLowerCase().includes(searchQuery.toLowerCase()))
+    (c) => !searchQuery.trim() || c.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        searchInputRef.current &&
-        !searchInputRef.current.contains(e.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [dropdownOpen]);
 
   useEffect(() => {
     setHighlightedIndex(0);
@@ -69,11 +46,9 @@ export function DashboardAddExpenseForm({
 
   const resetAll = useCallback(() => {
     setPhase("closed");
-    setSelectedFriends([]);
+    setSelectedFriend(null);
     setSearchQuery("");
-    setDropdownOpen(false);
     setHighlightedIndex(0);
-    setError(null);
   }, []);
 
   const handleOpen = useCallback(() => {
@@ -81,27 +56,15 @@ export function DashboardAddExpenseForm({
     setPhase("picking");
   }, [resetAll]);
 
-  const addFriend = useCallback((contact: DashboardContact) => {
-    setSelectedFriends((prev) => [...prev, contact]);
+  const selectFriend = useCallback((contact: DashboardContact) => {
+    setSelectedFriend(contact);
     setSearchQuery("");
-    setDropdownOpen(false);
-    // Re-focus search input after adding
-    setTimeout(() => searchInputRef.current?.focus(), 0);
-  }, []);
-
-  const removeFriend = useCallback((userId: string) => {
-    setSelectedFriends((prev) => prev.filter((f) => f.userId !== userId));
+    setPhase("form");
   }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Backspace" && !searchQuery && selectedFriends.length > 0) {
-        // Remove last chip
-        setSelectedFriends((prev) => prev.slice(0, -1));
-        return;
-      }
-
-      if (!dropdownOpen || filteredContacts.length === 0) return;
+      if (filteredContacts.length === 0) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -112,32 +75,23 @@ export function DashboardAddExpenseForm({
       } else if (e.key === "Enter") {
         e.preventDefault();
         const contact = filteredContacts[highlightedIndex];
-        if (contact) addFriend(contact);
+        if (contact) selectFriend(contact);
       } else if (e.key === "Escape") {
-        setDropdownOpen(false);
+        resetAll();
       }
     },
-    [dropdownOpen, filteredContacts, highlightedIndex, addFriend, searchQuery, selectedFriends.length]
+    [filteredContacts, highlightedIndex, selectFriend, resetAll]
   );
-
-  const proceedToForm = useCallback(() => {
-    if (selectedFriends.length === 0) {
-      setError("Select at least one friend.");
-      return;
-    }
-    setError(null);
-    setPhase("form");
-  }, [selectedFriends]);
 
   const handleCustomSubmit = useCallback(
     async (data: ExpenseSubmitData) => {
-      const friendIds = selectedFriends.map((f) => f.userId);
+      if (!selectedFriend) return;
 
       const res = await fetch("/api/friends/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          friendIds,
+          friendIds: [selectedFriend.userId],
           description: data.description,
           amountCents: data.amountCents,
           date: data.date,
@@ -155,19 +109,21 @@ export function DashboardAddExpenseForm({
       resetAll();
       router.refresh();
     },
-    [selectedFriends, currentUserId, resetAll, router]
+    [selectedFriend, currentUserId, resetAll, router]
   );
 
-  // Build Member[] for AddExpenseForm from selected friends + current user
-  const members: Member[] = [
-    { userId: currentUserId, displayName: currentUserDisplayName },
-    ...selectedFriends.map((f) => ({
-      userId: f.userId,
-      displayName: f.displayName,
-      emoji: f.emoji,
-      avatarUrl: f.avatarUrl,
-    })),
-  ];
+  // Build Member[] for AddExpenseForm
+  const members: Member[] = selectedFriend
+    ? [
+        { userId: currentUserId, displayName: currentUserDisplayName },
+        {
+          userId: selectedFriend.userId,
+          displayName: selectedFriend.displayName,
+          emoji: selectedFriend.emoji,
+          avatarUrl: selectedFriend.avatarUrl,
+        },
+      ]
+    : [];
 
   const triggerButton = renderTrigger ? (
     renderTrigger({ onClick: handleOpen, loading: false })
@@ -175,17 +131,17 @@ export function DashboardAddExpenseForm({
     <button
       type="button"
       onClick={handleOpen}
-      className="inline-flex items-center gap-1.5 rounded-full bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-amber-500 active:scale-[0.97] dark:bg-amber-500 dark:hover:bg-amber-400 cursor-pointer"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 text-sm font-semibold text-amber-800 shadow-sm transition-all duration-150 hover:bg-amber-100 hover:border-amber-300 hover:shadow active:scale-[0.97] cursor-pointer dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50 dark:hover:border-amber-600"
     >
-      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
       </svg>
       Add expense
     </button>
   );
 
   // Phase: form — delegate entirely to AddExpenseForm
-  if (phase === "form") {
+  if (phase === "form" && selectedFriend) {
     return (
       <>
         {triggerButton}
@@ -195,8 +151,6 @@ export function DashboardAddExpenseForm({
           members={members}
           onCustomSubmit={handleCustomSubmit}
           renderTrigger={({ onClick }) => {
-            // Auto-open: trigger the form immediately
-            // We use a hidden element that fires onClick on mount
             return <AutoOpen onClick={onClick} />;
           }}
         />
@@ -234,135 +188,75 @@ export function DashboardAddExpenseForm({
               </div>
             </div>
 
-            <div className="px-5 py-4 space-y-4">
-              {/* Token/chip input */}
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5 dark:text-stone-300">
-                  Split with
-                </label>
-                {contacts.length === 0 ? (
-                  <p className="text-sm text-stone-400 dark:text-stone-500 py-2">
-                    No contacts yet. Join a group first to see people you can split with.
-                  </p>
-                ) : (
+            <div className="px-5 py-4">
+              {contacts.length === 0 ? (
+                <p className="text-sm text-stone-400 dark:text-stone-500 py-2">
+                  No contacts yet. Join a group first to see people you can split with.
+                </p>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-2 dark:text-stone-300">
+                    Split with
+                  </label>
+                  {/* Search input */}
                   <div className="relative">
-                    {/* Chip container + inline search input */}
-                    <div
-                      className="flex flex-wrap items-center gap-1.5 rounded-lg border border-stone-300 dark:border-stone-700 px-2 py-1.5 focus-within:ring-2 focus-within:ring-amber-500 focus-within:border-amber-500 transition-shadow bg-white dark:bg-stone-900 min-h-[38px] cursor-text"
-                      onClick={() => searchInputRef.current?.focus()}
-                    >
-                      {/* Selected friend chips */}
-                      {selectedFriends.map((friend) => (
-                        <span
-                          key={friend.userId}
-                          className="inline-flex items-center gap-1 rounded-md bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-sm font-medium text-amber-800 dark:text-amber-300"
-                        >
-                          {formatDisplayName(friend.displayName)}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFriend(friend.userId);
-                            }}
-                            className="ml-0.5 text-amber-600/60 hover:text-amber-800 dark:text-amber-400/60 dark:hover:text-amber-200 transition-colors cursor-pointer"
-                            aria-label={`Remove ${formatDisplayName(friend.displayName)}`}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </span>
-                      ))}
-                      {/* Inline search */}
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        placeholder={selectedFriends.length === 0 ? "Search friends..." : ""}
-                        value={searchQuery}
-                        onChange={(e) => {
-                          setSearchQuery(e.target.value);
-                          setDropdownOpen(true);
-                        }}
-                        onFocus={() => setDropdownOpen(true)}
-                        onKeyDown={handleKeyDown}
-                        autoFocus
-                        className="flex-1 min-w-[80px] bg-transparent py-0.5 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none"
-                      />
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <svg className="h-4 w-4 text-stone-400 dark:text-stone-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                      </svg>
                     </div>
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Search friends..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      autoFocus
+                      className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-900 py-2.5 pl-9 pr-3 text-sm text-stone-900 dark:text-white placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow"
+                    />
+                  </div>
 
-                    {/* Dropdown */}
-                    {dropdownOpen && filteredContacts.length > 0 && (
-                      <div
-                        ref={dropdownRef}
-                        className="absolute z-10 top-full mt-1 w-full max-h-48 overflow-y-auto rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 shadow-lg"
-                      >
-                        {filteredContacts.map((contact, i) => (
-                          <button
-                            key={contact.userId}
-                            type="button"
-                            onClick={() => addFriend(contact)}
-                            onMouseEnter={() => setHighlightedIndex(i)}
-                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors cursor-pointer ${
-                              i === highlightedIndex
-                                ? "bg-amber-50 dark:bg-amber-900/20"
-                                : "hover:bg-stone-50 dark:hover:bg-stone-700/50"
-                            }`}
-                          >
-                            {contact.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={contact.avatarUrl}
-                                alt=""
-                                className="w-7 h-7 rounded-full object-cover"
-                              />
-                            ) : (
-                              <span className="flex w-7 h-7 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-700 text-xs font-semibold text-stone-600 dark:text-stone-300">
-                                {contact.emoji ?? contact.displayName.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                            <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
-                              {formatDisplayName(contact.displayName)}
+                  {/* Contact list */}
+                  <div className="mt-3 max-h-64 overflow-y-auto -mx-1 rounded-xl">
+                    {filteredContacts.length === 0 ? (
+                      <p className="px-3 py-4 text-sm text-stone-400 dark:text-stone-500 text-center">
+                        No matches found
+                      </p>
+                    ) : (
+                      filteredContacts.map((contact, i) => (
+                        <button
+                          key={contact.userId}
+                          type="button"
+                          onClick={() => selectFriend(contact)}
+                          onMouseEnter={() => setHighlightedIndex(i)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                            i === highlightedIndex
+                              ? "bg-amber-50 dark:bg-amber-900/20"
+                              : "hover:bg-stone-50 dark:hover:bg-stone-700/50"
+                          }`}
+                        >
+                          {contact.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={contact.avatarUrl}
+                              alt=""
+                              className="w-9 h-9 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="flex w-9 h-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-sm">
+                              {contact.emoji ?? contact.displayName.charAt(0).toUpperCase()}
                             </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {dropdownOpen && searchQuery.trim() && filteredContacts.length === 0 && (
-                      <div
-                        ref={dropdownRef}
-                        className="absolute z-10 top-full mt-1 w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 shadow-lg"
-                      >
-                        <p className="px-3 py-3 text-sm text-stone-400 dark:text-stone-500">
-                          No matches found
-                        </p>
-                      </div>
+                          )}
+                          <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
+                            {formatDisplayName(contact.displayName)}
+                          </span>
+                        </button>
+                      ))
                     )}
                   </div>
-                )}
-              </div>
-
-              {error && (
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
               )}
-
-              {/* Next button */}
-              <div className="flex gap-2 justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="px-4 py-2 text-sm rounded-xl font-medium transition-all duration-150 cursor-pointer active:scale-[0.97] text-stone-600 hover:text-stone-900 hover:bg-stone-100 dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={proceedToForm}
-                  disabled={selectedFriends.length === 0}
-                  className="px-4 py-2 text-sm rounded-xl font-medium transition-all duration-150 disabled:opacity-50 cursor-pointer active:scale-[0.97] bg-amber-600 text-white hover:bg-amber-700 shadow-sm dark:bg-amber-500 dark:hover:bg-amber-600"
-                >
-                  Next
-                </button>
-              </div>
             </div>
           </div>
         </div>

@@ -83,6 +83,14 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.getByText(/No contacts yet/)).toBeTruthy();
   });
 
+  it("shows all contacts in the list", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} />);
+    fireEvent.click(screen.getByText("Add expense"));
+    expect(screen.getByText("Bob S.")).toBeTruthy();
+    expect(screen.getByText("Carol J.")).toBeTruthy();
+    expect(screen.getByText("Dave L.")).toBeTruthy();
+  });
+
   it("filters contacts by search query", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
@@ -95,90 +103,20 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.queryByText("Dave L.")).toBeNull();
   });
 
-  it("adds a friend as a chip when clicked in dropdown", () => {
+  it("shows no matches message when search has no results", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
     const searchInput = screen.getByPlaceholderText("Search friends...");
-    fireEvent.focus(searchInput);
-    fireEvent.click(screen.getByText("Bob S."));
+    fireEvent.change(searchInput, { target: { value: "zzzzz" } });
 
-    // Bob should appear as a chip (not in the dropdown anymore)
-    // The chip has a remove button with aria-label
-    expect(screen.getByLabelText("Remove Bob S.")).toBeTruthy();
+    expect(screen.getByText("No matches found")).toBeTruthy();
   });
 
-  it("removes a friend chip when X is clicked", () => {
+  it("proceeds directly to AddExpenseForm when a friend is clicked", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
-
-    // Add Bob
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
     fireEvent.click(screen.getByText("Bob S."));
-
-    // Remove Bob
-    fireEvent.click(screen.getByLabelText("Remove Bob S."));
-    expect(screen.queryByLabelText("Remove Bob S.")).toBeNull();
-  });
-
-  it("supports adding multiple friends", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} />);
-    fireEvent.click(screen.getByText("Add expense"));
-
-    // Add Bob
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
-    fireEvent.click(screen.getByText("Bob S."));
-
-    // Add Carol (she should still be in the dropdown since Bob was already selected)
-    const searchInput = document.querySelector("input[type='text']") as HTMLInputElement;
-    fireEvent.focus(searchInput);
-    fireEvent.click(screen.getByText("Carol J."));
-
-    expect(screen.getByLabelText("Remove Bob S.")).toBeTruthy();
-    expect(screen.getByLabelText("Remove Carol J.")).toBeTruthy();
-  });
-
-  it("hides already-selected friends from dropdown", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} />);
-    fireEvent.click(screen.getByText("Add expense"));
-
-    // Add Bob
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
-    fireEvent.click(screen.getByText("Bob S."));
-
-    // Reopen dropdown — Bob should not appear
-    const searchInput = document.querySelector("input[type='text']") as HTMLInputElement;
-    fireEvent.focus(searchInput);
-    fireEvent.change(searchInput, { target: { value: "" } });
-
-    // Carol and Dave should appear, but not Bob
-    expect(screen.getByText("Carol J.")).toBeTruthy();
-    expect(screen.getByText("Dave L.")).toBeTruthy();
-    // Bob only appears as a chip, not in the dropdown
-    const bobElements = screen.queryAllByText("Bob S.");
-    // Should be exactly 1 (the chip)
-    expect(bobElements.length).toBe(1);
-  });
-
-  it("prevents proceeding without selecting a friend", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} />);
-    fireEvent.click(screen.getByText("Add expense"));
-
-    // Next button should be disabled
-    const nextButton = screen.getByText("Next");
-    expect((nextButton as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("proceeds to AddExpenseForm after selecting friends and clicking Next", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} />);
-    fireEvent.click(screen.getByText("Add expense"));
-
-    // Add Bob
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
-    fireEvent.click(screen.getByText("Bob S."));
-
-    // Click Next
-    fireEvent.click(screen.getByText("Next"));
 
     // Should now show the mocked AddExpenseForm
     expect(screen.getByTestId("add-expense-form")).toBeTruthy();
@@ -186,37 +124,29 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.getByTestId("form-members").textContent).toBe("Alice,Bob Smith");
   });
 
-  it("supports keyboard navigation in typeahead", () => {
+  it("supports keyboard navigation: ArrowDown + Enter selects a friend", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
     const searchInput = screen.getByPlaceholderText("Search friends...");
-    fireEvent.focus(searchInput);
 
-    // Arrow down to Carol (index 1), then Enter
+    // ArrowDown to Carol (index 1), then Enter
     fireEvent.keyDown(searchInput, { key: "ArrowDown" });
     fireEvent.keyDown(searchInput, { key: "Enter" });
 
-    // Carol should be added as chip
-    expect(screen.getByLabelText("Remove Carol J.")).toBeTruthy();
+    // Carol should be selected → form opens
+    expect(screen.getByTestId("add-expense-form")).toBeTruthy();
+    expect(screen.getByTestId("form-members").textContent).toBe("Alice,Carol Jones");
   });
 
-  it("removes last chip with Backspace when search is empty", () => {
+  it("closes modal on Escape", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    // Add Bob then Carol
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
-    fireEvent.click(screen.getByText("Bob S."));
-    const searchInput = document.querySelector("input[type='text']") as HTMLInputElement;
-    fireEvent.focus(searchInput);
-    fireEvent.click(screen.getByText("Carol J."));
+    const searchInput = screen.getByPlaceholderText("Search friends...");
+    fireEvent.keyDown(searchInput, { key: "Escape" });
 
-    // Backspace should remove Carol (last added)
-    const input = document.querySelector("input[type='text']") as HTMLInputElement;
-    fireEvent.keyDown(input, { key: "Backspace" });
-    expect(screen.queryByLabelText("Remove Carol J.")).toBeNull();
-    expect(screen.getByLabelText("Remove Bob S.")).toBeTruthy();
+    expect(screen.queryByText("Add friend expense")).toBeNull();
   });
 
   it("calls friends API with correct payload on submit", async () => {
@@ -228,12 +158,8 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    // Add Bob
-    fireEvent.focus(screen.getByPlaceholderText("Search friends..."));
+    // Select Bob
     fireEvent.click(screen.getByText("Bob S."));
-
-    // Next
-    fireEvent.click(screen.getByText("Next"));
 
     // The mocked AddExpenseForm has a submit button
     await fireEvent.click(screen.getByTestId("mock-submit"));

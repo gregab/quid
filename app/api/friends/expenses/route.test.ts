@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Use proper UUID v4 format for test data
 const USER_ID = "a0000000-0000-4000-8000-000000000001";
 const FRIEND_1 = "a0000000-0000-4000-8000-000000000002";
-const FRIEND_2 = "a0000000-0000-4000-8000-000000000003";
 const FRIEND_3 = "a0000000-0000-4000-8000-000000000004";
 
 // Mock Supabase client
@@ -71,10 +70,19 @@ describe("POST /api/friends/expenses", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when paidById is not self or a selected friend", async () => {
-    // FRIEND_3 is not in friendIds, so it's invalid
+  it("returns 400 when more than one friend is provided", async () => {
     const res = await POST(makeRequest({
-      friendIds: [FRIEND_1, FRIEND_2],
+      friendIds: [FRIEND_1, FRIEND_3],
+      description: "Dinner",
+      amountCents: 3000,
+      date: "2026-02-25",
+    }));
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when paidById is not self or the selected friend", async () => {
+    const res = await POST(makeRequest({
+      friendIds: [FRIEND_1],
       description: "Dinner",
       amountCents: 3000,
       date: "2026-02-25",
@@ -122,52 +130,9 @@ describe("POST /api/friends/expenses", () => {
     expect(params._paid_by_id).toBe(USER_ID);
   });
 
-  it("creates expenses for 3 friends with correct equal split", async () => {
-    mockRpc
-      .mockResolvedValueOnce({ data: "group-1", error: null })
-      .mockResolvedValueOnce({ data: "exp-1", error: null })
-      .mockResolvedValueOnce({ data: "group-2", error: null })
-      .mockResolvedValueOnce({ data: "exp-2", error: null })
-      .mockResolvedValueOnce({ data: "group-3", error: null })
-      .mockResolvedValueOnce({ data: "exp-3", error: null });
-
+  it("allows friend as payer", async () => {
     const res = await POST(makeRequest({
-      friendIds: [FRIEND_1, FRIEND_2, FRIEND_3],
-      description: "Dinner",
-      amountCents: 3001, // $30.01 among 4 people = [751, 750, 750, 750]
-      date: "2026-02-25",
-    }));
-
-    expect(res.status).toBe(200);
-
-    const createCalls = mockRpc.mock.calls.filter(
-      (c: unknown[]) => c[0] === "create_expense",
-    );
-    expect(createCalls.length).toBe(3);
-
-    // splitAmount(3001, 4) = [751, 750, 750, 750]
-    // user=751, friend1=750, friend2=750, friend3=750
-    // Each friend-group expense: [user's share, friend's share]
-    const p1 = createCalls[0]![1] as Record<string, unknown>;
-    expect(p1._split_amounts).toEqual([751, 750]);
-
-    const p2 = createCalls[1]![1] as Record<string, unknown>;
-    expect(p2._split_amounts).toEqual([751, 750]);
-
-    const p3 = createCalls[2]![1] as Record<string, unknown>;
-    expect(p3._split_amounts).toEqual([751, 750]);
-  });
-
-  it("allows any selected friend as payer", async () => {
-    // FRIEND_1 is in friendIds, so it's a valid payer even with multiple friends
-    mockRpc
-      .mockResolvedValueOnce({ data: "group-1", error: null })
-      .mockResolvedValueOnce({ data: "exp-1", error: null })
-      .mockResolvedValueOnce({ data: "group-2", error: null })
-      .mockResolvedValueOnce({ data: "exp-2", error: null });
-
-    const res = await POST(makeRequest({
-      friendIds: [FRIEND_1, FRIEND_2],
+      friendIds: [FRIEND_1],
       description: "Coffee",
       amountCents: 600,
       date: "2026-02-25",
