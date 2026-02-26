@@ -68,6 +68,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
   if (!group) redirect("/dashboard");
 
+  const isFriendGroup = group.isFriendGroup ?? false;
+
   // Sort members by joinedAt
   const groupMembers = (group.GroupMember ?? []).sort(
     (a, b) => a.joinedAt.localeCompare(b.joinedAt)
@@ -165,6 +167,12 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     user.id
   ));
 
+  // For friend groups, identify the friend for display
+  const friend = isFriendGroup
+    ? groupMembers.find((m) => m.userId !== user.id)
+    : null;
+  const friendDisplayName = friend?.User?.displayName ?? group.name;
+
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Header + Members */}
@@ -176,7 +184,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to groups
+          {isFriendGroup ? "Back" : "Back to groups"}
         </Link>
 
         {/* Banner hero (only when a banner is set) */}
@@ -191,17 +199,19 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
               <h1 className="text-xl sm:text-2xl font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
-                {group.name}
+                {isFriendGroup ? friendDisplayName : group.name}
               </h1>
             </div>
-            <div className="absolute top-3 right-3">
-              <GroupSettingsButton
-                groupId={group.id}
-                currentGroupName={group.name}
-                currentBannerUrl={group.bannerUrl ?? null}
-                onBanner
-              />
-            </div>
+            {!isFriendGroup && (
+              <div className="absolute top-3 right-3">
+                <GroupSettingsButton
+                  groupId={group.id}
+                  currentGroupName={group.name}
+                  currentBannerUrl={group.bannerUrl ?? null}
+                  onBanner
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -221,36 +231,40 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
                 <h1 className="text-xl sm:text-2xl font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]">
-                  {group.name}
+                  {isFriendGroup ? friendDisplayName : group.name}
                 </h1>
               </div>
-              <div className="absolute top-3 right-3">
-                <GroupSettingsButton
-                  groupId={group.id}
-                  currentGroupName={group.name}
-                  currentBannerUrl={group.bannerUrl ?? null}
-                  onBanner
-                />
-              </div>
+              {!isFriendGroup && (
+                <div className="absolute top-3 right-3">
+                  <GroupSettingsButton
+                    groupId={group.id}
+                    currentGroupName={group.name}
+                    currentBannerUrl={group.bannerUrl ?? null}
+                    onBanner
+                  />
+                </div>
+              )}
             </div>
           );
         })()}
 
-        {/* Member chips */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          {groupMembers.map((m) => (
-            <MemberPill
-              key={m.id}
-              name={formatDisplayName(m.User!.displayName)}
-              emoji={m.User!.defaultEmoji}
-              color={memberColorMap.get(m.userId)}
-              suffix={m.userId === user.id ? "· you" : undefined}
-              title={m.User?.email ?? undefined}
-              avatarUrl={m.User!.profilePictureUrl ?? m.User!.avatarUrl}
-            />
-          ))}
-          <CopyInviteLinkButton inviteToken={group.inviteToken} />
-        </div>
+        {/* Member chips — hidden for friend groups */}
+        {!isFriendGroup && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {groupMembers.map((m) => (
+              <MemberPill
+                key={m.id}
+                name={formatDisplayName(m.User!.displayName)}
+                emoji={m.User!.defaultEmoji}
+                color={memberColorMap.get(m.userId)}
+                suffix={m.userId === user.id ? "· you" : undefined}
+                title={m.User?.email ?? undefined}
+                avatarUrl={m.User!.profilePictureUrl ?? m.User!.avatarUrl}
+              />
+            ))}
+            <CopyInviteLinkButton inviteToken={group.inviteToken} />
+          </div>
+        )}
       </div>
 
       {/* Expenses, Activity, and Balances (client component with optimistic updates) */}
@@ -265,11 +279,15 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         members={members}
         allUserNames={allUserNames}
         inviteToken={group.inviteToken}
+        isFriendGroup={isFriendGroup}
       />
 
-      <div className="flex items-center justify-between pt-4">
-        <LeaveGroupButton groupId={group.id} userOutstandingCents={userOutstandingCents} />
-      </div>
+      {/* Leave button — hidden for friend groups */}
+      {!isFriendGroup && (
+        <div className="flex items-center justify-between pt-4">
+          <LeaveGroupButton groupId={group.id} userOutstandingCents={userOutstandingCents} />
+        </div>
+      )}
     </div>
   );
 }

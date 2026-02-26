@@ -57,6 +57,7 @@ interface ExpensesListProps {
   onCelebration?: (name: string) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  isFriendGroup?: boolean;
 }
 
 
@@ -246,6 +247,7 @@ export function ExpensesList({
   onCelebration,
   onRefresh,
   refreshing,
+  isFriendGroup,
 }: ExpensesListProps) {
   const router = useRouter();
   const [expenses, setExpenses] = useState<ExpenseRow[]>(initialExpenses);
@@ -405,7 +407,7 @@ export function ExpensesList({
               </svg>
             </button>
           )}
-          {expenses.length > 0 && <ExportButton groupId={groupId} />}
+          {expenses.length > 0 && !isFriendGroup && <ExportButton groupId={groupId} />}
         </div>
         {/* Desktop: buttons in header */}
         <div ref={inlineButtonsRef} className="hidden sm:flex items-center gap-2">

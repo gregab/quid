@@ -67,6 +67,7 @@ npm run cy:run                          # Cypress headless
 | **Auth middleware** (route protection) | `proxy.ts` (**not** `middleware.ts` — Next.js 16 convention) |
 | **Styling / dark mode** | Tailwind `dark:` variants; globals in `app/globals.css` |
 | **E2E tests** | `cypress/e2e/` — specs; `cypress/support/commands.ts` — `cy.login()` |
+| **Friends** (friend expenses, dashboard) | `DashboardAddExpenseForm.tsx` (dashboard), `app/api/friends/expenses/route.ts` (API), group detail page conditional rendering via `isFriendGroup` |
 
 ## DRY: Don't Duplicate Business Logic
 - **Balance/debt calculations** live in `lib/balances/` and are the single source of truth. **Never re-derive balances with a manual loop.** Use the pipeline: `buildRawDebts()` → `simplifyDebts()`. Convenience wrappers: `getUserDebtCents()` (how much a user owes), `getUserBalanceCents()` (signed net: positive=owed, negative=owes).
