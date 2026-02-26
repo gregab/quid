@@ -18,6 +18,14 @@ interface DashboardAddExpenseFormProps {
   currentUserId: string;
   currentUserDisplayName: string;
   contacts: DashboardContact[];
+  onExpenseCreated?: (expense: {
+    friendUserId: string;
+    friendGroupId: string;
+    amountCents: number;
+    paidById: string;
+    splitType: "equal" | "custom";
+    customSplits?: Array<{ userId: string; amountCents: number }>;
+  }) => void;
   renderTrigger?: (props: { onClick: () => void; loading: boolean }) => React.ReactNode;
 }
 
@@ -25,6 +33,7 @@ export function DashboardAddExpenseForm({
   currentUserId,
   currentUserDisplayName,
   contacts,
+  onExpenseCreated,
   renderTrigger,
 }: DashboardAddExpenseFormProps) {
   const router = useRouter();
@@ -87,29 +96,50 @@ export function DashboardAddExpenseForm({
     async (data: ExpenseSubmitData) => {
       if (!selectedFriend) return;
 
+      const payload = {
+        friendIds: [selectedFriend.userId],
+        description: data.description,
+        amountCents: data.amountCents,
+        date: data.date,
+        paidById: data.paidById !== currentUserId ? data.paidById : undefined,
+        splitType: data.splitType,
+        customSplits: data.customSplits,
+      };
+
+      // Close modal immediately (optimistic) — AddExpenseForm already closed itself
+      const friend = selectedFriend;
+      resetAll();
+
       const res = await fetch("/api/friends/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          friendIds: [selectedFriend.userId],
-          description: data.description,
-          amountCents: data.amountCents,
-          date: data.date,
-          paidById: data.paidById !== currentUserId ? data.paidById : undefined,
-          splitType: data.splitType,
-          customSplits: data.customSplits,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const json = (await res.json()) as { data: unknown; error: string | null };
+      const json = (await res.json()) as {
+        data: { createdCount: number; friendGroupIds: string[] } | null;
+        error: string | null;
+      };
+
       if (!res.ok || json.error) {
         throw new Error(json.error ?? "Something went wrong.");
       }
 
-      resetAll();
+      // Optimistically update the friends list
+      const friendGroupId = json.data?.friendGroupIds?.[0] ?? "";
+      onExpenseCreated?.({
+        friendUserId: friend.userId,
+        friendGroupId,
+        amountCents: data.amountCents,
+        paidById: data.paidById,
+        splitType: data.splitType,
+        customSplits: data.customSplits,
+      });
+
+      // Refresh server data in background to reconcile
       router.refresh();
     },
-    [selectedFriend, currentUserId, resetAll, router]
+    [selectedFriend, currentUserId, resetAll, router, onExpenseCreated]
   );
 
   // Build Member[] for AddExpenseForm

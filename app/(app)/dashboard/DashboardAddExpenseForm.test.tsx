@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { DashboardAddExpenseForm } from "./DashboardAddExpenseForm";
 import type { DashboardContact } from "./DashboardAddExpenseForm";
 
@@ -149,30 +149,50 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.queryByText("Add friend expense")).toBeNull();
   });
 
-  it("calls friends API with correct payload on submit", async () => {
+  it("calls friends API and onExpenseCreated on submit", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ data: { createdCount: 1, friendGroupIds: ["g1"] }, error: null }),
     });
 
-    render(<DashboardAddExpenseForm {...defaultProps} />);
+    const onExpenseCreated = vi.fn();
+    render(<DashboardAddExpenseForm {...defaultProps} onExpenseCreated={onExpenseCreated} />);
     fireEvent.click(screen.getByText("Add expense"));
 
     // Select Bob
     fireEvent.click(screen.getByText("Bob S."));
 
     // The mocked AddExpenseForm has a submit button
-    await fireEvent.click(screen.getByTestId("mock-submit"));
+    fireEvent.click(screen.getByTestId("mock-submit"));
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "/api/friends/expenses",
-      expect.objectContaining({ method: "POST" }),
-    );
+    // Wait for async handleCustomSubmit to complete
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/friends/expenses",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
 
     const callArgs = mockFetch.mock.calls[0] as [string, { body: string }];
     const body = JSON.parse(callArgs[1].body) as Record<string, unknown>;
     expect(body.friendIds).toEqual(["friend-1"]);
     expect(body.description).toBe("Test");
     expect(body.amountCents).toBe(1000);
+
+    // onExpenseCreated should have been called with optimistic data
+    await waitFor(() => {
+      expect(onExpenseCreated).toHaveBeenCalledWith(
+        expect.objectContaining({
+          friendUserId: "friend-1",
+          friendGroupId: "g1",
+          amountCents: 1000,
+          paidById: "user-1",
+          splitType: "equal",
+        }),
+      );
+    });
+
+    // router.refresh should be called for server reconciliation
+    expect(mockRefresh).toHaveBeenCalled();
   });
 });

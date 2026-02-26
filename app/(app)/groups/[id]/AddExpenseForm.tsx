@@ -891,29 +891,31 @@ export function AddExpenseForm({
                   {/* Split type toggle + member checkboxes */}
                   {renderSplitSection()}
 
-                  {/* Repeat toggle */}
-                  <div className="flex items-center gap-2.5">
-                    <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={recurring}
-                        onChange={(e) => setRecurring(e.target.checked)}
-                        className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
-                    </label>
-                    {recurring && (
-                      <select
-                        value={recurringFrequency}
-                        onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                        className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-                      >
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    )}
-                  </div>
+                  {/* Repeat toggle — only for group expenses */}
+                  {!onCustomSubmit && (
+                    <div className="flex items-center gap-2.5">
+                      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={recurring}
+                          onChange={(e) => setRecurring(e.target.checked)}
+                          className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                        />
+                        <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
+                      </label>
+                      {recurring && (
+                        <select
+                          value={recurringFrequency}
+                          onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                          className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                        >
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="yearly">Yearly</option>
+                        </select>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1341,29 +1343,31 @@ export function AddExpenseForm({
           {/* Split configuration */}
           {renderSplitSection()}
 
-          {/* Recurring toggle */}
-          <div className="flex items-center gap-2.5">
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={recurring}
-                onChange={(e) => setRecurring(e.target.checked)}
-                className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
-              />
-              <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
-            </label>
-            {recurring && (
-              <select
-                value={recurringFrequency}
-                onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
-                className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
-              >
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            )}
-          </div>
+          {/* Recurring toggle — only for group expenses */}
+          {!onCustomSubmit && (
+            <div className="flex items-center gap-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => setRecurring(e.target.checked)}
+                  className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                />
+                <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Repeat</span>
+              </label>
+              {recurring && (
+                <select
+                  value={recurringFrequency}
+                  onChange={(e) => setRecurringFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                  className="rounded-lg border border-stone-300 px-2.5 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-shadow dark:bg-stone-900 dark:border-stone-700 dark:text-stone-100"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              )}
+            </div>
+          )}
 
           {/* Done button */}
           <button
