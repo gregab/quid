@@ -16,6 +16,11 @@ vi.mock("lucide-react-native", () => ({
   ArrowRight: () => null,
 }));
 
+// Mock DateTimePicker
+vi.mock("@react-native-community/datetimepicker", () => ({
+  default: () => null,
+}));
+
 import RecordPaymentScreen from "./record-payment";
 
 // Mock auth
@@ -160,5 +165,16 @@ describe("RecordPaymentScreen", () => {
     fireEvent.click(screen.getByText(/Record other payment/));
     // Non-preset form step shows "Back" to return to pick step
     expect(screen.getByText("Back")).toBeTruthy();
+  });
+
+  it("shows date section in form step", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+    renderWithProviders();
+    fireEvent.click(screen.getByText(/Record other payment/));
+    // Date label appears in form step
+    expect(screen.getByText("Date")).toBeTruthy();
   });
 });

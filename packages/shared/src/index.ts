@@ -8,7 +8,7 @@ export {
 } from "./balances/getUserDebt";
 
 // Formatting
-export { formatCents, UNKNOWN_USER } from "./format";
+export { formatCents, UNKNOWN_USER, toLocalDateString } from "./format";
 export { formatDisplayName } from "./formatDisplayName";
 
 // Constants

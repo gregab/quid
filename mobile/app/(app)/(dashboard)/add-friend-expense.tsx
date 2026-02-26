@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,257 +7,165 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Check } from "lucide-react-native";
+import { ChevronLeft } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import { useContacts, useCreateFriendExpense } from "../../../lib/queries";
 import { useAuth } from "../../../lib/auth";
-import { useToast } from "../../../lib/toast";
 import { Button } from "../../../components/ui/Button";
-import { Input } from "../../../components/ui/Input";
+import { ExpenseForm, type ExpenseFormData } from "../../../components/ExpenseForm";
 import {
   formatDisplayName,
-  MAX_EXPENSE_DESCRIPTION,
-  MAX_AMOUNT_CENTS,
+  MEMBER_EMOJIS,
+  UNKNOWN_USER,
 } from "../../../lib/queries/shared";
+import type { Member } from "../../../lib/types";
 
 export default function AddFriendExpenseScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { data: contacts } = useContacts();
   const createFriendExpense = useCreateFriendExpense();
+  const insets = useSafeAreaInsets();
 
-  const { showToast } = useToast();
+  // Single-select: string | null
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
 
-  const [selectedFriends, setSelectedFriends] = useState<Set<string>>(
-    new Set(),
-  );
-  const [description, setDescription] = useState("");
-  const [amountStr, setAmountStr] = useState("");
-  const [date, setDate] = useState(
-    () => new Date().toISOString().split("T")[0]!,
-  );
-  const [paidById, setPaidById] = useState<string | undefined>(undefined);
-
-  const toggleFriend = useCallback(
-    (userId: string) => {
-      setSelectedFriends((prev) => {
-        const next = new Set(prev);
-        if (next.has(userId)) {
-          next.delete(userId);
-        } else {
-          next.add(userId);
-        }
-        return next;
-      });
-      setPaidById(undefined); // Reset payer when selection changes
-    },
-    [],
-  );
-
-  const amountCents = useMemo(() => {
-    const val = parseFloat(amountStr.replace(/[^0-9.]/g, ""));
-    return isNaN(val) ? 0 : Math.round(val * 100);
-  }, [amountStr]);
-
-  const showPayerSelector = selectedFriends.size === 1;
-  const singleFriend = showPayerSelector
-    ? (contacts ?? []).find((c) => selectedFriends.has(c.userId))
-    : null;
-
-  const handleSubmit = async () => {
-    const friendIds = Array.from(selectedFriends);
-    if (friendIds.length === 0) {
-      showToast({ message: "Select at least one friend.", type: "error" });
-      return;
-    }
-
-    const trimmedDesc = description.trim();
-    if (!trimmedDesc) {
-      showToast({ message: "Description is required.", type: "error" });
-      return;
-    }
-
-    if (amountCents <= 0) {
-      showToast({ message: "Enter a valid amount.", type: "error" });
-      return;
-    }
-    if (amountCents > MAX_AMOUNT_CENTS) {
-      showToast({ message: "Amount is too large.", type: "error" });
-      return;
-    }
-
-    try {
-      await createFriendExpense.mutateAsync({
-        friendIds,
-        description: trimmedDesc,
-        amountCents,
-        date,
-        paidById: paidById ?? user?.id,
-      });
-      router.back();
-    } catch (err) {
-      showToast({
-        message: err instanceof Error ? err.message : "Failed to add expense.",
-        type: "error",
-      });
-    }
+  const toggleFriend = (userId: string) => {
+    setSelectedFriendId((prev) => (prev === userId ? null : userId));
   };
 
+  const selectedFriend = useMemo(
+    () => (contacts ?? []).find((c) => c.userId === selectedFriendId) ?? null,
+    [contacts, selectedFriendId],
+  );
+
+  // Build members array for ExpenseForm when a friend is selected
+  const members: Member[] = useMemo(() => {
+    if (!user || !selectedFriend) return [];
+    return [
+      {
+        userId: user.id,
+        displayName: (user.user_metadata?.display_name as string | undefined) ?? UNKNOWN_USER,
+        emoji: MEMBER_EMOJIS[0]!,
+      },
+      {
+        userId: selectedFriend.userId,
+        displayName: selectedFriend.displayName,
+        emoji: MEMBER_EMOJIS[1]!,
+      },
+    ];
+  }, [user, selectedFriend]);
+
+  const handleSubmit = async (data: ExpenseFormData) => {
+    if (!selectedFriendId) return;
+    await createFriendExpense.mutateAsync({
+      friendIds: [selectedFriendId],
+      description: data.description,
+      amountCents: data.amountCents,
+      date: data.date,
+      paidById: data.paidById,
+      splitType: data.splitType,
+      splitAmounts: data.splitAmounts,
+    });
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    router.back();
+  };
+
+  const contactList = contacts ?? [];
+
   return (
-    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+    <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
       >
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ padding: 16 }}
-          keyboardShouldPersistTaps="handled"
+        {/* Header */}
+        <View
+          style={{ paddingTop: insets.top + 8 }}
+          className="flex-row items-center justify-between border-b border-stone-100 px-4 pb-3 dark:border-stone-800/60"
         >
-          {/* Header */}
-          <View className="mb-6 flex-row items-center justify-between">
-            <Text className="text-xl font-bold tracking-tight text-stone-900 dark:text-white">
-              Add expense with friends
-            </Text>
-            <Button variant="ghost" onPress={() => router.back()}>
-              Cancel
-            </Button>
-          </View>
+          <Pressable
+            onPress={() => router.back()}
+            className="flex-row items-center gap-1"
+          >
+            <ChevronLeft size={20} color="#78716c" />
+            <Text className="text-sm text-stone-500">Cancel</Text>
+          </Pressable>
+          <Text className="text-base font-semibold text-stone-900 dark:text-white">
+            Add expense
+          </Text>
+          <View style={{ width: 60 }} />
+        </View>
 
-          {/* Friend selector */}
+        {/* Friend selector — always visible above form */}
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: selectedFriend ? 0 : 120 }}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={!selectedFriend}
+        >
           <View className="mb-5">
-            <Text className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
+            <Text className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
               Split with
             </Text>
-            {(contacts ?? []).length === 0 ? (
+            {contactList.length === 0 ? (
               <Text className="text-sm text-stone-400 dark:text-stone-500">
                 No contacts yet. Join a group first.
               </Text>
             ) : (
               <View className="flex-row flex-wrap gap-2">
-                {(contacts ?? []).map((contact) => {
-                  const isSelected = selectedFriends.has(contact.userId);
+                {contactList.map((contact) => {
+                  const isSelected = selectedFriendId === contact.userId;
                   return (
                     <Pressable
                       key={contact.userId}
                       onPress={() => toggleFriend(contact.userId)}
-                      className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 ${
+                      className={`flex-row items-center gap-1.5 rounded-full px-3.5 py-2 ${
                         isSelected
-                          ? "bg-amber-100 dark:bg-amber-900/40"
+                          ? "bg-amber-600 dark:bg-amber-500"
                           : "bg-stone-100 dark:bg-stone-800"
                       }`}
                     >
                       <Text
-                        className={`text-sm font-medium ${
+                        className={`text-xs font-medium ${
                           isSelected
-                            ? "text-amber-800 dark:text-amber-300"
-                            : "text-stone-600 dark:text-stone-400"
+                            ? "text-white"
+                            : "text-stone-700 dark:text-stone-300"
                         }`}
                       >
                         {formatDisplayName(contact.displayName)}
                       </Text>
-                      {isSelected && <Check size={14} color="#92400e" />}
                     </Pressable>
                   );
                 })}
               </View>
             )}
           </View>
-
-          {/* Description */}
-          <View className="mb-4">
-            <Input
-              label="Description"
-              placeholder="Dinner, groceries, etc."
-              value={description}
-              onChangeText={setDescription}
-              maxLength={MAX_EXPENSE_DESCRIPTION}
-            />
-          </View>
-
-          {/* Amount */}
-          <View className="mb-4">
-            <Input
-              label="Amount"
-              placeholder="$0.00"
-              value={amountStr}
-              onChangeText={(text) =>
-                setAmountStr(text.replace(/[^0-9.]/g, ""))
-              }
-              keyboardType="decimal-pad"
-            />
-          </View>
-
-          {/* Payer selector — only when 1 friend selected */}
-          {showPayerSelector && singleFriend && user && (
-            <View className="mb-4">
-              <Text className="mb-2 text-sm font-medium text-stone-700 dark:text-stone-300">
-                Paid by
-              </Text>
-              <View className="flex-row gap-2">
-                <Pressable
-                  onPress={() => setPaidById(user.id)}
-                  className={`flex-1 items-center rounded-lg px-3 py-2.5 ${
-                    !paidById || paidById === user.id
-                      ? "bg-amber-100 dark:bg-amber-900/40"
-                      : "bg-stone-100 dark:bg-stone-800"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      !paidById || paidById === user.id
-                        ? "text-amber-800 dark:text-amber-300"
-                        : "text-stone-600 dark:text-stone-400"
-                    }`}
-                  >
-                    You
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setPaidById(singleFriend.userId)}
-                  className={`flex-1 items-center rounded-lg px-3 py-2.5 ${
-                    paidById === singleFriend.userId
-                      ? "bg-amber-100 dark:bg-amber-900/40"
-                      : "bg-stone-100 dark:bg-stone-800"
-                  }`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      paidById === singleFriend.userId
-                        ? "text-amber-800 dark:text-amber-300"
-                        : "text-stone-600 dark:text-stone-400"
-                    }`}
-                  >
-                    {formatDisplayName(singleFriend.displayName)}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {/* Split info */}
-          {selectedFriends.size > 0 && amountCents > 0 && (
-            <Text className="mb-4 text-xs text-stone-400 dark:text-stone-500">
-              Split equally between you and {selectedFriends.size}{" "}
-              {selectedFriends.size === 1 ? "friend" : "friends"}
-            </Text>
-          )}
-
-          {/* Submit */}
-          <Button
-            onPress={handleSubmit}
-            loading={createFriendExpense.isPending}
-            disabled={
-              selectedFriends.size === 0 ||
-              !description.trim() ||
-              amountCents <= 0
-            }
-          >
-            Add expense
-          </Button>
         </ScrollView>
+
+        {/* ExpenseForm — only when a friend is selected */}
+        {selectedFriend && user && (
+          <ExpenseForm
+            members={members}
+            currentUserId={user.id}
+            onSubmit={handleSubmit}
+            isLoading={createFriendExpense.isPending}
+            showRecurring={false}
+            submitLabel="Add expense"
+          />
+        )}
+
+        {/* Prompt to select a friend when none selected */}
+        {!selectedFriend && contactList.length > 0 && (
+          <View
+            style={{ paddingBottom: insets.bottom + 8 }}
+            className="border-t border-stone-100 bg-[#faf9f7] px-4 pt-3 dark:border-stone-800/60 dark:bg-[#0c0a09]"
+          >
+            <Button disabled>Select a friend above</Button>
+          </View>
+        )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

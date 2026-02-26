@@ -17,7 +17,7 @@ export {
 } from "@aviary/shared";
 
 // Formatting
-export { formatCents, UNKNOWN_USER, formatDisplayName } from "@aviary/shared";
+export { formatCents, UNKNOWN_USER, formatDisplayName, toLocalDateString } from "@aviary/shared";
 
 // Constants
 export {

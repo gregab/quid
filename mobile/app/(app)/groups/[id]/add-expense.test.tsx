@@ -10,6 +10,16 @@ vi.mock("lucide-react-native", () => ({
   Check: () => null,
 }));
 
+// Mock DateTimePicker
+vi.mock("@react-native-community/datetimepicker", () => ({
+  default: () => null,
+}));
+
+// Mock safe area
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
 import AddExpenseScreen from "./add-expense";
 
 // Mock auth
@@ -43,6 +53,7 @@ beforeEach(() => {
     data: makeGroupDetail(),
     isLoading: false,
   });
+  mockMutateAsync.mockResolvedValue({});
 });
 
 function renderWithProviders() {
@@ -55,10 +66,8 @@ function renderWithProviders() {
 }
 
 describe("AddExpenseScreen", () => {
-  it("renders form fields", () => {
+  it("renders form fields via ExpenseForm", () => {
     renderWithProviders();
-    // "Add expense" appears as both heading and button
-    expect(screen.getAllByText("Add expense").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
     expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
   });
@@ -69,14 +78,18 @@ describe("AddExpenseScreen", () => {
       isLoading: true,
     });
     renderWithProviders();
-    // LoadingSpinner component renders
     expect(screen.queryByText("Add expense")).toBeNull();
+  });
+
+  it("renders header with title and cancel button", () => {
+    renderWithProviders();
+    expect(screen.getAllByText("Add expense").length).toBeGreaterThan(0);
+    expect(screen.getByText("Cancel")).toBeTruthy();
   });
 
   it("renders member selection for paid-by", () => {
     renderWithProviders();
     expect(screen.getByText("Paid by")).toBeTruthy();
-    // Members shown: "Alice W. (you)" and "Bob S."
     expect(screen.getAllByText(/Alice W/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
   });
@@ -89,38 +102,33 @@ describe("AddExpenseScreen", () => {
     expect(screen.getByText("%")).toBeTruthy();
   });
 
-  it("disables submit button when description is empty", () => {
-    renderWithProviders();
-
-    // Set a valid amount but no description
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "50.00" },
-    });
-
-    // "Add expense" appears as heading and button; target the button
-    const addButtons = screen.getAllByText("Add expense");
-    const button = addButtons.find((el) => el.closest("button")) ?? addButtons[addButtons.length - 1]!;
-    const buttonEl = button.closest("button");
-
-    expect(buttonEl?.disabled ?? button.hasAttribute("disabled")).toBe(true);
-    expect(mockMutateAsync).not.toHaveBeenCalled();
-  });
-
-  it("shows recurring expense toggle", () => {
+  it("shows recurring toggle", () => {
     renderWithProviders();
     expect(screen.getByText("Recurring expense")).toBeTruthy();
   });
 
-  it("shows Cancel button", () => {
+  it("submits with correct payload including splitType", async () => {
     renderWithProviders();
-    expect(screen.getByText("Cancel")).toBeTruthy();
-  });
 
-  it("renders participant list for all members", () => {
-    renderWithProviders();
-    expect(screen.getByText("Split between")).toBeTruthy();
-    // Both members are listed (Check icon is mocked to null)
-    expect(screen.getAllByText(/Alice W/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "50.00" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+      target: { value: "Pizza" },
+    });
+
+    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(mockMutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groupId: "group-1",
+        description: "Pizza",
+        amountCents: 5000,
+        splitType: "equal",
+      }),
+    );
   });
 });

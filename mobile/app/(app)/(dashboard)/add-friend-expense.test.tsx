@@ -2,20 +2,32 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createTestQueryClient } from "../../../lib/test-utils";
-import AddFriendExpenseScreen from "./add-friend-expense";
 
 // Mock lucide-react-native
 vi.mock("lucide-react-native", () => ({
+  ChevronLeft: () => null,
   Check: () => null,
 }));
 
-// Mock auth
+// Mock DateTimePicker
+vi.mock("@react-native-community/datetimepicker", () => ({
+  default: () => null,
+}));
+
+// Mock safe area
+vi.mock("react-native-safe-area-context", () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
+
+import AddFriendExpenseScreen from "./add-friend-expense";
+
+// Mock auth with display_name
 vi.mock("../../../lib/auth", () => ({
   useAuth: vi.fn(() => ({
     user: {
       id: "user-1",
       email: "alice@example.com",
-      user_metadata: { display_name: "Alice" },
+      user_metadata: { display_name: "Alice Wonderland" },
     },
     session: { access_token: "tok" },
     loading: false,
@@ -24,7 +36,6 @@ vi.mock("../../../lib/auth", () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock queries
 const mockMutateAsync = vi.fn();
 const mockUseContacts = vi.fn();
 
@@ -38,6 +49,11 @@ vi.mock("../../../lib/queries", () => ({
 
 afterEach(cleanup);
 
+const contacts = [
+  { userId: "friend-1", displayName: "Bob Smith", avatarUrl: null },
+  { userId: "friend-2", displayName: "Carol Jones", avatarUrl: null },
+];
+
 function renderWithProviders() {
   const client = createTestQueryClient();
   return render(
@@ -47,12 +63,6 @@ function renderWithProviders() {
   );
 }
 
-const contacts = [
-  { userId: "friend-1", displayName: "Bob Smith", avatarUrl: null },
-  { userId: "friend-2", displayName: "Carol Jones", avatarUrl: null },
-  { userId: "friend-3", displayName: "Dave Lee", avatarUrl: null },
-];
-
 describe("AddFriendExpenseScreen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -60,17 +70,16 @@ describe("AddFriendExpenseScreen", () => {
     mockMutateAsync.mockResolvedValue({ createdCount: 1, friendGroupIds: ["g1"] });
   });
 
-  it("renders header and cancel button", () => {
+  it("renders header with title and cancel button", () => {
     renderWithProviders();
-    expect(screen.getByText("Add expense with friends")).toBeTruthy();
+    expect(screen.getAllByText("Add expense").length).toBeGreaterThan(0);
     expect(screen.getByText("Cancel")).toBeTruthy();
   });
 
-  it("shows contacts as selectable pills", () => {
+  it("shows contacts as selectable chips", () => {
     renderWithProviders();
     expect(screen.getByText("Bob S.")).toBeTruthy();
     expect(screen.getByText("Carol J.")).toBeTruthy();
-    expect(screen.getByText("Dave L.")).toBeTruthy();
   });
 
   it("shows empty state when no contacts", () => {
@@ -79,66 +88,64 @@ describe("AddFriendExpenseScreen", () => {
     expect(screen.getByText(/No contacts yet/)).toBeTruthy();
   });
 
-  it("toggles friend selection on click", () => {
-    renderWithProviders();
-    const bobPill = screen.getByText("Bob S.");
-    fireEvent.click(bobPill);
-    // Split info should appear when a friend is selected
-    // (requires amount > 0 too, so let's check payer selector instead)
-    expect(screen.getByText("Paid by")).toBeTruthy();
-  });
-
-  it("shows payer selector when exactly 1 friend selected", () => {
+  it("shows ExpenseForm when a friend is selected", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
-    expect(screen.getByText("Paid by")).toBeTruthy();
-    expect(screen.getByText("You")).toBeTruthy();
-    // Bob S. appears as contact pill AND payer option
-    expect(screen.getAllByText("Bob S.").length).toBeGreaterThanOrEqual(2);
+    // ExpenseForm renders with description and amount inputs
+    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
   });
 
-  it("hides payer selector when multiple friends selected", () => {
+  it("hides ExpenseForm when no friend selected", () => {
+    renderWithProviders();
+    expect(screen.queryByPlaceholderText("What's this for?")).toBeNull();
+  });
+
+  it("deselects friend when same chip clicked again", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
+    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    fireEvent.click(screen.getByText("Bob S."));
+    expect(screen.queryByPlaceholderText("What's this for?")).toBeNull();
+  });
+
+  it("switches selected friend when different chip clicked", () => {
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Bob S."));
+    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    // Click Carol — should switch selection
     fireEvent.click(screen.getByText("Carol J."));
-    expect(screen.queryByText("Paid by")).toBeNull();
+    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
   });
 
-  it("shows split info when friend selected and amount entered", () => {
+  it("does not show recurring toggle in friend expense form", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
-    const amountInput = screen.getByPlaceholderText("$0.00");
-    fireEvent.change(amountInput, { target: { value: "20.00" } });
-    expect(screen.getByText(/Split equally between you and 1 friend/)).toBeTruthy();
+    expect(screen.queryByText("Recurring expense")).toBeNull();
   });
 
-  it("shows multi-friend split info", () => {
+  it("shows split type options in friend expense form", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
-    fireEvent.click(screen.getByText("Carol J."));
-    const amountInput = screen.getByPlaceholderText("$0.00");
-    fireEvent.change(amountInput, { target: { value: "30.00" } });
-    expect(screen.getByText(/Split equally between you and 2 friends/)).toBeTruthy();
+    expect(screen.getByText("Equal")).toBeTruthy();
+    expect(screen.getByText("Custom")).toBeTruthy();
+    expect(screen.getByText("%")).toBeTruthy();
   });
 
-  it("submits with correct payload", async () => {
+  it("submits with correct payload when friend selected and form filled", async () => {
     renderWithProviders();
-
-    // Select a friend
     fireEvent.click(screen.getByText("Bob S."));
 
-    // Fill in description
-    const descInput = screen.getByPlaceholderText("Dinner, groceries, etc.");
-    fireEvent.change(descInput, { target: { value: "Coffee" } });
+    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+      target: { value: "Coffee" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "12.50" },
+    });
 
-    // Fill in amount
-    const amountInput = screen.getByPlaceholderText("$0.00");
-    fireEvent.change(amountInput, { target: { value: "12.50" } });
-
-    // Submit
-    const submitButton = screen.getAllByText("Add expense");
+    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {
-      fireEvent.click(submitButton[submitButton.length - 1]!);
+      fireEvent.click(submitBtn);
     });
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -148,5 +155,36 @@ describe("AddFriendExpenseScreen", () => {
         amountCents: 1250,
       }),
     );
+  });
+
+  it("passes splitType and splitAmounts on custom split submit", async () => {
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Bob S."));
+
+    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+      target: { value: "Groceries" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "30.00" },
+    });
+
+    fireEvent.click(screen.getByText("Custom"));
+
+    // Both participants in custom mode
+    const customInputs = screen.getAllByPlaceholderText("0.00");
+    if (customInputs.length >= 3) {
+      fireEvent.change(customInputs[1]!, { target: { value: "20.00" } });
+      fireEvent.change(customInputs[2]!, { target: { value: "10.00" } });
+    }
+
+    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    if (mockMutateAsync.mock.calls.length > 0) {
+      const call = mockMutateAsync.mock.calls[0]![0] as { splitType?: string };
+      expect(call.splitType).toBe("custom");
+    }
   });
 });

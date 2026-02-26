@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, ArrowRight, CheckCircle } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../lib/auth";
 import {
@@ -32,10 +33,20 @@ import {
   filterAmountInput,
   formatAmountDisplay,
   stripAmountFormatting,
+  toLocalDateString,
 } from "../../../../lib/queries/shared";
 import type { Member, UserOwesDebt } from "../../../../lib/types";
 
 type Step = "pick" | "form";
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function formatShortDate(d: Date): string {
+  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
 
 export default function RecordPaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,6 +62,8 @@ export default function RecordPaymentScreen() {
   const [fromUserId, setFromUserId] = useState<string | null>(null);
   const [toUserId, setToUserId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(Platform.OS === "ios");
   const [isPreset, setIsPreset] = useState(false);
   const [presetToName, setPresetToName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +148,7 @@ export default function RecordPaymentScreen() {
       await createPayment.mutateAsync({
         groupId: id!,
         amountCents,
-        date: new Date().toISOString().split("T")[0]!,
+        date: toLocalDateString(date),
         paidById: fromUserId,
         recipientId: toUserId,
         members,
@@ -381,6 +394,34 @@ export default function RecordPaymentScreen() {
                   </View>
                 </View>
               )}
+
+              {/* Date */}
+              <View className="mb-5">
+                <Text className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                  Date
+                </Text>
+                {Platform.OS === "android" && (
+                  <Pressable
+                    onPress={() => setShowDatePicker(true)}
+                    className="rounded-lg border border-stone-300 bg-white px-3 py-2.5 dark:border-stone-700 dark:bg-stone-900"
+                  >
+                    <Text className="text-base text-stone-900 dark:text-stone-100">
+                      {formatShortDate(date)}
+                    </Text>
+                  </Pressable>
+                )}
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "compact" : "default"}
+                    onChange={(_event, selectedDate) => {
+                      if (Platform.OS === "android") setShowDatePicker(false);
+                      if (selectedDate) setDate(selectedDate);
+                    }}
+                  />
+                )}
+              </View>
 
               {/* Amount — centered large input */}
               <View className="mb-5 items-center py-4">

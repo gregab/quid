@@ -11,6 +11,8 @@ interface CreateFriendExpenseInput {
   amountCents: number;
   date: string;
   paidById?: string;
+  splitType?: "equal" | "custom";
+  splitAmounts?: number[]; // parallel with [currentUser, friend] order
 }
 
 interface MemberLike {
@@ -27,10 +29,10 @@ export function useCreateFriendExpense() {
     mutationFn: async (input: CreateFriendExpenseInput) => {
       if (!user) throw new Error("Not authenticated");
 
-      const { friendIds, description, amountCents, date, paidById: rawPaidById } = input;
+      const { friendIds, description, amountCents, date, paidById: rawPaidById, splitType, splitAmounts: inputSplitAmounts } = input;
       const paidById = rawPaidById ?? user.id;
 
-      // Compute per-person shares
+      // Compute per-person shares (equal by default)
       const totalParticipants = friendIds.length + 1;
       const shares = splitAmount(amountCents, totalParticipants);
 
@@ -46,7 +48,10 @@ export function useCreateFriendExpense() {
 
       for (let i = 0; i < friendIds.length; i++) {
         const friendId = friendIds[i]!;
-        const friendShare = shares[i + 1]!;
+        // Use provided custom split amounts if available, otherwise equal split
+        const friendShare = (splitType === "custom" && inputSplitAmounts)
+          ? inputSplitAmounts[i + 1]!
+          : shares[i + 1]!;
 
         // Get or create friend group
         const { data: groupId, error: groupError } = await supabase.rpc(
@@ -68,7 +73,9 @@ export function useCreateFriendExpense() {
           .single();
         const friendDisplayName = friendProfile?.displayName ?? "Unknown";
 
-        const myShare = amountCents - friendShare;
+        const myShare = (splitType === "custom" && inputSplitAmounts)
+          ? inputSplitAmounts[i]!
+          : amountCents - friendShare;
         const participantIds = [user.id, friendId];
         const splitAmounts = [myShare, friendShare];
 
