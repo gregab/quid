@@ -81,6 +81,13 @@ export {
 // Bird facts
 export { BIRD_FACTS } from "./birdFacts";
 
+// Group colors
+export {
+  GROUP_COLORS,
+  getGroupColor,
+  type GroupColor,
+} from "./groupColors";
+
 // Group patterns
 export {
   generateGroupPattern,

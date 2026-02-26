@@ -192,7 +192,7 @@ export default function SettingsScreen() {
           <View className="mb-6 items-center">
             <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
               <Text className="text-3xl">
-                {profile?.emoji ?? "🐦"}
+                {profile?.defaultEmoji ?? "🐦"}
               </Text>
             </View>
             <Text className="text-lg font-bold text-stone-900 dark:text-white">
