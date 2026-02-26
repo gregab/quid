@@ -18,6 +18,16 @@ Module._resolveFilename = function (request, parent, ...args) {
   return originalResolve.call(this, request, parent, ...args);
 };
 
+// NativeWind's Tailwind CLI subprocess (child.js) is forked as a separate
+// Node.js process and does NOT inherit the Module._resolveFilename patch above.
+// Inject our resolver hook via NODE_OPTIONS so the child process loads it at
+// startup before requiring "tailwindcss/lib/cli/build".
+const resolverHook = path.resolve(__dirname, "tailwind-v3-resolver.js");
+const nodeOptionsFlag = `--require ${resolverHook}`;
+process.env.NODE_OPTIONS = process.env.NODE_OPTIONS
+  ? `${process.env.NODE_OPTIONS} ${nodeOptionsFlag}`
+  : nodeOptionsFlag;
+
 const { withNativeWind } = require("nativewind/metro");
 
 const projectRoot = __dirname;
@@ -34,5 +44,15 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, "node_modules"),
 ];
 
+// Vite and vitest are server-only build tools hoisted to the monorepo root.
+// They use Node.js-specific syntax (import.meta.resolve) that Hermes can't
+// handle. Resolve them as empty modules so they're never bundled.
+const SERVER_ONLY_MODULES = /^(vite|vitest)(\/|$)/;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (SERVER_ONLY_MODULES.test(moduleName)) {
+    return { type: "empty" };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 module.exports = withNativeWind(config, { input: "./global.css" });
