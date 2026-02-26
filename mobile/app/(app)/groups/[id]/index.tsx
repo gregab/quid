@@ -16,6 +16,7 @@ import {
   Plus,
   CheckCircle,
   Link as LinkIcon,
+  Repeat,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../lib/auth";
@@ -535,6 +536,17 @@ export default function GroupDetailScreen() {
               Expenses
             </Text>
             <View className="flex-row gap-2">
+              <Pressable
+                onPress={() =>
+                  router.push(`/(app)/groups/${id}/recurring`)
+                }
+                className="flex-row items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 dark:border-stone-700 dark:bg-stone-800"
+              >
+                <Repeat size={12} color="#78716c" />
+                <Text className="text-xs font-semibold text-stone-600 dark:text-stone-300">
+                  Recurring
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={() =>
                   router.push(`/(app)/groups/${id}/record-payment`)

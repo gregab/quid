@@ -16,6 +16,7 @@ vi.mock("lucide-react-native", () => ({
   Plus: () => null,
   CheckCircle: () => null,
   Link: () => null,
+  Repeat: () => null,
 }));
 
 import GroupDetailScreen from "./index";

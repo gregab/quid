@@ -6,3 +6,4 @@ export { useAddMember, useLeaveGroup } from "./members";
 export { useActivityLogs } from "./activity";
 export { useCurrentUser, useUpdateProfile, useDeleteAccount } from "./user";
 export { useInvitePreview, useJoinGroup } from "./invite";
+export { useRecurringExpenses, useStopRecurringExpense } from "./recurring";

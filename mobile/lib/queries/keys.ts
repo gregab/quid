@@ -7,6 +7,7 @@ export const groupKeys = {
   balances: (id: string) => ["groups", id, "balances"] as const,
   activity: (id: string) => ["groups", id, "activity"] as const,
   members: (id: string) => ["groups", id, "members"] as const,
+  recurringExpenses: (id: string) => ["groups", id, "recurringExpenses"] as const,
 };
 
 export const userKeys = {
