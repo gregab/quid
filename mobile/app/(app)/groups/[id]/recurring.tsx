@@ -8,6 +8,7 @@ import {
   useStopRecurringExpense,
 } from "../../../../lib/queries";
 import { Card } from "../../../../components/ui/Card";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { formatCents } from "../../../../lib/queries/shared";
 import type { RecurringExpenseRow } from "../../../../lib/queries/recurring";
@@ -114,13 +115,11 @@ export default function RecurringExpensesScreen() {
         <LoadingSpinner text="Loading recurring expenses..." />
       ) : (recurring ?? []).length === 0 ? (
         <View className="px-4">
-          <Card className="items-center px-4 py-8">
-            <Text className="text-3xl">🔄</Text>
-            <Text className="mt-2 text-center text-sm text-stone-500 dark:text-stone-400">
-              No active recurring expenses. Create one from the "Add Expense"
-              screen by toggling "Recurring".
-            </Text>
-          </Card>
+          <EmptyState
+            icon={<Text className="text-2xl">🔄</Text>}
+            title="No recurring expenses"
+            subtitle={'Create one from the "Add Expense" screen by toggling "Recurring".'}
+          />
         </View>
       ) : (
         <View className="px-4">
