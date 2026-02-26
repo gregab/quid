@@ -10,18 +10,7 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-**`origin/main` is the canonical source of truth.** All work ultimately lands on `origin/main`. Local `main` is just a local cache.
-
-### Default workflow
-1. Pull latest before starting: `git pull --rebase origin main`
-2. Make changes and write tests
-3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
-4. Commit to local `main`
-5. `git push origin main` — triggers a Vercel **preview deployment** automatically
-6. User promotes to production when satisfied: `deploy` (shell shortcut) or `vercel --prod`
-
-### Worker instances
-Workers are Claude instances spawned with the worker prompt (`~/.claude/prompts/worker.md`). They follow a different loop: branch from `origin/main`, implement, get subagent review, push directly to `origin/main`. See that file for the full flow.
+**`origin/main` is the canonical source of truth.** Always start from `origin/main` and push approved work back to `origin/main` when done. `git push origin main` triggers a Vercel preview deployment. The user controls production promotion: `deploy` (shell shortcut) or `vercel --prod`.
 
 **Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
