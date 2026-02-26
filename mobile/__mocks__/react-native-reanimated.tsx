@@ -33,5 +33,25 @@ const AnimatedText = forwardRef<HTMLSpanElement, Props>(
   },
 );
 
+/** Chainable entering/exiting animation stub. */
+function makeEnteringAnimation() {
+  const chain: Record<string, (...args: unknown[]) => typeof chain> = {};
+  const handler = (..._args: unknown[]) => chain;
+  chain.delay = handler;
+  chain.duration = handler;
+  chain.springify = handler;
+  chain.damping = handler;
+  chain.stiffness = handler;
+  chain.withInitialValues = handler;
+  return chain;
+}
+
+export const FadeInDown = makeEnteringAnimation();
+export const FadeInUp = makeEnteringAnimation();
+export const FadeIn = makeEnteringAnimation();
+export const FadeOut = makeEnteringAnimation();
+export const SlideInDown = makeEnteringAnimation();
+export const SlideInUp = makeEnteringAnimation();
+
 const Animated = { View: AnimatedView, Text: AnimatedText, createAnimatedComponent };
 export default Animated;

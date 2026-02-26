@@ -43,3 +43,6 @@ export { percentagesToCents, centsToPercentages } from "@aviary/shared";
 
 // Bird facts
 export { BIRD_FACTS } from "@aviary/shared";
+
+// Group colors
+export { GROUP_COLORS, getGroupColor, type GroupColor } from "@aviary/shared";
