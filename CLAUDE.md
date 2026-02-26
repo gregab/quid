@@ -10,9 +10,19 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 ## Workflow
 
-For any change: make changes, write tests, run tests, commit. **Every completed task ends with a local commit** — do NOT push to GitHub automatically. The user controls when to deploy. Pushing to `main` creates a preview deployment; `vercel --prod` (or `vercel promote <url>`) deploys to production.
+All changes go through a PR — never commit directly to `main` or `production`.
 
-**Don't commit during planning.** Commits are for shipping code — features, bug fixes, refactors, doc updates tied to code changes. If you're exploring the codebase, researching approaches, or drafting a plan, don't create commits. Only commit when there's actual deliverable work.
+**Standard loop:**
+1. Create a worktree off `main`: `git worktree add "../aviary-<branch>" -b "<branch>" main`
+2. Implement the change with tests
+3. Verify: `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`
+4. Push the branch and open a PR with `gh pr create`
+5. GitHub Actions runs an automated Claude review — wait for `APPROVED` or `CHANGES_REQUESTED`
+6. On approval: merge with `gh pr merge <number> --squash --delete-branch`
+7. Merging to `main` triggers a Vercel **preview deployment** automatically
+8. The user promotes to production when satisfied: `vercel promote <preview-url>` or `vercel --prod`
+
+**Don't commit during planning.** Only commit actual deliverable work — features, bug fixes, doc updates tied to code. Exploring or drafting a plan doesn't warrant a commit.
 
 **Starting a task:** Use the "Where to Change Things" table below to find the right files. For larger tasks or unfamiliar areas, consult **ARCHITECTURE.md** for data models, API routes, and design decisions. **Be strategic with token usage** — targeted reads, not broad exploration.
 
@@ -20,7 +30,7 @@ For any change: make changes, write tests, run tests, commit. **Every completed 
 
 **Bug reports:** Just fix it. Investigate the root cause, write the fix, add tests, verify — zero hand-holding required. Don't ask clarifying questions when the bug is reproducible.
 
-**Before marking anything done:** Run tests and verify correctness. `npm run build` must pass. Diff your changes and ask: "Would this hold up in code review?"
+**Before opening a PR:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
 
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
@@ -151,7 +161,7 @@ See **ARCHITECTURE.md § Testing** for patterns, mocking examples, and Cypress d
 ## Environment Variables
 All in `.env.local` (see `.env.local.example`):
 - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase project
-- `NEXT_PUBLIC_SITE_URL` — `https://aviary.gregbigelow.com` in prod, `http://localhost:3000` in dev
+- `NEXT_PUBLIC_SITE_URL` — `https://aviary.gregbigelow.com` in prod and dev. Not set in Vercel Preview — code falls back to `VERCEL_URL` / `NEXT_PUBLIC_VERCEL_URL` automatically.
 - `SMOKE_TEST_EMAIL` / `SMOKE_TEST_PASSWORD` — (optional) Test account for smoke tests + Cypress
 
 ## Keeping Docs Current
