@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import CreateGroupButton from "./CreateGroupButton";
 import { DashboardFriends } from "./DashboardFriends";
-import type { DashboardContact } from "./DashboardAddExpenseForm";
+import type { DashboardContact, DashboardGroup } from "./DashboardAddExpenseForm";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
 import { GroupThumbnail } from "@/components/GroupThumbnail";
@@ -106,14 +106,16 @@ export default async function DashboardPage() {
     }
   }
 
-  // Build contacts: all unique users across ALL groups (excluding self)
+  // Build contacts and dashboardGroups: fetch members for all groups
   const contacts: DashboardContact[] = [];
+  const dashboardGroups: DashboardGroup[] = [];
   if (allGroups.length > 0) {
     const { data: contactMembers } = await supabase
       .from("GroupMember")
-      .select("userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
+      .select("groupId, userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
       .in("groupId", allGroups.map((g) => g.id));
 
+    // Build deduplicated contacts list
     const seen = new Set<string>();
     for (const m of contactMembers ?? []) {
       if (m.userId === user.id || seen.has(m.userId)) continue;
@@ -128,6 +130,26 @@ export default async function DashboardPage() {
       }
     }
     contacts.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    // Build per-group member map for dashboardGroups (regular groups only)
+    const currentUserDisplayName =
+      (user.user_metadata?.display_name as string | undefined) ??
+      user.email?.split("@")[0] ??
+      "friend";
+    for (const g of regularGroups) {
+      const members = [
+        { userId: user.id, displayName: currentUserDisplayName },
+        ...(contactMembers ?? [])
+          .filter((m) => m.groupId === g.id && m.userId !== user.id && m.User)
+          .map((m) => ({
+            userId: m.userId,
+            displayName: m.User!.displayName,
+            avatarUrl: m.User!.profilePictureUrl ?? m.User!.avatarUrl,
+            emoji: m.User!.defaultEmoji ?? undefined,
+          })),
+      ];
+      dashboardGroups.push({ id: g.id, name: g.name, members });
+    }
   }
 
   const displayName =
@@ -279,6 +301,7 @@ export default async function DashboardPage() {
         currentUserId={user.id}
         currentUserDisplayName={displayName}
         contacts={contacts}
+        groups={dashboardGroups}
         initialFriends={friends}
       />
 

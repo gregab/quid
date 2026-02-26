@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { DashboardAddExpenseForm } from "./DashboardAddExpenseForm";
-import type { DashboardContact } from "./DashboardAddExpenseForm";
+import type { DashboardContact, DashboardGroup } from "./DashboardAddExpenseForm";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 import { splitAmount } from "@/lib/balances/splitAmount";
@@ -22,6 +22,7 @@ interface DashboardFriendsProps {
   currentUserId: string;
   currentUserDisplayName: string;
   contacts: DashboardContact[];
+  groups: DashboardGroup[];
   initialFriends: FriendInfo[];
 }
 
@@ -29,6 +30,7 @@ export function DashboardFriends({
   currentUserId,
   currentUserDisplayName,
   contacts,
+  groups,
   initialFriends,
 }: DashboardFriendsProps) {
   const [friends, setFriends] = useState(initialFriends);
@@ -105,6 +107,7 @@ export function DashboardFriends({
             currentUserId={currentUserId}
             currentUserDisplayName={currentUserDisplayName}
             contacts={contacts}
+            groups={groups}
             onExpenseCreated={handleExpenseCreated}
           />
         </div>

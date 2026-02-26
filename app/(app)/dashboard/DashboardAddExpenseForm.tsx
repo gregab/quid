@@ -14,10 +14,17 @@ export interface DashboardContact {
   emoji?: string;
 }
 
+export interface DashboardGroup {
+  id: string;
+  name: string;
+  members: Member[];
+}
+
 interface DashboardAddExpenseFormProps {
   currentUserId: string;
   currentUserDisplayName: string;
   contacts: DashboardContact[];
+  groups?: DashboardGroup[];
   onExpenseCreated?: (expense: {
     friendUserId: string;
     friendGroupId: string;
@@ -33,21 +40,33 @@ export function DashboardAddExpenseForm({
   currentUserId,
   currentUserDisplayName,
   contacts,
+  groups = [],
   onExpenseCreated,
   renderTrigger,
 }: DashboardAddExpenseFormProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<"closed" | "picking" | "form">("closed");
   const [selectedFriend, setSelectedFriend] = useState<DashboardContact | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<DashboardGroup | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const filteredGroups = groups.filter(
+    (g) => !searchQuery.trim() || g.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const filteredContacts = contacts.filter(
     (c) => !searchQuery.trim() || c.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Combined list for keyboard navigation: groups first, then friends
+  const allFilteredItems = [
+    ...filteredGroups.map((g) => ({ type: "group" as const, item: g })),
+    ...filteredContacts.map((c) => ({ type: "contact" as const, item: c })),
+  ];
 
   useEffect(() => {
     setHighlightedIndex(0);
@@ -56,6 +75,7 @@ export function DashboardAddExpenseForm({
   const resetAll = useCallback(() => {
     setPhase("closed");
     setSelectedFriend(null);
+    setSelectedGroup(null);
     setSearchQuery("");
     setHighlightedIndex(0);
   }, []);
@@ -67,32 +87,45 @@ export function DashboardAddExpenseForm({
 
   const selectFriend = useCallback((contact: DashboardContact) => {
     setSelectedFriend(contact);
+    setSelectedGroup(null);
+    setSearchQuery("");
+    setPhase("form");
+  }, []);
+
+  const selectGroup = useCallback((group: DashboardGroup) => {
+    setSelectedGroup(group);
+    setSelectedFriend(null);
     setSearchQuery("");
     setPhase("form");
   }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (filteredContacts.length === 0) return;
+      if (allFilteredItems.length === 0) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setHighlightedIndex((i) => (i + 1) % filteredContacts.length);
+        setHighlightedIndex((i) => (i + 1) % allFilteredItems.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setHighlightedIndex((i) => (i - 1 + filteredContacts.length) % filteredContacts.length);
+        setHighlightedIndex((i) => (i - 1 + allFilteredItems.length) % allFilteredItems.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const contact = filteredContacts[highlightedIndex];
-        if (contact) selectFriend(contact);
+        const highlighted = allFilteredItems[highlightedIndex];
+        if (!highlighted) return;
+        if (highlighted.type === "group") {
+          selectGroup(highlighted.item as DashboardGroup);
+        } else {
+          selectFriend(highlighted.item as DashboardContact);
+        }
       } else if (e.key === "Escape") {
         resetAll();
       }
     },
-    [filteredContacts, highlightedIndex, selectFriend, resetAll]
+    [allFilteredItems, highlightedIndex, selectFriend, selectGroup, resetAll]
   );
 
-  const handleCustomSubmit = useCallback(
+  const handleFriendSubmit = useCallback(
     async (data: ExpenseSubmitData) => {
       if (!selectedFriend) return;
 
@@ -142,8 +175,38 @@ export function DashboardAddExpenseForm({
     [selectedFriend, currentUserId, resetAll, router, onExpenseCreated]
   );
 
+  const handleGroupSubmit = useCallback(
+    async (data: ExpenseSubmitData) => {
+      if (!selectedGroup) return;
+      resetAll();
+
+      const res = await fetch(`/api/groups/${selectedGroup.id}/expenses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: data.description,
+          amountCents: data.amountCents,
+          date: data.date,
+          paidById: data.paidById,
+          participantIds: data.participantIds,
+          splitType: data.splitType,
+          customSplits: data.customSplits,
+          recurring: data.recurring,
+        }),
+      });
+
+      const json = (await res.json()) as { data: unknown; error: string | null };
+      if (!res.ok || json.error) throw new Error(json.error ?? "Something went wrong.");
+
+      router.refresh();
+    },
+    [selectedGroup, resetAll, router]
+  );
+
   // Build Member[] for AddExpenseForm
-  const members: Member[] = selectedFriend
+  const members: Member[] = selectedGroup
+    ? selectedGroup.members
+    : selectedFriend
     ? [
         { userId: currentUserId, displayName: currentUserDisplayName },
         {
@@ -171,7 +234,7 @@ export function DashboardAddExpenseForm({
   );
 
   // Phase: form — delegate entirely to AddExpenseForm
-  if (phase === "form" && selectedFriend) {
+  if (phase === "form" && (selectedFriend || selectedGroup)) {
     return (
       <>
         {triggerButton}
@@ -179,7 +242,8 @@ export function DashboardAddExpenseForm({
           currentUserId={currentUserId}
           currentUserDisplayName={currentUserDisplayName}
           members={members}
-          onCustomSubmit={handleCustomSubmit}
+          groupId={selectedGroup?.id}
+          onCustomSubmit={selectedGroup ? handleGroupSubmit : handleFriendSubmit}
           renderTrigger={({ onClick }) => {
             return <AutoOpen onClick={onClick} />;
           }}
@@ -187,6 +251,8 @@ export function DashboardAddExpenseForm({
       </>
     );
   }
+
+  const hasAnything = groups.length > 0 || contacts.length > 0;
 
   return (
     <>
@@ -204,7 +270,7 @@ export function DashboardAddExpenseForm({
             <div className="px-5 pt-5 pb-3 border-b border-stone-100 dark:border-stone-700/60">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-stone-900 dark:text-white">
-                  Add friend expense
+                  Add expense
                 </h2>
                 <button
                   type="button"
@@ -219,9 +285,9 @@ export function DashboardAddExpenseForm({
             </div>
 
             <div className="px-5 py-4">
-              {contacts.length === 0 ? (
+              {!hasAnything ? (
                 <p className="text-sm text-stone-400 dark:text-stone-500 py-2">
-                  No contacts yet. Join a group first to see people you can split with.
+                  Join a group to start adding expenses.
                 </p>
               ) : (
                 <div>
@@ -238,7 +304,7 @@ export function DashboardAddExpenseForm({
                     <input
                       ref={searchInputRef}
                       type="text"
-                      placeholder="Search friends..."
+                      placeholder="Search groups and friends..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -247,42 +313,88 @@ export function DashboardAddExpenseForm({
                     />
                   </div>
 
-                  {/* Contact list */}
+                  {/* Combined list */}
                   <div className="mt-3 max-h-64 overflow-y-auto -mx-1 rounded-xl">
-                    {filteredContacts.length === 0 ? (
+                    {allFilteredItems.length === 0 ? (
                       <p className="px-3 py-4 text-sm text-stone-400 dark:text-stone-500 text-center">
                         No matches found
                       </p>
                     ) : (
-                      filteredContacts.map((contact, i) => (
-                        <button
-                          key={contact.userId}
-                          type="button"
-                          onClick={() => selectFriend(contact)}
-                          onMouseEnter={() => setHighlightedIndex(i)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
-                            i === highlightedIndex
-                              ? "bg-amber-50 dark:bg-amber-900/20"
-                              : "hover:bg-stone-50 dark:hover:bg-stone-700/50"
-                          }`}
-                        >
-                          {contact.avatarUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={contact.avatarUrl}
-                              alt=""
-                              className="w-9 h-9 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="flex w-9 h-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-sm">
-                              {contact.emoji ?? contact.displayName.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                          <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
-                            {formatDisplayName(contact.displayName)}
-                          </span>
-                        </button>
-                      ))
+                      <>
+                        {/* Groups section */}
+                        {filteredGroups.length > 0 && (
+                          <div>
+                            {filteredContacts.length > 0 && (
+                              <p className="px-3 pt-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                                Groups
+                              </p>
+                            )}
+                            {filteredGroups.map((group, i) => (
+                              <button
+                                key={group.id}
+                                type="button"
+                                onClick={() => selectGroup(group)}
+                                onMouseEnter={() => setHighlightedIndex(i)}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                                  i === highlightedIndex
+                                    ? "bg-amber-50 dark:bg-amber-900/20"
+                                    : "hover:bg-stone-50 dark:hover:bg-stone-700/50"
+                                }`}
+                              >
+                                <span className="flex w-9 h-9 items-center justify-center rounded-full bg-stone-100 dark:bg-stone-700 text-sm font-bold text-stone-600 dark:text-stone-300">
+                                  {group.name.charAt(0).toUpperCase()}
+                                </span>
+                                <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
+                                  {group.name}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Friends section */}
+                        {filteredContacts.length > 0 && (
+                          <div>
+                            {filteredGroups.length > 0 && (
+                              <p className="px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                                Friends
+                              </p>
+                            )}
+                            {filteredContacts.map((contact, i) => {
+                              const absIdx = filteredGroups.length + i;
+                              return (
+                                <button
+                                  key={contact.userId}
+                                  type="button"
+                                  onClick={() => selectFriend(contact)}
+                                  onMouseEnter={() => setHighlightedIndex(absIdx)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors cursor-pointer ${
+                                    absIdx === highlightedIndex
+                                      ? "bg-amber-50 dark:bg-amber-900/20"
+                                      : "hover:bg-stone-50 dark:hover:bg-stone-700/50"
+                                  }`}
+                                >
+                                  {contact.avatarUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={contact.avatarUrl}
+                                      alt=""
+                                      className="w-9 h-9 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="flex w-9 h-9 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-sm">
+                                      {contact.emoji ?? contact.displayName.charAt(0).toUpperCase()}
+                                    </span>
+                                  )}
+                                  <span className="text-sm font-medium text-stone-800 dark:text-stone-200 truncate">
+                                    {formatDisplayName(contact.displayName)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

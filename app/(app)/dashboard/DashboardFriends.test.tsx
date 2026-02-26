@@ -55,6 +55,7 @@ const defaultProps = {
   currentUserId: "user-1",
   currentUserDisplayName: "Alice",
   contacts,
+  groups: [],
   initialFriends: friends,
 };
 

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { DashboardAddExpenseForm } from "./DashboardAddExpenseForm";
-import type { DashboardContact } from "./DashboardAddExpenseForm";
+import type { DashboardContact, DashboardGroup } from "./DashboardAddExpenseForm";
 
 // Mock next/navigation
 const mockRefresh = vi.fn();
@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
   })),
 }));
 
-// Mock AddExpenseForm — we test the friend picker wrapper, not the inner form
+// Mock AddExpenseForm — we test the friend/group picker wrapper, not the inner form
 vi.mock("@/app/(app)/groups/[id]/AddExpenseForm", () => ({
   AddExpenseForm: vi.fn(({ members, onCustomSubmit, renderTrigger }: {
     members: Array<{ userId: string; displayName: string }>;
@@ -54,6 +54,25 @@ const contacts: DashboardContact[] = [
   { userId: "friend-3", displayName: "Dave Lee", avatarUrl: null },
 ];
 
+const groups: DashboardGroup[] = [
+  {
+    id: "group-1",
+    name: "Apartment",
+    members: [
+      { userId: "user-1", displayName: "Alice" },
+      { userId: "friend-1", displayName: "Bob Smith" },
+    ],
+  },
+  {
+    id: "group-2",
+    name: "Road Trip",
+    members: [
+      { userId: "user-1", displayName: "Alice" },
+      { userId: "friend-2", displayName: "Carol Jones" },
+    ],
+  },
+];
+
 const defaultProps = {
   currentUserId: "user-1",
   currentUserDisplayName: "Alice",
@@ -70,17 +89,17 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.getByText("Add expense")).toBeTruthy();
   });
 
-  it("opens friend picker modal on button click", () => {
+  it("opens picker modal with updated title on button click", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
-    expect(screen.getByText("Add friend expense")).toBeTruthy();
-    expect(screen.getByPlaceholderText("Search friends...")).toBeTruthy();
+    expect(screen.getByText("Add expense", { selector: "h2" })).toBeTruthy();
+    expect(screen.getByPlaceholderText("Search groups and friends...")).toBeTruthy();
   });
 
-  it("shows no contacts message when contacts array is empty", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} contacts={[]} />);
+  it("shows join group message when no contacts and no groups", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} contacts={[]} groups={[]} />);
     fireEvent.click(screen.getByText("Add expense"));
-    expect(screen.getByText(/No contacts yet/)).toBeTruthy();
+    expect(screen.getByText(/Join a group to start adding expenses/)).toBeTruthy();
   });
 
   it("shows all contacts in the list", () => {
@@ -95,7 +114,7 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    const searchInput = screen.getByPlaceholderText("Search friends...");
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
     fireEvent.change(searchInput, { target: { value: "Bob" } });
 
     expect(screen.getByText("Bob S.")).toBeTruthy();
@@ -107,7 +126,7 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    const searchInput = screen.getByPlaceholderText("Search friends...");
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
     fireEvent.change(searchInput, { target: { value: "zzzzz" } });
 
     expect(screen.getByText("No matches found")).toBeTruthy();
@@ -124,11 +143,11 @@ describe("DashboardAddExpenseForm", () => {
     expect(screen.getByTestId("form-members").textContent).toBe("Alice,Bob Smith");
   });
 
-  it("supports keyboard navigation: ArrowDown + Enter selects a friend", () => {
-    render(<DashboardAddExpenseForm {...defaultProps} />);
+  it("supports keyboard navigation: ArrowDown + Enter selects a friend (no groups)", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} groups={[]} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    const searchInput = screen.getByPlaceholderText("Search friends...");
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
 
     // ArrowDown to Carol (index 1), then Enter
     fireEvent.keyDown(searchInput, { key: "ArrowDown" });
@@ -143,13 +162,13 @@ describe("DashboardAddExpenseForm", () => {
     render(<DashboardAddExpenseForm {...defaultProps} />);
     fireEvent.click(screen.getByText("Add expense"));
 
-    const searchInput = screen.getByPlaceholderText("Search friends...");
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
     fireEvent.keyDown(searchInput, { key: "Escape" });
 
-    expect(screen.queryByText("Add friend expense")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Add expense" })).toBeNull();
   });
 
-  it("calls friends API and onExpenseCreated on submit", async () => {
+  it("calls friends API and onExpenseCreated on friend submit", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ data: { createdCount: 1, friendGroupIds: ["g1"] }, error: null }),
@@ -165,7 +184,7 @@ describe("DashboardAddExpenseForm", () => {
     // The mocked AddExpenseForm has a submit button
     fireEvent.click(screen.getByTestId("mock-submit"));
 
-    // Wait for async handleCustomSubmit to complete
+    // Wait for async handleFriendSubmit to complete
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/friends/expenses",
@@ -194,5 +213,89 @@ describe("DashboardAddExpenseForm", () => {
 
     // router.refresh should be called for server reconciliation
     expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  // ── Group path tests ──────────────────────────────────────────────────────
+
+  it("renders group section when groups are passed", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} />);
+    fireEvent.click(screen.getByText("Add expense"));
+    expect(screen.getByText("Apartment")).toBeTruthy();
+    expect(screen.getByText("Road Trip")).toBeTruthy();
+  });
+
+  it("clicking a group proceeds to AddExpenseForm with group members", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} />);
+    fireEvent.click(screen.getByText("Add expense"));
+    fireEvent.click(screen.getByText("Apartment"));
+
+    expect(screen.getByTestId("add-expense-form")).toBeTruthy();
+    expect(screen.getByTestId("form-members").textContent).toBe("Alice,Bob Smith");
+  });
+
+  it("search filters both groups and friends", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} />);
+    fireEvent.click(screen.getByText("Add expense"));
+
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
+    fireEvent.change(searchInput, { target: { value: "Road" } });
+
+    expect(screen.getByText("Road Trip")).toBeTruthy();
+    expect(screen.queryByText("Apartment")).toBeNull();
+    // Friends not matching "Road" should also be hidden
+    expect(screen.queryByText("Bob S.")).toBeNull();
+  });
+
+  it("calls group expenses API on group submit", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { id: "exp-1" }, error: null }),
+    });
+
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} />);
+    fireEvent.click(screen.getByText("Add expense"));
+    fireEvent.click(screen.getByText("Apartment"));
+
+    fireEvent.click(screen.getByTestId("mock-submit"));
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/groups/group-1/expenses",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+
+    const callArgs = mockFetch.mock.calls[0] as [string, { body: string }];
+    const body = JSON.parse(callArgs[1].body) as Record<string, unknown>;
+    expect(body.description).toBe("Test");
+    expect(body.amountCents).toBe(1000);
+  });
+
+  it("calls router.refresh() after group submit", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { id: "exp-1" }, error: null }),
+    });
+
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} />);
+    fireEvent.click(screen.getByText("Add expense"));
+    fireEvent.click(screen.getByText("Apartment"));
+    fireEvent.click(screen.getByTestId("mock-submit"));
+
+    await waitFor(() => {
+      expect(mockRefresh).toHaveBeenCalled();
+    });
+  });
+
+  it("keyboard Enter on group selects it and opens form", () => {
+    render(<DashboardAddExpenseForm {...defaultProps} groups={groups} contacts={[]} />);
+    fireEvent.click(screen.getByText("Add expense"));
+
+    const searchInput = screen.getByPlaceholderText("Search groups and friends...");
+    // First item (index 0) is Apartment — press Enter
+    fireEvent.keyDown(searchInput, { key: "Enter" });
+
+    expect(screen.getByTestId("add-expense-form")).toBeTruthy();
+    expect(screen.getByTestId("form-members").textContent).toBe("Alice,Bob Smith");
   });
 });
