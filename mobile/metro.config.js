@@ -44,29 +44,45 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, "node_modules"),
 ];
 
+// Test files must never be bundled by Metro — they use vitest/happy-dom APIs
+// that don't exist in Hermes, and Expo Router picks them up as routes. Vitest
+// runs independently and is unaffected by this block.
+config.resolver.blockList = [/.*\.test\.(ts|tsx|js|jsx)$/];
+
 // Vite and vitest are server-only build tools hoisted to the monorepo root.
 // They use Node.js-specific syntax (import.meta.resolve) that Hermes can't
 // handle. Resolve them as empty modules so they're never bundled.
 const SERVER_ONLY_MODULES = /^(vite|vitest)(\/|$)/;
 
-// React and React Native must resolve to a single instance to avoid the
-// "Invalid hook call" / duplicate React error in monorepos. Pin them to
-// mobile/node_modules so every package (including react-native-css-interop)
-// sees the same copy as the renderer.
-// Matches: "react", "react/...", "react-native", "react-native/..."
-// Does NOT match: "react-query", "react-native-gesture-handler", etc.
-const PINNED_TO_MOBILE = /^react(-native)?(\/|$)/;
+// Some packages must resolve to a single instance across the whole bundle to
+// avoid duplicate-context bugs (e.g. "Invalid hook call", NativeWind styles
+// not applied). We use require.resolve() to get the absolute path and return
+// it directly, bypassing Metro's standard parent-directory walk entirely.
+//
+// Modifying `nodeModulesPaths` alone is NOT sufficient: Metro walks parent
+// directories first, so root/node_modules wins for packages installed there.
+//
+// "react" — must be one instance or hooks break.
+//   Pinned to mobile/node_modules (matches react-native-renderer version).
+//
+// "react-native-css-interop" — NativeWind bundles its own nested copy AND
+//   mobile/package.json has another. Two instances = different React Contexts
+//   = NativeWind StyleSheets never reach the components. Pin to mobile copy.
+const PINNED_TO_MOBILE = /^(react(\/|$)|react-native-css-interop(\/|$))/;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (SERVER_ONLY_MODULES.test(moduleName)) {
     return { type: "empty" };
   }
   if (PINNED_TO_MOBILE.test(moduleName)) {
-    return context.resolveRequest(
-      { ...context, nodeModulesPaths: [path.resolve(projectRoot, "node_modules")] },
-      moduleName,
-      platform
-    );
+    try {
+      const filePath = require.resolve(moduleName, {
+        paths: [mobileNodeModules],
+      });
+      return { type: "sourceFile", filePath };
+    } catch {
+      // Fall through to default resolution if not found in mobile/node_modules
+    }
   }
   return context.resolveRequest(context, moduleName, platform);
 };
