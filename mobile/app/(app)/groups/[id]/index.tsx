@@ -165,7 +165,8 @@ function ExpenseCard({
 
   let paymentDirection: string | null = null;
   if (expense.isPayment) {
-    const toId = expense.participantIds[0];
+    const recipientSplit = expense.splits.find((s) => s.userId !== expense.paidById);
+    const toId = recipientSplit?.userId;
     const toMember = members.find((m) => m.userId === toId);
     const toName = toMember
       ? formatDisplayName(toMember.displayName)
@@ -310,7 +311,7 @@ export default function GroupDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const { data: group, isLoading: groupLoading } = useGroupDetail(id!);
+  const { data: group, isLoading: groupLoading, refetch: refetchGroup } = useGroupDetail(id!);
   const {
     data: expenses,
     isLoading: expensesLoading,
@@ -321,6 +322,7 @@ export default function GroupDetailScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch: refetchActivity,
   } = useActivityLogs(id!);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -389,7 +391,7 @@ export default function GroupDetailScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetchExpenses();
+    await Promise.all([refetchGroup(), refetchExpenses(), refetchActivity()]);
     setRefreshing(false);
   };
 
@@ -536,7 +538,7 @@ export default function GroupDetailScreen() {
             <View className={`w-1 rounded-l-xl ${accentColor}`} />
             <View className="min-w-0 flex-1 px-4 py-3">
               <View className="flex-row items-center gap-1.5">
-                {(resolvedDebts.length === 0 || netBalance === 0) && (
+                {resolvedDebts.length === 0 && (
                   <CheckCircle size={16} color="#16a34a" />
                 )}
                 <Text className={`text-xl font-bold ${balanceColor}`}>

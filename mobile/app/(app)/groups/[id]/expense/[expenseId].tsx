@@ -105,7 +105,20 @@ export default function ExpenseDetailScreen() {
 
     const beforeSplits = expense.splits.map((s) => ({ displayName: getMemberName(s.userId), amountCents: s.amountCents }));
     const ids = expense.participantIds;
-    const newSplitAmounts = splitAmount(amountCents, ids.length);
+
+    let newSplitAmounts: number[];
+    if (expense.splitType === "custom") {
+      if (amountCents !== expense.amountCents) {
+        const ratio = amountCents / expense.amountCents;
+        newSplitAmounts = expense.splits.map((s) => Math.round(s.amountCents * ratio));
+        const diff = amountCents - newSplitAmounts.reduce((a, b) => a + b, 0);
+        newSplitAmounts[newSplitAmounts.length - 1]! += diff;
+      } else {
+        newSplitAmounts = expense.splits.map((s) => s.amountCents);
+      }
+    } else {
+      newSplitAmounts = splitAmount(amountCents, ids.length);
+    }
     const afterSplits = ids.map((uid, i) => ({ displayName: getMemberName(uid), amountCents: newSplitAmounts[i]! }));
 
     try {
