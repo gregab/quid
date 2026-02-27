@@ -12,6 +12,7 @@ import { fontAssets } from "../lib/fonts";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ToastProvider } from "../lib/toast";
 import { ColorSchemeProvider } from "../lib/colorScheme";
+import { OfflineBanner } from "../components/ui/OfflineBanner";
 import "../global.css";
 
 // Keep splash visible while fonts load
@@ -39,6 +40,7 @@ export default function RootLayout() {
               <ToastProvider>
               <BottomSheetModalProvider>
                   <StatusBar style="auto" />
+                  <OfflineBanner />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(app)" />
