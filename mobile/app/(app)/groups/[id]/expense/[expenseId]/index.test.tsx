@@ -84,8 +84,8 @@ describe("ExpenseDetailScreen", () => {
   it("shows PAID BY section with payer and amount", () => {
     renderWithProviders();
     expect(screen.getByText("Paid by")).toBeTruthy();
-    // payer row shows name
-    expect(screen.getByText(/Alice W\./)).toBeTruthy();
+    // payer row shows name with "(you)" suffix when current user is payer
+    expect(screen.getAllByText(/Alice W\. \(you\)/).length).toBeGreaterThan(0);
   });
 
   it("shows SPLIT section with member amounts", () => {
@@ -189,7 +189,7 @@ describe("ExpenseDetailScreen", () => {
     const mockBack = vi.fn();
     vi.mocked(useRouter).mockReturnValue({ back: mockBack } as unknown as ReturnType<typeof useRouter>);
     renderWithProviders();
-    fireEvent.click(screen.getByLabelText("Close"));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(mockBack).toHaveBeenCalled();
   });
 });

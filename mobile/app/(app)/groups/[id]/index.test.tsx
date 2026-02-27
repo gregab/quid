@@ -117,7 +117,7 @@ describe("GroupDetailScreen", () => {
     renderWithProviders();
     expect(screen.getByText("No expenses yet")).toBeTruthy();
     expect(screen.getByText("Add the first expense to start tracking who owes what")).toBeTruthy();
-    expect(screen.getByText("Add expense")).toBeTruthy();
+    expect(screen.getAllByText("Add expense").length).toBeGreaterThan(0);
   });
 
   it("renders expense cards with descriptions", () => {
@@ -225,7 +225,7 @@ describe("GroupDetailScreen", () => {
       refetch: vi.fn(),
     });
     renderWithProviders();
-    expect(screen.getByTestId("icon-ArrowDownLeft")).toBeTruthy();
+    expect(screen.getAllByTestId("icon-ArrowDownLeft").length).toBeGreaterThan(0);
   });
 
   // --- Activity pressable + sheet tests ---
@@ -249,7 +249,7 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByTestId("activity-sheet-content")).toBeTruthy();
     expect(screen.getByText("Expense added")).toBeTruthy();
     expect(screen.getByText("Test")).toBeTruthy();
-    expect(screen.getByText("$50.00")).toBeTruthy();
+    expect(screen.getAllByText("$50.00").length).toBeGreaterThan(0);
     expect(screen.getByText("Close")).toBeTruthy();
   });
 
@@ -304,7 +304,7 @@ describe("GroupDetailScreen", () => {
       refetch: vi.fn(),
     });
     renderWithProviders();
-    expect(screen.getByText("Load more")).toBeTruthy();
+    expect(screen.getByText("Load older activity")).toBeTruthy();
   });
 
   it("renders inline action buttons with 'Settle up' and 'Add expense'", () => {

@@ -11,10 +11,7 @@ export function createTestQueryClient() {
     defaultOptions: {
       queries: {
         retry: false,
-        // 1ms gcTime: tiny enough to let fork worker event loops drain after
-        // tests complete, large enough that synchronous assertions after
-        // mutateAsync still see cache data (GC fires as a macro task, not inline)
-        gcTime: 1,
+        gcTime: Infinity,
       },
       mutations: {
         retry: false,

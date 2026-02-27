@@ -117,12 +117,12 @@ describe("AddExpenseScreen", () => {
   it("submits with equal split when Add expense is pressed", async () => {
     renderWithProviders();
 
-    fireEvent.changeText(screen.getByPlaceholderText("0.00"), "50.00");
-    fireEvent.changeText(screen.getByPlaceholderText("What's it for?"), "Pizza");
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "50.00" } });
+    fireEvent.change(screen.getByPlaceholderText("What's it for?"), { target: { value: "Pizza" } });
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {
-      fireEvent.press(submitBtn);
+      fireEvent.click(submitBtn);
     });
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -138,11 +138,11 @@ describe("AddExpenseScreen", () => {
   it("navigates to split screen when Split options is pressed", async () => {
     renderWithProviders();
 
-    fireEvent.changeText(screen.getByPlaceholderText("0.00"), "30.00");
-    fireEvent.changeText(screen.getByPlaceholderText("What's it for?"), "Groceries");
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "30.00" } });
+    fireEvent.change(screen.getByPlaceholderText("What's it for?"), { target: { value: "Groceries" } });
 
     await act(async () => {
-      fireEvent.press(screen.getByText("Split options"));
+      fireEvent.click(screen.getByText("Split options"));
     });
 
     expect(mockRouterPush).toHaveBeenCalledWith(

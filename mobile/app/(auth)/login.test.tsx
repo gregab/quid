@@ -31,7 +31,7 @@ describe("LoginScreen", () => {
   it("renders the Aviary branding", () => {
     render(<LoginScreen />);
     expect(screen.getByText("Aviary")).toBeTruthy();
-    expect(screen.getByText("Welcome back")).toBeTruthy();
+    expect(screen.getByText("Split expenses with friends")).toBeTruthy();
   });
 
   it("renders Log In button", () => {

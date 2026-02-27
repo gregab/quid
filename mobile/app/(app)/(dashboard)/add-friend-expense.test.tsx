@@ -5,10 +5,14 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { createTestQueryClient } from "../../../lib/test-utils";
 
-// Mock lucide-react-native
+// Mock lucide-react-native (must match all icons used by this screen and sub-components)
 vi.mock("lucide-react-native", () => ({
   ChevronLeft: () => null,
+  ChevronRight: () => null,
   Check: () => null,
+  X: () => null,
+  Calendar: () => null,
+  SlidersHorizontal: () => null,
 }));
 
 // Mock DateTimePicker
@@ -94,31 +98,31 @@ describe("AddFriendExpenseScreen", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
     // ExpenseForm renders with description and amount inputs
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Dinner, groceries, rent...")).toBeTruthy();
     expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
   });
 
   it("hides ExpenseForm when no friend selected", () => {
     renderWithProviders();
-    expect(screen.queryByPlaceholderText("What's this for?")).toBeNull();
+    expect(screen.queryByPlaceholderText("Dinner, groceries, rent...")).toBeNull();
   });
 
   it("deselects friend when same chip clicked again", () => {
     renderWithProviders();
     // Use getAllByText[0] — after selection, ExpenseForm also renders the name
     fireEvent.click(screen.getAllByText("Bob S.")[0]!);
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Dinner, groceries, rent...")).toBeTruthy();
     fireEvent.click(screen.getAllByText("Bob S.")[0]!);
-    expect(screen.queryByPlaceholderText("What's this for?")).toBeNull();
+    expect(screen.queryByPlaceholderText("Dinner, groceries, rent...")).toBeNull();
   });
 
   it("switches selected friend when different chip clicked", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Dinner, groceries, rent...")).toBeTruthy();
     // Click Carol — should switch selection
     fireEvent.click(screen.getByText("Carol J."));
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Dinner, groceries, rent...")).toBeTruthy();
   });
 
   it("does not show recurring toggle in friend expense form", () => {
@@ -130,6 +134,10 @@ describe("AddFriendExpenseScreen", () => {
   it("shows split type options in friend expense form", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
+    // Advance to step 1 where split options are shown
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), { target: { value: "Coffee" } });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), { target: { value: "10.00" } });
+    fireEvent.click(screen.getByText("Next"));
     expect(screen.getByText("Equal")).toBeTruthy();
     expect(screen.getByText("Custom")).toBeTruthy();
     expect(screen.getByText("%")).toBeTruthy();
@@ -139,12 +147,14 @@ describe("AddFriendExpenseScreen", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
 
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
       target: { value: "Coffee" },
     });
     fireEvent.change(screen.getByPlaceholderText("0.00"), {
       target: { value: "12.50" },
     });
+    // Advance to step 1 (equal split shows "Add expense" submit button)
+    fireEvent.click(screen.getByText("Next"));
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {
@@ -164,20 +174,24 @@ describe("AddFriendExpenseScreen", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
 
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
       target: { value: "Groceries" },
     });
     fireEvent.change(screen.getByPlaceholderText("0.00"), {
       target: { value: "30.00" },
     });
+    // Advance to step 1
+    fireEvent.click(screen.getByText("Next"));
 
+    // Switch to custom split and advance to step 2
     fireEvent.click(screen.getByText("Custom"));
+    fireEvent.click(screen.getByText("Next"));
 
     // Both participants in custom mode
     const customInputs = screen.getAllByPlaceholderText("0.00");
-    if (customInputs.length >= 3) {
-      fireEvent.change(customInputs[1]!, { target: { value: "20.00" } });
-      fireEvent.change(customInputs[2]!, { target: { value: "10.00" } });
+    if (customInputs.length >= 2) {
+      fireEvent.change(customInputs[0]!, { target: { value: "20.00" } });
+      fireEvent.change(customInputs[1]!, { target: { value: "10.00" } });
     }
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
@@ -220,12 +234,13 @@ describe("AddFriendExpenseScreen", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
 
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
       target: { value: "Lunch" },
     });
     fireEvent.change(screen.getByPlaceholderText("0.00"), {
       target: { value: "20.00" },
     });
+    fireEvent.click(screen.getByText("Next"));
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {
@@ -247,12 +262,13 @@ describe("AddFriendExpenseScreen", () => {
     renderWithProviders();
     fireEvent.click(screen.getByText("Bob S."));
 
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
       target: { value: "Lunch" },
     });
     fireEvent.change(screen.getByPlaceholderText("0.00"), {
       target: { value: "20.00" },
     });
+    fireEvent.click(screen.getByText("Next"));
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {

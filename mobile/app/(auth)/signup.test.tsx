@@ -20,7 +20,7 @@ describe("SignupScreen", () => {
   it("renders the Aviary branding", () => {
     render(<SignupScreen />);
     expect(screen.getByText("Aviary")).toBeTruthy();
-    expect(screen.getByText("Create your account")).toBeTruthy();
+    expect(screen.getByText("Split expenses with friends")).toBeTruthy();
   });
 
   it("renders Sign Up button", () => {

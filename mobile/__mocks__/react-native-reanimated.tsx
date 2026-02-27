@@ -15,6 +15,15 @@ export function useAnimatedStyle(updater: () => Record<string, unknown>) {
 }
 
 export function withSpring(toValue: number) { return toValue; }
+export function interpolate(value: number, inputRange: number[], outputRange: number[]) {
+  // Linear interpolation for test purposes
+  const [inMin, inMax] = [inputRange[0]!, inputRange[inputRange.length - 1]!];
+  const [outMin, outMax] = [outputRange[0]!, outputRange[outputRange.length - 1]!];
+  if (inMax === inMin) return outMin;
+  const t = (value - inMin) / (inMax - inMin);
+  return outMin + t * (outMax - outMin);
+}
+export const Extrapolation = { CLAMP: "clamp", EXTEND: "extend", IDENTITY: "identity" };
 export function withTiming(toValue: number) { return toValue; }
 export function withRepeat(animation: unknown) { return animation; }
 export function withDelay(_delay: number, animation: unknown) { return animation; }

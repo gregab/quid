@@ -1,4 +1,7 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+
+// Unmock toast so we test the real implementation (vitest.setup.ts mocks it globally)
+vi.unmock("./toast");
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { ToastProvider, useToast } from "./toast";
 

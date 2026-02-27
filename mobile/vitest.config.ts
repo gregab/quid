@@ -116,6 +116,7 @@ export default defineConfig({
       ),
 
       // --- Expo packages ---
+      "expo-linear-gradient": path.resolve(__dirname, "__mocks__/expo-linear-gradient.ts"),
       "expo-router": path.resolve(__dirname, "__mocks__/expo-router.tsx"),
       "expo-status-bar": path.resolve(__dirname, "__mocks__/expo-status-bar.tsx"),
       "expo-haptics": path.resolve(__dirname, "__mocks__/expo-haptics.ts"),

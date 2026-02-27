@@ -102,7 +102,7 @@ describe("ExpenseForm — Step 1: Split Options", () => {
   it("renders Paid by section with all member pills", () => {
     renderForm();
     fillStep0AndAdvance();
-    expect(screen.getByText("You")).toBeTruthy(); // current user shows as "You"
+    expect(screen.getAllByText("You").length).toBeGreaterThan(0); // current user shows as "You"
     expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
   });
 

@@ -32,7 +32,7 @@ describe("CreateGroupScreen", () => {
 
   it("renders form with group name input", () => {
     renderWithProviders();
-    expect(screen.getByText("Create a group")).toBeTruthy();
+    expect(screen.getByText("New Group")).toBeTruthy();
     expect(
       screen.getByPlaceholderText("Roommates, Trip to Paris, etc."),
     ).toBeTruthy();
@@ -85,7 +85,7 @@ describe("CreateGroupScreen", () => {
       fireEvent.click(screen.getByText("Create group"));
     });
 
-    expect(mockMutateAsync).toHaveBeenCalledWith("Trip Squad");
+    expect(mockMutateAsync).toHaveBeenCalledWith({ name: "Trip Squad", emoji: undefined });
     expect(replace).toHaveBeenCalledWith(
       "/(app)/groups/new-group-id",
     );
@@ -114,8 +114,8 @@ describe("CreateGroupScreen", () => {
     expect(screen.getByText("0/40")).toBeTruthy();
   });
 
-  it("shows Cancel button", () => {
+  it("shows Close button", () => {
     renderWithProviders();
-    expect(screen.getByText("Cancel")).toBeTruthy();
+    expect(screen.getByLabelText("Close")).toBeTruthy();
   });
 });

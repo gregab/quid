@@ -90,7 +90,7 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(
 );
 
 export const Pressable = forwardRef<HTMLButtonElement, Props>(
-  function MockPressable({ onPress, children, testID, className, style, ...rest }, ref) {
+  function MockPressable({ onPress, children, testID, className, style, accessibilityLabel, ...rest }, ref) {
     // Resolve function-style and array style props
     const resolvedStyle = flattenStyle(style);
     return (
@@ -101,6 +101,7 @@ export const Pressable = forwardRef<HTMLButtonElement, Props>(
         style={resolvedStyle}
         ref={ref}
         type="button"
+        aria-label={accessibilityLabel as string | undefined}
         {...rest}
       >
         {children}
