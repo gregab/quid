@@ -34,9 +34,7 @@ npm run build                           # Production build (next build)
 SKIP_SMOKE_TESTS=1 npm test            # Fast: unit + integration only (no network)
 npm test                                # All tests including smoke (hits production)
 npm run db:types                        # Regenerate Supabase types → lib/supabase/database.types.ts
-git push origin main                    # Triggers a Preview deployment on Vercel (NOT production)
-vercel --prod                           # Deploy current build to production
-vercel promote <preview-url>            # Promote an existing preview to production (no rebuild)
+git push origin main                    # Pushes to the canonical source of truth for the app
 
 # Mobile app
 cd mobile && npx expo start            # Start Expo dev server
