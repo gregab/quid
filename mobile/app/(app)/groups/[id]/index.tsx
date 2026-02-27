@@ -56,6 +56,7 @@ import { MemberPill } from "../../../../components/ui/MemberPill";
 import { GroupDetailSkeleton } from "../../../../components/ui/SkeletonLoader";
 import { ErrorState } from "../../../../components/ui/ErrorState";
 import { EmptyState } from "../../../../components/ui/EmptyState";
+import { PressableRow } from "../../../../components/ui/PressableRow";
 import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
@@ -236,9 +237,9 @@ function ExpenseCard({
   const badge = getExpenseBadge(expense, currentUserId);
 
   return (
-    <Pressable
+    <PressableRow
       onPress={onPress}
-      className="flex-row items-center gap-3 border-b border-stone-100 py-3 active:opacity-80 dark:border-stone-800/60"
+      className="flex-row items-center gap-3 border-b border-stone-100 py-3 dark:border-stone-800/60"
     >
       <View className="w-11 items-center rounded-lg bg-stone-100 py-1.5 dark:bg-stone-800">
         <Text className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">
@@ -312,7 +313,7 @@ function ExpenseCard({
       {expense.isPending && (
         <View className="h-2 w-2 rounded-full bg-amber-400" />
       )}
-    </Pressable>
+    </PressableRow>
   );
 }
 
@@ -433,9 +434,9 @@ function ActivityItem({
 
   if (onPress) {
     return (
-      <Pressable onPress={onPress} testID={`activity-item-${log.id}`} className="active:opacity-80">
+      <PressableRow onPress={onPress} testID={`activity-item-${log.id}`}>
         {content}
-      </Pressable>
+      </PressableRow>
     );
   }
 

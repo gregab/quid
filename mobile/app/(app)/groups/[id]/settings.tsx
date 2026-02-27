@@ -32,6 +32,7 @@ import {
   getUserDebtCents,
   formatCents,
 } from "../../../../lib/queries/shared";
+import { PressableRow } from "../../../../components/ui/PressableRow";
 
 function SettingsRow({
   icon,
@@ -46,12 +47,8 @@ function SettingsRow({
   onPress?: () => void;
   danger?: boolean;
 }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={!onPress}
-      className="flex-row items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 dark:border-stone-800 dark:bg-stone-900"
-    >
+  const content = (
+    <>
       {icon}
       <Text
         className={`flex-1 text-sm font-medium ${
@@ -68,7 +65,24 @@ function SettingsRow({
         </Text>
       )}
       {onPress && !danger && <ChevronRight size={16} color="#a8a29e" />}
-    </Pressable>
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <PressableRow
+        onPress={onPress}
+        className="flex-row items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 dark:border-stone-800 dark:bg-stone-900"
+      >
+        {content}
+      </PressableRow>
+    );
+  }
+
+  return (
+    <View className="flex-row items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 dark:border-stone-800 dark:bg-stone-900">
+      {content}
+    </View>
   );
 }
 

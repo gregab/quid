@@ -10,6 +10,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronRight, Plus, Settings } from "lucide-react-native";
+import { PressableRow } from "../../../components/ui/PressableRow";
 import { useAuth } from "../../../lib/auth";
 import { useGroups, useCurrentUser, useContacts } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
@@ -36,12 +37,8 @@ function GroupCard({ group }: { group: GroupSummary }) {
   });
 
   return (
-    <Pressable
+    <PressableRow
       onPress={() => router.push(`/(app)/groups/${group.id}`)}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.72 : 1,
-        transform: [{ scale: pressed ? 0.985 : 1 }],
-      })}
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
       {/* Thumbnail */}
@@ -92,7 +89,7 @@ function GroupCard({ group }: { group: GroupSummary }) {
         )}
         <ChevronRight size={15} color="#a8a29e" />
       </View>
-    </Pressable>
+    </PressableRow>
   );
 }
 
@@ -100,12 +97,8 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
   const router = useRouter();
 
   return (
-    <Pressable
+    <PressableRow
       onPress={() => router.push(`/(app)/groups/${friend.groupId}`)}
-      style={({ pressed }) => ({
-        opacity: pressed ? 0.72 : 1,
-        transform: [{ scale: pressed ? 0.985 : 1 }],
-      })}
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
       {/* Avatar */}
@@ -153,7 +146,7 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
         )}
         <ChevronRight size={15} color="#a8a29e" />
       </View>
-    </Pressable>
+    </PressableRow>
   );
 }
 
