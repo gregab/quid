@@ -14,6 +14,7 @@ import { useGroups, useCurrentUser, useContacts } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { DashboardSkeleton } from "../../../components/ui/SkeletonLoader";
+import { ErrorState } from "../../../components/ui/ErrorState";
 import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
 import { formatCents, BIRD_FACTS, formatDisplayName } from "../../../lib/queries/shared";
 import type { GroupSummary } from "../../../lib/types";
@@ -158,7 +159,7 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const { data: groups, isLoading, refetch } = useGroups();
+  const { data: groups, isLoading, isError, refetch } = useGroups();
   const { data: profile } = useCurrentUser();
   const { data: contacts } = useContacts();
   const [refreshing, setRefreshing] = useState(false);
@@ -211,6 +212,19 @@ export default function DashboardScreen() {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
         <DashboardSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+        <View className="flex-1 justify-center">
+          <ErrorState
+            message="Couldn't load your groups. Check your connection and try again."
+            onRetry={() => void refetch()}
+          />
+        </View>
       </SafeAreaView>
     );
   }

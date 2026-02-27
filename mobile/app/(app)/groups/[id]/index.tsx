@@ -52,7 +52,8 @@ import {
 import { useDeleteExpense } from "../../../../lib/queries/expenses";
 import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
-import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
+import { GroupDetailSkeleton } from "../../../../components/ui/SkeletonLoader";
+import { ErrorState } from "../../../../components/ui/ErrorState";
 import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
@@ -650,10 +651,11 @@ export default function GroupDetailScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const { data: group, isLoading: groupLoading, refetch: refetchGroup } = useGroupDetail(id!);
+  const { data: group, isLoading: groupLoading, isError: groupError, refetch: refetchGroup } = useGroupDetail(id!);
   const {
     data: expenses,
     isLoading: expensesLoading,
+    isError: expensesError,
     refetch: refetchExpenses,
   } = useGroupExpenses(id!);
   const {
@@ -827,7 +829,23 @@ export default function GroupDetailScreen() {
   if (groupLoading || expensesLoading) {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-        <LoadingSpinner text="Loading group..." />
+        <GroupDetailSkeleton />
+      </SafeAreaView>
+    );
+  }
+
+  if (groupError || expensesError) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+        <View className="flex-1 justify-center">
+          <ErrorState
+            message="Couldn't load this group. Check your connection and try again."
+            onRetry={() => {
+              void refetchGroup();
+              void refetchExpenses();
+            }}
+          />
+        </View>
       </SafeAreaView>
     );
   }
