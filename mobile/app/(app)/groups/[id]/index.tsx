@@ -62,7 +62,7 @@ import {
   UNKNOWN_USER,
   MEMBER_EMOJIS,
   getGroupColor,
-  generateGroupPattern,
+  generateGroupBanner,
 } from "../../../../lib/queries/shared";
 import type {
   ExpenseRow,
@@ -486,6 +486,110 @@ function ActivitySheetContent({
   );
 }
 
+const MEMBER_COLLAPSE_THRESHOLD = 9;
+const MEMBERS_SHOWN_COLLAPSED = 6;
+
+function ShareInvitePill({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 999,
+        borderWidth: 1.5,
+        borderColor: "#fcd34d",
+        backgroundColor: "#fef9e7",
+      }}
+      className="active:opacity-70"
+    >
+      <UserPlus size={12} color="#d97706" />
+      <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400e" }}>
+        Share invite
+      </Text>
+    </Pressable>
+  );
+}
+
+function MemberPillsSection({
+  members,
+  currentUserId,
+  inviteToken,
+  onShareInvite,
+  expanded,
+  onToggleExpanded,
+}: {
+  members: Member[];
+  currentUserId: string;
+  inviteToken: string | undefined;
+  onShareInvite: () => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
+  const needsCollapse = members.length >= MEMBER_COLLAPSE_THRESHOLD;
+  const visibleMembers =
+    needsCollapse && !expanded ? members.slice(0, MEMBERS_SHOWN_COLLAPSED) : members;
+  const hiddenCount = members.length - MEMBERS_SHOWN_COLLAPSED;
+
+  return (
+    <View className="px-4 pb-4 pt-3">
+      {/* Member pills — wrapping flex row */}
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        {visibleMembers.map((m) => (
+          <MemberPill
+            key={m.userId}
+            emoji={m.emoji ?? ""}
+            displayName={formatDisplayName(m.displayName)}
+            isCurrentUser={m.userId === currentUserId}
+            avatarUrl={m.avatarUrl}
+          />
+        ))}
+
+        {/* For small groups (≤8), share invite pill wraps inline with members */}
+        {!needsCollapse && inviteToken && (
+          <ShareInvitePill onPress={onShareInvite} />
+        )}
+
+        {/* Collapse toggle pill — shown only when ≥9 members */}
+        {needsCollapse && (
+          <Pressable
+            onPress={onToggleExpanded}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 999,
+              borderWidth: 1.5,
+              borderColor: "#d6d3d1",
+              backgroundColor: "#f5f5f4",
+            }}
+            className="active:opacity-70"
+          >
+            <Text style={{ fontSize: 12, fontWeight: "600", color: "#78716c" }}>
+              {expanded ? "Show less" : `+${hiddenCount} more`}
+            </Text>
+            <View style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }}>
+              <ChevronDown size={12} color="#78716c" />
+            </View>
+          </Pressable>
+        )}
+      </View>
+
+      {/* For large groups (≥9), share invite pill lives outside the collapsible area — always visible */}
+      {needsCollapse && inviteToken && (
+        <View style={{ marginTop: 8 }}>
+          <ShareInvitePill onPress={onShareInvite} />
+        </View>
+      )}
+    </View>
+  );
+}
+
 function GroupBannerHeader({
   group,
   displayTitle,
@@ -505,7 +609,7 @@ function GroupBannerHeader({
   const patternSeed = (group.patternSeed as number | null) ?? 0;
   const groupColor = getGroupColor(patternSeed);
 
-  const { lightSvg, darkSvg } = generateGroupPattern(patternSeed, 160);
+  const { lightSvg, darkSvg } = generateGroupBanner(patternSeed);
   const svgXml = colorScheme === "dark" ? darkSvg : lightSvg;
 
   const headerContent = (
@@ -751,6 +855,7 @@ export default function GroupDetailScreen() {
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showBalanceDetails, setShowBalanceDetails] = useState(false);
   const [showAllDebts, setShowAllDebts] = useState(false);
+  const [membersExpanded, setMembersExpanded] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
   const activitySheetRef = useRef<BottomSheetModal>(null);
   const hasAnimated = useRef(false);
@@ -964,44 +1069,14 @@ export default function GroupDetailScreen() {
         scrollEventThrottle={16}
       >
         {!isFriendGroup && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="px-4 pb-4 pt-3"
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {members.map((m) => (
-              <MemberPill
-                key={m.userId}
-                emoji={m.emoji ?? ""}
-                displayName={formatDisplayName(m.displayName)}
-                isCurrentUser={m.userId === user?.id}
-                avatarUrl={m.avatarUrl}
-              />
-            ))}
-            {inviteToken && (
-              <Pressable
-                onPress={handleShareInvite}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 999,
-                  borderWidth: 1.5,
-                  borderColor: "#fcd34d",
-                  backgroundColor: "#fef9e7",
-                }}
-                className="active:opacity-70"
-              >
-                <UserPlus size={12} color="#d97706" />
-                <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400e" }}>
-                  Share invite
-                </Text>
-              </Pressable>
-            )}
-          </ScrollView>
+          <MemberPillsSection
+            members={members}
+            currentUserId={user?.id ?? ""}
+            inviteToken={inviteToken}
+            onShareInvite={handleShareInvite}
+            expanded={membersExpanded}
+            onToggleExpanded={() => setMembersExpanded((v) => !v)}
+          />
         )}
 
         {celebration && (

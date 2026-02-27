@@ -48,4 +48,4 @@ export { BIRD_FACTS } from "@aviary/shared";
 export { GROUP_COLORS, getGroupColor, type GroupColor } from "@aviary/shared";
 
 // Group pattern generation
-export { generateGroupPattern } from "@aviary/shared";
+export { generateGroupPattern, generateGroupBanner } from "@aviary/shared";
