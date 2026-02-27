@@ -2,7 +2,7 @@
 
 Splitwise-style app: create groups, add expenses, get simplified debts. **Live production app with real users.** Security, correctness, and reliability are non-negotiable.
 
-**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. React Native mobile app (Expo SDK 52, Expo Router v4, NativeWind v4, TanStack Query v5). Monorepo with `@aviary/shared` for cross-platform business logic. Deployed on Vercel at `https://aviary.gregbigelow.com`.
+**Tech:** Next.js 16 (App Router, React 19, TS strict), Supabase (Auth + Data via JS client + RLS), Tailwind CSS 4, Zod 4, Vitest 4. React Native mobile app (Expo SDK 54, Expo Router v6, NativeWind v4, TanStack Query v5). Monorepo with `@aviary/shared` for cross-platform business logic. Deployed on Vercel at `https://aviary.gregbigelow.com`.
 
 ## Design Philosophy
 
