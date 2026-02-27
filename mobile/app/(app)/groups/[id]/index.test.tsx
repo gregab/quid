@@ -139,7 +139,7 @@ describe("GroupDetailScreen", () => {
     });
     renderWithProviders();
     expect(screen.getByText("Payment")).toBeTruthy();
-    expect(screen.getByText("you paid Bob S.")).toBeTruthy();
+    expect(screen.getByText("You paid Bob S.")).toBeTruthy();
   });
 
   it("shows personal context for lent expenses", () => {
@@ -149,7 +149,7 @@ describe("GroupDetailScreen", () => {
       refetch: vi.fn(),
     });
     renderWithProviders();
-    expect(screen.getByText("you lent $20.00")).toBeTruthy();
+    expect(screen.getByText("You lent $20.00")).toBeTruthy();
   });
 
   // --- Expense type badge tests ---
@@ -313,10 +313,10 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByText("Add")).toBeTruthy();
   });
 
-  it("shows invite members button", () => {
+  it("shows share invite button", () => {
     mockUseGroupDetail.mockReturnValue({ data: makeGroupDetail({ inviteToken: "abc" }), isLoading: false, refetch: vi.fn() });
     renderWithProviders();
-    expect(screen.getByText("Invite members")).toBeTruthy();
+    expect(screen.getByText("Share invite")).toBeTruthy();
   });
 
   it("renders banner with color background", () => {
@@ -329,27 +329,6 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByTestId("banner-back")).toBeTruthy();
   });
 
-  // --- Swipe-to-delete tests ---
-
-  it("wraps deletable expenses in swipeable wrapper", () => {
-    mockUseGroupExpenses.mockReturnValue({
-      data: [makeExpense({ canDelete: true })],
-      isLoading: false,
-      refetch: vi.fn(),
-    });
-    renderWithProviders();
-    expect(screen.getByTestId("swipeable")).toBeTruthy();
-  });
-
-  it("does not wrap non-deletable expenses in swipeable", () => {
-    mockUseGroupExpenses.mockReturnValue({
-      data: [makeExpense({ canDelete: false })],
-      isLoading: false,
-      refetch: vi.fn(),
-    });
-    renderWithProviders();
-    expect(screen.queryByTestId("swipeable")).toBeNull();
-  });
 
   // --- Friend group tests ---
 
@@ -381,7 +360,7 @@ describe("GroupDetailScreen", () => {
     it("hides invite link", () => {
       mockUseGroupDetail.mockReturnValue({ data: friendGroupDetail, isLoading: false, refetch: vi.fn() });
       renderWithProviders();
-      expect(screen.queryByText("Invite members")).toBeNull();
+      expect(screen.queryByText("Share invite")).toBeNull();
     });
 
     it("hides recurring button", () => {
@@ -396,5 +375,42 @@ describe("GroupDetailScreen", () => {
       expect(screen.getByText("Settle up")).toBeTruthy();
       expect(screen.getByText("Add")).toBeTruthy();
     });
+  });
+
+  // --- "Paid by you" attribution tests ---
+
+  it("shows 'Paid by you' when current user paid the expense", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ paidById: "user-1", paidByDisplayName: "Alice Wonderland", amountCents: 3000, splits: [{ userId: "user-1", amountCents: 1500 }, { userId: "user-2", amountCents: 1500 }] })],
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    renderWithProviders();
+    expect(screen.getByText("Paid by you")).toBeTruthy();
+  });
+
+  it("shows payer name when another user paid the expense", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ paidById: "user-2", paidByDisplayName: "Bob Smith", amountCents: 3000, splits: [{ userId: "user-1", amountCents: 1500 }, { userId: "user-2", amountCents: 1500 }] })],
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    renderWithProviders();
+    expect(screen.getByText("Paid by Bob S.")).toBeTruthy();
+  });
+
+  // --- Collapsible balance tests ---
+
+  it("hides debt lines by default (collapsed)", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ paidById: "user-1", amountCents: 4000, splits: [{ userId: "user-1", amountCents: 2000 }, { userId: "user-2", amountCents: 2000 }] })],
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    renderWithProviders();
+    // Balance label is visible
+    expect(screen.getByText(/You're owed/)).toBeTruthy();
+    // But individual debt lines are hidden by default
+    expect(screen.queryByText(/owes you/)).toBeNull();
   });
 });
