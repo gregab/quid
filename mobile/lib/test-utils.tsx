@@ -105,6 +105,7 @@ export function makeGroupDetail(overrides: Record<string, unknown> = {}) {
     id: "group-1",
     name: "Test Group",
     createdAt: "2026-01-01T00:00:00Z",
+    createdById: "user-1",
     inviteToken: "invite-tok",
     GroupMember: [
       {

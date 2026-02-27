@@ -27,6 +27,7 @@ const mockUseGroupDetail = vi.fn();
 const mockUseGroupExpenses = vi.fn();
 
 const mockUploadBannerAsync = vi.fn();
+const mockDeleteGroupAsync = vi.fn();
 
 vi.mock("../../../../lib/queries", () => ({
   useGroupDetail: () => mockUseGroupDetail(),
@@ -41,6 +42,9 @@ vi.mock("../../../../lib/queries", () => ({
   useUploadGroupBanner: () => ({
     mutateAsync: mockUploadBannerAsync,
     isPending: false,
+  }),
+  useDeleteGroup: () => ({
+    mutateAsync: mockDeleteGroupAsync,
   }),
 }));
 
@@ -195,5 +199,52 @@ describe("GroupSettingsScreen", () => {
   it("renders Banner section header", () => {
     renderWithProviders();
     expect(screen.getByText("Banner")).toBeTruthy();
+  });
+
+  // --- Delete group tests ---
+
+  it("shows delete group button when user is the creator", () => {
+    mockUseGroupDetail.mockReturnValue({
+      data: makeGroupDetail({ createdById: "user-1" }),
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.getByText("Delete group")).toBeTruthy();
+    expect(screen.getByTestId("delete-group-button")).toBeTruthy();
+  });
+
+  it("hides delete group button when user is not the creator", () => {
+    mockUseGroupDetail.mockReturnValue({
+      data: makeGroupDetail({ createdById: "user-other" }),
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.queryByText("Delete group")).toBeNull();
+    expect(screen.queryByTestId("delete-group-button")).toBeNull();
+  });
+
+  it("calls deleteGroup on confirmation", async () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+    mockDeleteGroupAsync.mockResolvedValueOnce(undefined);
+    mockUseGroupDetail.mockReturnValue({
+      data: makeGroupDetail({ createdById: "user-1" }),
+      isLoading: false,
+    });
+
+    renderWithProviders();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Delete group"));
+    });
+
+    // Alert mock auto-clicks last button (destructive "Delete")
+    expect(mockDeleteGroupAsync).toHaveBeenCalled();
+    expect(replace).toHaveBeenCalledWith("/(app)/(dashboard)");
   });
 });

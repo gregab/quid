@@ -252,6 +252,23 @@ export function useUpdateGroup(groupId: string) {
   });
 }
 
+/** Delete a group (creator-only — RLS enforces this). */
+export function useDeleteGroup(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("Group")
+        .delete()
+        .eq("id", groupId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: groupKeys.all });
+    },
+  });
+}
+
 /** Upload a banner image to Supabase Storage and update the group's bannerUrl. */
 export function useUploadGroupBanner(groupId: string) {
   const queryClient = useQueryClient();

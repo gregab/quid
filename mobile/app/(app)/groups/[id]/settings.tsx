@@ -8,6 +8,7 @@ import {
   Link as LinkIcon,
   UserPlus,
   LogOut,
+  Trash2,
   Users,
   Hash,
   ImageIcon,
@@ -21,6 +22,7 @@ import {
   useGroupExpenses,
   useLeaveGroup,
   useUpdateGroup,
+  useDeleteGroup,
   useUploadGroupBanner,
 } from "../../../../lib/queries";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
@@ -81,9 +83,11 @@ export default function GroupSettingsScreen() {
 
   const { showToast } = useToast();
   const updateGroup = useUpdateGroup(id!);
+  const deleteGroup = useDeleteGroup(id!);
   const uploadBanner = useUploadGroupBanner(id!);
 
   const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
 
@@ -126,6 +130,9 @@ export default function GroupSettingsScreen() {
   const groupName = (group as Record<string, unknown> | undefined)?.name as
     | string
     | undefined;
+  const createdById = (group as Record<string, unknown> | undefined)
+    ?.createdById as string | undefined;
+  const isCreator = !!user && !!createdById && user.id === createdById;
   const inviteToken = (group as Record<string, unknown> | undefined)
     ?.inviteToken as string | undefined;
   const memberCount = (
@@ -195,6 +202,38 @@ export default function GroupSettingsScreen() {
                 message: err instanceof Error
                   ? err.message
                   : "Failed to leave group.",
+                type: "error",
+              });
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleDeleteGroup = () => {
+    Alert.alert(
+      "Delete group",
+      `Are you sure you want to permanently delete "${groupName}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteGroup.mutateAsync();
+              void Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+              router.replace("/(app)/(dashboard)");
+            } catch (err) {
+              setDeleting(false);
+              showToast({
+                message: err instanceof Error
+                  ? err.message
+                  : "Failed to delete group.",
                 type: "error",
               });
             }
@@ -347,16 +386,31 @@ export default function GroupSettingsScreen() {
           <Text className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
             Danger zone
           </Text>
-          <Pressable
-            onPress={handleLeave}
-            disabled={leaving}
-            className="flex-row items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 dark:border-rose-900 dark:bg-rose-950/30"
-          >
-            <LogOut size={18} color="#e11d48" />
-            <Text className="flex-1 text-sm font-medium text-rose-600 dark:text-rose-400">
-              {leaving ? "Leaving..." : "Leave group"}
-            </Text>
-          </Pressable>
+          <View className="gap-2">
+            <Pressable
+              onPress={handleLeave}
+              disabled={leaving}
+              className="flex-row items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 dark:border-rose-900 dark:bg-rose-950/30"
+            >
+              <LogOut size={18} color="#e11d48" />
+              <Text className="flex-1 text-sm font-medium text-rose-600 dark:text-rose-400">
+                {leaving ? "Leaving..." : "Leave group"}
+              </Text>
+            </Pressable>
+            {isCreator && (
+              <Pressable
+                onPress={handleDeleteGroup}
+                disabled={deleting}
+                className="flex-row items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 dark:border-rose-900 dark:bg-rose-950/30"
+                testID="delete-group-button"
+              >
+                <Trash2 size={18} color="#e11d48" />
+                <Text className="flex-1 text-sm font-medium text-rose-600 dark:text-rose-400">
+                  {deleting ? "Deleting..." : "Delete group"}
+                </Text>
+              </Pressable>
+            )}
+          </View>
           {outstandingCents > 0 && (
             <Text className="mt-2 text-center text-xs text-rose-500 dark:text-rose-400">
               You owe {formatCents(outstandingCents)} — settle up first
