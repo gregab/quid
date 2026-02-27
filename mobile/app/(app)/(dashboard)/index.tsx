@@ -53,12 +53,12 @@ function GroupCard({ group }: { group: GroupSummary }) {
       {/* Group info */}
       <View className="min-w-0 flex-1">
         <Text
-          className="text-base font-semibold text-stone-900 dark:text-white"
+          className="text-[17px] font-semibold text-stone-900 dark:text-white"
           numberOfLines={1}
         >
           {group.name}
         </Text>
-        <Text className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
+        <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
           {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
           {" · "}
           {monthLabel}
@@ -68,13 +68,13 @@ function GroupCard({ group }: { group: GroupSummary }) {
       {/* Balance */}
       <View className="flex-row items-center gap-1.5">
         {group.balanceCents === 0 ? (
-          <Text className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+          <Text className="text-xs font-medium text-stone-400 dark:text-stone-500">
             settled
           </Text>
         ) : (
           <View className="items-end">
             <Text
-              className={`text-[11px] ${
+              className={`text-xs ${
                 group.balanceCents > 0
                   ? "text-emerald-600/70 dark:text-emerald-400/70"
                   : "text-rose-500/70 dark:text-rose-400/70"
@@ -83,7 +83,7 @@ function GroupCard({ group }: { group: GroupSummary }) {
               {group.balanceCents > 0 ? "you are owed" : "you owe"}
             </Text>
             <Text
-              className={`text-sm font-bold ${
+              className={`text-[15px] font-bold ${
                 group.balanceCents > 0
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-rose-500 dark:text-rose-400"
@@ -117,7 +117,7 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
       {/* Name */}
       <View className="min-w-0 flex-1">
         <Text
-          className="text-base font-semibold text-stone-900 dark:text-white"
+          className="text-[17px] font-semibold text-stone-900 dark:text-white"
           numberOfLines={1}
         >
           {formatDisplayName(friend.displayName)}
@@ -127,13 +127,13 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
       {/* Balance */}
       <View className="flex-row items-center gap-1.5">
         {friend.balanceCents === 0 ? (
-          <Text className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+          <Text className="text-xs font-medium text-stone-400 dark:text-stone-500">
             settled
           </Text>
         ) : (
           <View className="items-end">
             <Text
-              className={`text-[11px] ${
+              className={`text-xs ${
                 friend.balanceCents > 0
                   ? "text-emerald-600/70 dark:text-emerald-400/70"
                   : "text-rose-500/70 dark:text-rose-400/70"
@@ -142,7 +142,7 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
               {friend.balanceCents > 0 ? "you are owed" : "you owe"}
             </Text>
             <Text
-              className={`text-sm font-bold ${
+              className={`text-[15px] font-bold ${
                 friend.balanceCents > 0
                   ? "text-emerald-600 dark:text-emerald-400"
                   : "text-rose-500 dark:text-rose-400"
@@ -300,8 +300,8 @@ export default function DashboardScreen() {
             </ImageBackground>
 
             {/* Section header */}
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-stone-900 dark:text-white">
                 Your groups
               </Text>
               <Pressable
@@ -340,8 +340,8 @@ export default function DashboardScreen() {
             {/* Friends section */}
             {friends.length > 0 && (
               <View className="mt-6">
-                <View className="mb-2 flex-row items-center">
-                  <Text className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
+                <View className="mb-3 flex-row items-center">
+                  <Text className="text-xl font-bold text-stone-900 dark:text-white">
                     Friends
                   </Text>
                 </View>
@@ -389,7 +389,7 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   heroBg: {
-    marginBottom: 24,
+    marginBottom: 16,
     borderRadius: 16,
     overflow: "hidden",
   },
@@ -398,8 +398,8 @@ const styles = StyleSheet.create({
   },
   heroContent: {
     paddingHorizontal: 20,
-    paddingTop: 28,
-    paddingBottom: 24,
+    paddingTop: 20,
+    paddingBottom: 18,
   },
   heroLabel: {
     fontSize: 10,
