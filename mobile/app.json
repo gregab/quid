@@ -27,7 +27,9 @@
       "bundleIdentifier": "com.gregbigelow.aviary",
       "buildNumber": "1",
       "supportsTablet": true,
-      "associatedDomains": ["applinks:aviary.gregbigelow.com"],
+      "associatedDomains": [
+        "applinks:aviary.gregbigelow.com"
+      ],
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Aviary uses your photo library to set group banner images."
       },
@@ -56,7 +58,10 @@
               "pathPrefix": "/invite"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -73,7 +78,8 @@
         {
           "photosPermission": "Aviary uses your photo library to set group banner images."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "web": {
       "favicon": "./assets/favicon.png"
