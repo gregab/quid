@@ -4,6 +4,31 @@
  */
 import { vi } from "vitest";
 
+// --- @react-native-async-storage/async-storage ---
+vi.mock("@react-native-async-storage/async-storage", () => {
+  const store = new Map<string, string>();
+  return {
+    default: {
+      getItem: vi.fn((key: string) =>
+        Promise.resolve(store.get(key) ?? null),
+      ),
+      setItem: vi.fn((key: string, value: string) => {
+        store.set(key, value);
+        return Promise.resolve();
+      }),
+      removeItem: vi.fn((key: string) => {
+        store.delete(key);
+        return Promise.resolve();
+      }),
+      clear: vi.fn(() => {
+        store.clear();
+        return Promise.resolve();
+      }),
+      _store: store,
+    },
+  };
+});
+
 // --- expo-secure-store ---
 vi.mock("expo-secure-store", () => {
   const store = new Map<string, string>();
@@ -90,8 +115,31 @@ vi.mock("expo-constants", () => ({
       name: "Aviary",
       slug: "aviary",
       scheme: "aviary",
+      extra: {
+        eas: { projectId: "test-project-id" },
+      },
     },
   },
+}));
+
+// --- expo-notifications ---
+vi.mock("expo-notifications", () => ({
+  getPermissionsAsync: vi.fn(() =>
+    Promise.resolve({ status: "granted", expires: "never", granted: true }),
+  ),
+  requestPermissionsAsync: vi.fn(() =>
+    Promise.resolve({ status: "granted", expires: "never", granted: true }),
+  ),
+  getExpoPushTokenAsync: vi.fn(() =>
+    Promise.resolve({ data: "ExponentPushToken[mock-token]", type: "expo" }),
+  ),
+  setNotificationHandler: vi.fn(),
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1 },
+}));
+
+// --- expo-device ---
+vi.mock("expo-device", () => ({
+  isDevice: true,
 }));
 
 // --- @gorhom/bottom-sheet ---

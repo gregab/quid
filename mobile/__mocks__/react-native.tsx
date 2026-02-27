@@ -173,5 +173,6 @@ export const useWindowDimensions = () => ({
 });
 export const Appearance = {
   getColorScheme: () => "light",
+  setColorScheme: (_scheme: "light" | "dark" | null) => {},
   addChangeListener: () => ({ remove: () => {} }),
 };

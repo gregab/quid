@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -22,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
+import { useColorSchemePreference } from "../../../lib/colorScheme";
 import { useToast } from "../../../lib/toast";
 import {
   useCurrentUser,
@@ -87,7 +87,7 @@ export default function SettingsScreen() {
   const updateProfile = useUpdateProfile();
   const deleteAccount = useDeleteAccount();
 
-  const colorScheme = useColorScheme();
+  const { preference, cyclePreference } = useColorSchemePreference();
 
   const { showToast } = useToast();
 
@@ -257,7 +257,14 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<Moon size={16} color="#78716c" />}
               label="Dark mode"
-              value={colorScheme === "dark" ? "On" : "Off"}
+              value={
+                preference === "system"
+                  ? "System"
+                  : preference === "dark"
+                    ? "On"
+                    : "Off"
+              }
+              onPress={cyclePreference}
             />
           </Card>
 

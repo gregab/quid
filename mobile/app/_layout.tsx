@@ -11,6 +11,7 @@ import { queryClient } from "../lib/queryClient";
 import { fontAssets } from "../lib/fonts";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ToastProvider } from "../lib/toast";
+import { ColorSchemeProvider } from "../lib/colorScheme";
 import "../global.css";
 
 // Keep splash visible while fonts load
@@ -32,19 +33,21 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ToastProvider>
+        <ColorSchemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <ToastProvider>
               <BottomSheetModalProvider>
-                <StatusBar style="auto" />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(app)" />
-                </Stack>
-              </BottomSheetModalProvider>
-            </ToastProvider>
-          </AuthProvider>
-        </QueryClientProvider>
+                  <StatusBar style="auto" />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(app)" />
+                  </Stack>
+                </BottomSheetModalProvider>
+              </ToastProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ColorSchemeProvider>
       </ErrorBoundary>
     </GestureHandlerRootView>
   );
