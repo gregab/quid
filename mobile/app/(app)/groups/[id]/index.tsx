@@ -8,6 +8,9 @@ import {
   Alert,
   Share,
   ImageBackground,
+  ActivityIndicator,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
@@ -50,7 +53,6 @@ import { useDeleteExpense } from "../../../../lib/queries/expenses";
 import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
-import { Button } from "../../../../components/ui/Button";
 import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
@@ -810,6 +812,18 @@ export default function GroupDetailScreen() {
     setSelectedActivity(null);
   }, []);
 
+  const handleScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+      const distanceFromBottom =
+        contentSize.height - layoutMeasurement.height - contentOffset.y;
+      if (distanceFromBottom < 200 && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
+
   if (groupLoading || expensesLoading) {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
@@ -879,6 +893,8 @@ export default function GroupDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d97706" />
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
+        onScroll={handleScroll}
+        scrollEventThrottle={400}
       >
         {!isFriendGroup && (
           <ScrollView
@@ -1021,14 +1037,10 @@ export default function GroupDetailScreen() {
                   onPress={() => handleActivityPress(log)}
                 />
               ))}
-              {hasNextPage && (
-                <Button
-                  variant="ghost"
-                  onPress={() => void fetchNextPage()}
-                  loading={isFetchingNextPage}
-                >
-                  Load more
-                </Button>
+              {isFetchingNextPage && (
+                <View className="items-center py-3">
+                  <ActivityIndicator size="small" color="#d97706" />
+                </View>
               )}
             </>
           )}
