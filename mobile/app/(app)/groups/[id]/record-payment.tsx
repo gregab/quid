@@ -211,6 +211,7 @@ export default function RecordPaymentScreen() {
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
         >
           {step === "pick" ? (
             <>

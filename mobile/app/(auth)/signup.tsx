@@ -147,6 +147,7 @@ export default function SignupScreen() {
         <ScrollView
           contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           className="px-6"
         >
           {/* Hero */}

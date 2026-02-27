@@ -211,6 +211,7 @@ export function ExpenseForm({
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
       >
         {/* Amount — prominent centered input */}
         <View className="mb-6 items-center py-4">
