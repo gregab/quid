@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  ScrollView,
   Pressable,
   KeyboardAvoidingView,
   Platform,
@@ -70,47 +71,52 @@ export default function AddMemberScreen() {
           />
         </View>
 
-        <View className="flex-1 items-center px-4 pt-10">
-          {/* Icon */}
-          <View className="mb-4 h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
-            <UserPlus size={28} color="#d97706" />
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="flex-1 items-center px-4 pt-10">
+            {/* Icon */}
+            <View className="mb-4 h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 dark:bg-amber-900/30">
+              <UserPlus size={28} color="#d97706" />
+            </View>
+
+            <Text className="mb-2 text-center text-lg font-bold tracking-tight text-stone-900 dark:text-white">
+              Invite by email
+            </Text>
+            <Text className="mb-8 text-center text-sm leading-relaxed text-stone-500 dark:text-stone-400">
+              Enter the email address of the person you'd like to add.{"\n"}
+              They must already have an Aviary account.
+            </Text>
+
+            <View className="w-full gap-4">
+              <Input
+                label="Email address"
+                placeholder="friend@example.com"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setError(null);
+                  setSuccess(null);
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                error={error ?? undefined}
+              />
+
+              {success && (
+                <View className="flex-row items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+                  <CheckCircle2 size={18} color="#16a34a" />
+                  <Text className="flex-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    {success}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-
-          <Text className="mb-2 text-center text-lg font-bold tracking-tight text-stone-900 dark:text-white">
-            Invite by email
-          </Text>
-          <Text className="mb-8 text-center text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-            Enter the email address of the person you'd like to add.{"\n"}
-            They must already have an Aviary account.
-          </Text>
-
-          <View className="w-full gap-4">
-            <Input
-              label="Email address"
-              placeholder="friend@example.com"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setError(null);
-                setSuccess(null);
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              error={error ?? undefined}
-            />
-
-            {success && (
-              <View className="flex-row items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
-                <CheckCircle2 size={18} color="#16a34a" />
-                <Text className="flex-1 text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                  {success}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+        </ScrollView>
 
         {/* Bottom submit button */}
         <View

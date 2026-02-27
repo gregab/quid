@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   ScrollView,
+  KeyboardAvoidingView,
   Pressable,
   Platform,
   Switch,
@@ -203,7 +204,10 @@ export function ExpenseForm({
   }, [participantIds, percentages]);
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
         keyboardShouldPersistTaps="handled"
@@ -553,6 +557,6 @@ export function ExpenseForm({
           {submitLabel}
         </Button>
       </View>
-    </>
+    </KeyboardAvoidingView>
   );
 }
