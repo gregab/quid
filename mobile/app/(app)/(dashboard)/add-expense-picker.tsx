@@ -1,16 +1,8 @@
 import { useState, useMemo } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Platform,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, Text, TextInput, FlatList, Pressable } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react-native";
+import { ChevronRight, Search } from "lucide-react-native";
 import { useGroups, useContacts } from "../../../lib/queries";
 import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
 import { Avatar } from "../../../components/ui/Avatar";
@@ -24,7 +16,6 @@ type ListItem =
 
 export default function AddExpensePickerScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { data: groups } = useGroups();
   const { data: contacts } = useContacts();
   const [query, setQuery] = useState("");
@@ -41,14 +32,9 @@ export default function AddExpensePickerScreen() {
     [groups],
   );
 
-  // Build a map of userId → balanceCents for friend groups
   const friendBalanceMap = useMemo(() => {
     const map = new Map<string, number>();
-    // For friend groups, we use the group's balanceCents and match by friendName
-    // We'll match contacts by cross-referencing the friendGroups list
     for (const fg of friendGroups) {
-      // The "friend" in a friend group is identified by friendName
-      // We find the matching contact by displayName
       const contact = (contacts ?? []).find(
         (c) => c.displayName === (fg.friendName ?? fg.name),
       );
@@ -77,7 +63,6 @@ export default function AddExpensePickerScreen() {
     [contacts, q],
   );
 
-  // Build flat list with section headers
   const listData: ListItem[] = useMemo(() => {
     const items: ListItem[] = [];
     if (filteredGroups.length > 0) {
@@ -102,8 +87,10 @@ export default function AddExpensePickerScreen() {
   const renderItem = ({ item }: { item: ListItem }) => {
     if (item.kind === "section") {
       return (
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>{item.label}</Text>
+        <View className="px-5 pb-1.5 pt-5">
+          <Text className="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-stone-500">
+            {item.label}
+          </Text>
         </View>
       );
     }
@@ -115,14 +102,17 @@ export default function AddExpensePickerScreen() {
           onPress={() =>
             router.push(`/(app)/groups/${group.id}/add-expense`)
           }
-          style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          className="flex-row items-center gap-3 border-b border-stone-100 bg-[#faf9f7] px-5 py-3.5 active:bg-stone-50 dark:border-stone-800/60 dark:bg-[#0c0a09] dark:active:bg-stone-900"
         >
           <GroupThumbnail
             patternSeed={group.patternSeed}
             bannerUrl={group.bannerUrl}
           />
-          <View style={styles.rowInfo}>
-            <Text style={styles.rowName} numberOfLines={1}>
+          <View className="min-w-0 flex-1">
+            <Text
+              className="text-[15px] font-semibold text-stone-900 dark:text-white"
+              numberOfLines={1}
+            >
               {group.name}
             </Text>
           </View>
@@ -132,7 +122,6 @@ export default function AddExpensePickerScreen() {
       );
     }
 
-    // kind === "friend"
     const { contact, balanceCents } = item;
     return (
       <Pressable
@@ -141,14 +130,14 @@ export default function AddExpensePickerScreen() {
             `/(app)/(dashboard)/add-friend-expense?friendId=${contact.userId}`,
           )
         }
-        style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+        className="flex-row items-center gap-3 border-b border-stone-100 bg-[#faf9f7] px-5 py-3.5 active:bg-stone-50 dark:border-stone-800/60 dark:bg-[#0c0a09] dark:active:bg-stone-900"
       >
-        <Avatar
-          imageUrl={contact.avatarUrl}
-          size="lg"
-        />
-        <View style={styles.rowInfo}>
-          <Text style={styles.rowName} numberOfLines={1}>
+        <Avatar imageUrl={contact.avatarUrl} size="lg" />
+        <View className="min-w-0 flex-1">
+          <Text
+            className="text-[15px] font-semibold text-stone-900 dark:text-white"
+            numberOfLines={1}
+          >
             {formatDisplayName(contact.displayName)}
           </Text>
         </View>
@@ -161,26 +150,32 @@ export default function AddExpensePickerScreen() {
   const isEmpty = listData.length === 0;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       {/* Header */}
-      <View style={styles.header}>
+      <View className="flex-row items-center justify-between border-b border-stone-100 px-4 pb-2.5 pt-1 dark:border-stone-800/60">
         <Pressable
           onPress={() => router.back()}
-          style={styles.backButton}
+          className="py-1"
           hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
         >
-          <ChevronLeft size={20} color="#78716c" />
-          <Text style={styles.backLabel}>Cancel</Text>
+          <Text className="text-sm text-stone-500 dark:text-stone-400">
+            Cancel
+          </Text>
         </Pressable>
-        <Text style={styles.headerTitle}>Add expense</Text>
-        <View style={styles.headerSpacer} />
+        <Text className="text-sm font-semibold text-stone-900 dark:text-white">
+          Add expense
+        </Text>
+        {/* Spacer to center title */}
+        <View className="w-[52px]" />
       </View>
 
       {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <Search size={16} color="#a8a29e" style={styles.searchIcon} />
+      <View className="mx-4 my-3 flex-row items-center gap-2 rounded-xl bg-stone-100 px-3 py-2.5 dark:bg-stone-800">
+        <Search size={16} color="#a8a29e" />
         <TextInput
-          style={styles.searchInput}
+          className="flex-1 text-[15px] text-stone-900 dark:text-white"
           placeholder="Search groups or friends…"
           placeholderTextColor="#a8a29e"
           value={query}
@@ -195,183 +190,56 @@ export default function AddExpensePickerScreen() {
 
       {/* List */}
       {isEmpty ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>
+        <View className="flex-1 items-center justify-center px-8">
+          <Text className="text-center text-[15px] text-stone-400 dark:text-stone-500">
             {q ? `No results for "${query}"` : "No groups or friends yet."}
           </Text>
         </View>
       ) : (
         <FlatList
           data={listData}
-          keyExtractor={(item, index) => {
+          keyExtractor={(item) => {
             if (item.kind === "section") return `section-${item.label}`;
             if (item.kind === "group") return `group-${item.group.id}`;
             return `friend-${item.contact.userId}`;
           }}
           renderItem={renderItem}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 24 },
-          ]}
+          contentContainerStyle={{ paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 function BalanceChip({ balanceCents }: { balanceCents: number }) {
   if (balanceCents === 0) {
     return (
-      <Text style={styles.balanceSettled}>settled</Text>
+      <Text className="mr-1 text-[11px] font-medium text-stone-400 dark:text-stone-500">
+        settled
+      </Text>
     );
   }
   return (
-    <View style={styles.balanceStack}>
+    <View className="items-end">
       <Text
-        style={[
-          styles.balanceLabel,
-          balanceCents > 0 ? styles.balanceOwedLabel : styles.balanceOweLabel,
-        ]}
+        className={`text-[11px] ${
+          balanceCents > 0
+            ? "text-emerald-600/70 dark:text-emerald-400/70"
+            : "text-rose-500/70 dark:text-rose-400/70"
+        }`}
       >
         {balanceCents > 0 ? "you are owed" : "you owe"}
       </Text>
       <Text
-        style={[
-          styles.balanceAmount,
-          balanceCents > 0 ? styles.balanceOwedAmount : styles.balanceOweAmount,
-        ]}
+        className={`text-[13px] font-bold ${
+          balanceCents > 0
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-rose-500 dark:text-rose-400"
+        }`}
       >
         {formatCents(Math.abs(balanceCents))}
       </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#faf9f7",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e7e5e4",
-  },
-  backButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  backLabel: {
-    fontSize: 14,
-    color: "#78716c",
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1c1917",
-  },
-  headerSpacer: {
-    width: 60,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    backgroundColor: "#f5f5f4",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === "ios" ? 10 : 8,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    color: "#1c1917",
-  },
-  sectionHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 6,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "#a8a29e",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#f5f5f4",
-    backgroundColor: "#faf9f7",
-  },
-  rowPressed: {
-    backgroundColor: "#f5f5f4",
-  },
-  rowInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1c1917",
-  },
-  balanceSettled: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#a8a29e",
-    marginRight: 4,
-  },
-  balanceStack: {
-    alignItems: "flex-end",
-  },
-  balanceLabel: {
-    fontSize: 11,
-  },
-  balanceOwedLabel: {
-    color: "rgba(5, 150, 105, 0.7)",
-  },
-  balanceOweLabel: {
-    color: "rgba(244, 63, 94, 0.7)",
-  },
-  balanceAmount: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  balanceOwedAmount: {
-    color: "#059669",
-  },
-  balanceOweAmount: {
-    color: "#f43f5e",
-  },
-  listContent: {
-    paddingBottom: 24,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: "#a8a29e",
-    textAlign: "center",
-  },
-});
