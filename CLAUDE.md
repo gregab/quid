@@ -22,6 +22,8 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 **Before committing:** Run `npx tsc --noEmit && SKIP_SMOKE_TESTS=1 npm test`. Diff your changes and ask: "Would this hold up in code review?"
 
+**To commit and push:** After committing, push with `git fetch origin && git rebase origin/main && git push origin HEAD:main`. This pushes to `origin/main` directly (the canonical branch) — not to the local worktree branch. Retry rebase + push if rejected.
+
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
 > **Tests are non-negotiable.** Every bug fix, feature addition, and significant change must ship with tests. A task is not done until the tests are written and passing. No exceptions.
