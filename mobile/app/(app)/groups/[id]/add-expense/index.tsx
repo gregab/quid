@@ -112,7 +112,7 @@ export default function AddExpenseScreen() {
     if (!validate()) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: `/(app)/groups/${id}/add-expense/split` as const,
+      pathname: "./split",
       params: {
         amount: formatAmountDisplay(amount),
         description: description.trim(),

@@ -133,7 +133,7 @@ export default function SplitOptionsScreen() {
     if (participantIds.size === 0) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
-      pathname: `/(app)/groups/${id}/add-expense/advanced` as const,
+      pathname: "./advanced",
       params: {
         amount: amount ?? "",
         description: description ?? "",
