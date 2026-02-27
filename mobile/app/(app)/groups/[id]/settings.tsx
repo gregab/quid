@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, Pressable, Alert, Share } from "react-native";
+import { View, Text, Pressable, Alert, Share, Image, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -10,8 +10,10 @@ import {
   LogOut,
   Users,
   Hash,
+  ImageIcon,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../../../lib/auth";
 import { useToast } from "../../../../lib/toast";
 import {
@@ -19,6 +21,7 @@ import {
   useGroupExpenses,
   useLeaveGroup,
   useUpdateGroup,
+  useUploadGroupBanner,
 } from "../../../../lib/queries";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { Button } from "../../../../components/ui/Button";
@@ -78,6 +81,7 @@ export default function GroupSettingsScreen() {
 
   const { showToast } = useToast();
   const updateGroup = useUpdateGroup(id!);
+  const uploadBanner = useUploadGroupBanner(id!);
 
   const [leaving, setLeaving] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -87,6 +91,37 @@ export default function GroupSettingsScreen() {
     if (!expenses || !user) return 0;
     return getUserDebtCents(expenses, user.id);
   }, [expenses, user]);
+
+  const bannerUrl = (group as Record<string, unknown> | undefined)?.bannerUrl as
+    | string
+    | null
+    | undefined;
+
+  const handlePickBanner = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [3, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    try {
+      await uploadBanner.mutateAsync({
+        uri: asset.uri,
+        mimeType: asset.mimeType ?? "image/jpeg",
+      });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast({ message: "Banner updated!", type: "success" });
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to upload banner.",
+        type: "error",
+      });
+    }
+  };
 
   const groupName = (group as Record<string, unknown> | undefined)?.name as
     | string
@@ -240,6 +275,52 @@ export default function GroupSettingsScreen() {
             label="Members"
             value={`${memberCount}`}
           />
+        </View>
+
+        {/* Banner section */}
+        <Text className="mb-2.5 text-xs font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+          Banner
+        </Text>
+        <View className="mb-6">
+          <Pressable
+            onPress={handlePickBanner}
+            disabled={uploadBanner.isPending}
+            className="overflow-hidden rounded-xl border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900"
+            testID="banner-upload-button"
+          >
+            {bannerUrl ? (
+              <View>
+                <Image
+                  source={{ uri: bannerUrl }}
+                  style={{ width: "100%", height: 100, borderTopLeftRadius: 12, borderTopRightRadius: 12 }}
+                  resizeMode="cover"
+                  testID="banner-preview"
+                />
+                <View className="flex-row items-center justify-center gap-2 py-2.5">
+                  {uploadBanner.isPending ? (
+                    <ActivityIndicator size="small" color="#d97706" />
+                  ) : (
+                    <ImageIcon size={14} color="#d97706" />
+                  )}
+                  <Text className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    {uploadBanner.isPending ? "Uploading..." : "Change banner"}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View className="flex-row items-center gap-3 px-4 py-3.5">
+                {uploadBanner.isPending ? (
+                  <ActivityIndicator size="small" color="#d97706" />
+                ) : (
+                  <ImageIcon size={18} color="#78716c" />
+                )}
+                <Text className="flex-1 text-sm font-medium text-stone-700 dark:text-stone-300">
+                  {uploadBanner.isPending ? "Uploading..." : "Add banner image"}
+                </Text>
+                <ChevronRight size={16} color="#a8a29e" />
+              </View>
+            )}
+          </Pressable>
         </View>
 
         {/* Actions section */}

@@ -234,16 +234,55 @@ export function useCreateGroup() {
   });
 }
 
-/** Update a group's name. */
+/** Update a group's settings (name, bannerUrl, etc.). */
 export function useUpdateGroup(groupId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name }: { name: string }) => {
+    mutationFn: async (fields: { name?: string; bannerUrl?: string | null }) => {
       const { error } = await supabase
         .from("Group")
-        .update({ name })
+        .update(fields)
         .eq("id", groupId);
       if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: groupKeys.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: groupKeys.all });
+    },
+  });
+}
+
+/** Upload a banner image to Supabase Storage and update the group's bannerUrl. */
+export function useUploadGroupBanner(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ uri, mimeType }: { uri: string; mimeType: string }) => {
+      const ext = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+      const path = `${groupId}/banner.${ext}`;
+
+      // Fetch the local file as a blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("group-banners")
+        .upload(path, blob, { upsert: true, contentType: mimeType });
+      if (uploadError) throw new Error(uploadError.message);
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("group-banners")
+        .getPublicUrl(path);
+
+      // Update the Group row
+      const { error: updateError } = await supabase
+        .from("Group")
+        .update({ bannerUrl: publicUrl })
+        .eq("id", groupId);
+      if (updateError) throw new Error(updateError.message);
+
+      return publicUrl;
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: groupKeys.detail(groupId) });

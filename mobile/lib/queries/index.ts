@@ -1,5 +1,5 @@
 export { groupKeys, userKeys, inviteKeys } from "./keys";
-export { useGroups, useGroupDetail, useGroupExpenses, useCreateGroup, useUpdateGroup } from "./groups";
+export { useGroups, useGroupDetail, useGroupExpenses, useCreateGroup, useUpdateGroup, useUploadGroupBanner } from "./groups";
 export { useCreateExpense, useUpdateExpense, useDeleteExpense } from "./expenses";
 export { useCreatePayment } from "./payments";
 export { useAddMember, useLeaveGroup } from "./members";

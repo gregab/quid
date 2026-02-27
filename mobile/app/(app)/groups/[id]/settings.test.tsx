@@ -26,6 +26,8 @@ const mockUpdateGroupAsync = vi.fn();
 const mockUseGroupDetail = vi.fn();
 const mockUseGroupExpenses = vi.fn();
 
+const mockUploadBannerAsync = vi.fn();
+
 vi.mock("../../../../lib/queries", () => ({
   useGroupDetail: () => mockUseGroupDetail(),
   useGroupExpenses: () => mockUseGroupExpenses(),
@@ -34,6 +36,10 @@ vi.mock("../../../../lib/queries", () => ({
   }),
   useUpdateGroup: () => ({
     mutateAsync: mockUpdateGroupAsync,
+    isPending: false,
+  }),
+  useUploadGroupBanner: () => ({
+    mutateAsync: mockUploadBannerAsync,
     isPending: false,
   }),
 }));
@@ -166,5 +172,28 @@ describe("GroupSettingsScreen", () => {
       fireEvent.click(screen.getByText("Save"));
     });
     expect(mockUpdateGroupAsync).toHaveBeenCalledWith({ name: "New Name" });
+  });
+
+  // --- Banner upload tests ---
+
+  it("renders banner upload button when no banner set", () => {
+    renderWithProviders();
+    expect(screen.getByText("Add banner image")).toBeTruthy();
+    expect(screen.getByTestId("banner-upload-button")).toBeTruthy();
+  });
+
+  it("shows banner preview when group has banner", () => {
+    mockUseGroupDetail.mockReturnValue({
+      data: makeGroupDetail({ bannerUrl: "https://example.com/banner.jpg" }),
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.getByTestId("banner-preview")).toBeTruthy();
+    expect(screen.getByText("Change banner")).toBeTruthy();
+  });
+
+  it("renders Banner section header", () => {
+    renderWithProviders();
+    expect(screen.getByText("Banner")).toBeTruthy();
   });
 });
