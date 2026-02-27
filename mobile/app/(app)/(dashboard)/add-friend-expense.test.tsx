@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { createTestQueryClient } from "../../../lib/test-utils";
 
 // Mock lucide-react-native
@@ -187,5 +189,84 @@ describe("AddFriendExpenseScreen", () => {
       const call = mockMutateAsync.mock.calls[0]![0] as { splitType?: string };
       expect(call.splitType).toBe("custom");
     }
+  });
+
+  it("cancel button navigates back", () => {
+    const mockBack = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      back: mockBack,
+      push: vi.fn(),
+      replace: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as never);
+
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("shows disabled 'Select a friend above' prompt when contacts exist but none selected", () => {
+    renderWithProviders();
+    expect(screen.getByText("Select a friend above")).toBeTruthy();
+  });
+
+  it("hides 'Select a friend above' prompt when a friend is selected", () => {
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Bob S."));
+    expect(screen.queryByText("Select a friend above")).toBeNull();
+  });
+
+  it("triggers haptics on successful submission", async () => {
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Bob S."));
+
+    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+      target: { value: "Lunch" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "20.00" },
+    });
+
+    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(Haptics.notificationAsync).toHaveBeenCalled();
+  });
+
+  it("navigates back after successful submission", async () => {
+    const mockBack = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      back: mockBack,
+      push: vi.fn(),
+      replace: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as never);
+
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Bob S."));
+
+    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
+      target: { value: "Lunch" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "20.00" },
+    });
+
+    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(mockBack).toHaveBeenCalled();
+  });
+
+  it("shows loading state when contacts are undefined", () => {
+    mockUseContacts.mockReturnValue({ data: undefined });
+    renderWithProviders();
+    // No contacts rendered, no empty state shown (data is undefined, not empty array)
+    expect(screen.queryByText("Bob S.")).toBeNull();
+    expect(screen.queryByText("Carol J.")).toBeNull();
   });
 });

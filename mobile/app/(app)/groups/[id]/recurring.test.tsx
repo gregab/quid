@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { createTestQueryClient } from "../../../../lib/test-utils";
 import { Alert } from "react-native";
 
@@ -39,15 +40,13 @@ vi.mock("../../../../lib/auth", () => ({
 
 const mockMutateFn = vi.fn();
 const mockUseRecurringExpenses = vi.fn();
+const mockUseStopRecurringExpense = vi.fn();
 
 vi.mock("../../../../lib/queries", () => ({
   useRecurringExpenses: (...args: unknown[]) =>
     mockUseRecurringExpenses(...args),
-  useStopRecurringExpense: () => ({
-    mutate: mockMutateFn,
-    isPending: false,
-    variables: undefined,
-  }),
+  useStopRecurringExpense: (...args: unknown[]) =>
+    mockUseStopRecurringExpense(...args),
 }));
 
 afterEach(cleanup);
@@ -55,6 +54,11 @@ afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useLocalSearchParams).mockReturnValue({ id: "group-1" });
+  mockUseStopRecurringExpense.mockReturnValue({
+    mutate: mockMutateFn,
+    isPending: false,
+    variables: undefined,
+  });
 });
 
 function renderWithProviders() {
@@ -215,5 +219,121 @@ describe("RecurringExpensesScreen", () => {
 
     fireEvent.click(screen.getByText("Back"));
     expect(mockRouter.back).toHaveBeenCalled();
+  });
+
+  it("shows 'Stopping...' when mutation is pending for that item", () => {
+    mockUseStopRecurringExpense.mockReturnValue({
+      mutate: mockMutateFn,
+      isPending: true,
+      variables: "rec-1",
+    });
+
+    mockUseRecurringExpenses.mockReturnValue({
+      data: [
+        {
+          id: "rec-1",
+          description: "Weekly groceries",
+          amountCents: 5000,
+          frequency: "weekly",
+          nextDueDate: "2026-03-01",
+          paidByDisplayName: "Alice",
+          isActive: true,
+        },
+        {
+          id: "rec-2",
+          description: "Monthly rent",
+          amountCents: 100000,
+          frequency: "monthly",
+          nextDueDate: "2026-04-01",
+          paidByDisplayName: "Bob",
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+    });
+
+    renderWithProviders();
+
+    // rec-1 should show "Stopping..." while rec-2 still shows "Stop"
+    expect(screen.getByText("Stopping...")).toBeTruthy();
+    expect(screen.getByText("Stop")).toBeTruthy();
+  });
+
+  it("triggers haptics when stop is confirmed", () => {
+    const alertSpy = vi.spyOn(Alert, "alert");
+
+    mockUseRecurringExpenses.mockReturnValue({
+      data: [
+        {
+          id: "rec-1",
+          description: "Weekly groceries",
+          amountCents: 5000,
+          frequency: "weekly",
+          nextDueDate: "2026-03-01",
+          paidByDisplayName: "Alice",
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+    });
+
+    renderWithProviders();
+    fireEvent.click(screen.getByText("Stop"));
+
+    // Simulate pressing "Stop" in the alert
+    const alertCall = alertSpy.mock.calls[0];
+    const buttons = alertCall![2] as Array<{
+      text: string;
+      onPress?: () => void;
+    }>;
+    const stopButton = buttons.find((b) => b.text === "Stop");
+
+    act(() => {
+      stopButton!.onPress!();
+    });
+
+    expect(vi.mocked(Haptics.impactAsync)).toHaveBeenCalledWith("medium");
+  });
+
+  it("navigates to add-expense when 'Add recurring expense' button is pressed", () => {
+    const mockRouter = { back: vi.fn(), push: vi.fn() };
+    vi.mocked(useRouter).mockReturnValue(
+      mockRouter as unknown as ReturnType<typeof useRouter>,
+    );
+
+    mockUseRecurringExpenses.mockReturnValue({
+      data: [],
+      isLoading: false,
+    });
+
+    renderWithProviders();
+
+    fireEvent.click(screen.getByText("Add recurring expense"));
+    expect(mockRouter.push).toHaveBeenCalledWith(
+      "/(app)/groups/group-1/add-expense",
+    );
+  });
+
+  it("renders yearly frequency badge correctly", () => {
+    mockUseRecurringExpenses.mockReturnValue({
+      data: [
+        {
+          id: "rec-3",
+          description: "Annual subscription",
+          amountCents: 12000,
+          frequency: "yearly",
+          nextDueDate: "2027-01-01",
+          paidByDisplayName: "Alice",
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+    });
+
+    renderWithProviders();
+
+    expect(screen.getByText("Annual subscription")).toBeTruthy();
+    expect(screen.getByText("$120.00")).toBeTruthy();
+    expect(screen.getByText("Yearly")).toBeTruthy();
   });
 });
