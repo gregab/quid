@@ -8,7 +8,9 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/d37db65c-9f57-4fca-8ccb-2f407b315158"
+      "url": "https://u.expo.dev/d37db65c-9f57-4fca-8ccb-2f407b315158",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     },
     "scheme": "aviary",
     "version": "1.0.0",
@@ -24,7 +26,13 @@
       "bundleIdentifier": "com.gregbigelow.aviary",
       "buildNumber": "1",
       "supportsTablet": true,
-      "associatedDomains": ["applinks:aviary.gregbigelow.com"]
+      "associatedDomains": ["applinks:aviary.gregbigelow.com"],
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": []
+      }
     },
     "android": {
       "package": "com.gregbigelow.aviary",
@@ -66,7 +74,9 @@
       },
       "eas": {
         "projectId": "d37db65c-9f57-4fca-8ccb-2f407b315158"
-      }
+      },
+      "privacyPolicyUrl": "https://aviary.gregbigelow.com/privacy",
+      "termsOfServiceUrl": "https://aviary.gregbigelow.com/terms"
     }
   }
 }
