@@ -81,11 +81,11 @@ function renderWithProviders() {
 }
 
 describe("GroupDetailScreen", () => {
-  it("shows loading spinner when data is loading", () => {
-    mockUseGroupDetail.mockReturnValue({ data: undefined, isLoading: true });
+  it("shows skeleton loader when data is loading", () => {
+    mockUseGroupDetail.mockReturnValue({ data: undefined, isLoading: true, refetch: vi.fn() });
     mockUseGroupExpenses.mockReturnValue({ data: undefined, isLoading: true, refetch: vi.fn() });
     renderWithProviders();
-    expect(screen.getByText("Loading group...")).toBeTruthy();
+    expect(screen.getByTestId("group-detail-skeleton")).toBeTruthy();
   });
 
   it("shows group not found when no group data", () => {
