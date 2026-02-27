@@ -24,6 +24,8 @@ Splitwise-style app: create groups, add expenses, get simplified debts. **Live p
 
 **To commit and push:** After committing, push with `git fetch origin && git rebase origin/main && git push origin HEAD:main`. This pushes to `origin/main` directly (the canonical branch) — not to the local worktree branch. Retry rebase + push if rejected.
 
+**Multi-agent work:** Use `TeamCreate` + `SendMessage` (agent teams) rather than the `dispatching-parallel-agents` skill. Teams allow mid-flight communication — you can message running agents to adjust, redirect, or stop them. Background Task agents from `dispatching-parallel-agents` cannot receive messages once launched.
+
 > **Database migrations must be pushed before the task is done.** If you created or modified a migration (schema change, RPC signature change, new function), run `npx supabase db push` as part of completing the task — not as an afterthought. A migration that exists only locally means the production app is broken.
 
 > **Tests are non-negotiable.** Every bug fix, feature addition, and significant change must ship with tests. A task is not done until the tests are written and passing. No exceptions.
