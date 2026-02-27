@@ -5,9 +5,11 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ImageBackground,
+  StyleSheet,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronRight, Plus, Settings } from "lucide-react-native";
 import { PressableRow } from "../../../components/ui/PressableRow";
@@ -21,6 +23,7 @@ import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
 import { Avatar } from "../../../components/ui/Avatar";
 import { formatCents, BIRD_FACTS, formatDisplayName } from "../../../lib/queries/shared";
 import type { GroupSummary } from "../../../lib/types";
+import birdsImage from "../../../assets/birds.jpg";
 
 interface FriendInfo {
   userId: string;
@@ -162,6 +165,7 @@ export default function DashboardScreen() {
   const { data: contacts } = useContacts();
   const [refreshing, setRefreshing] = useState(false);
   const hasAnimated = useRef(false);
+  const insets = useSafeAreaInsets();
 
   // Mark animations as done after first render with data
   useEffect(() => {
@@ -236,6 +240,8 @@ export default function DashboardScreen() {
     );
   }
 
+  const hasGroups = (groups ?? []).length > 0;
+
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <FlatList
@@ -264,27 +270,19 @@ export default function DashboardScreen() {
               </Pressable>
             </View>
 
-            {/* Hero card */}
-            <Card className="mb-6 overflow-hidden rounded-2xl">
-              <View className="relative bg-amber-600 px-5 pb-6 pt-7 dark:bg-amber-700">
-                {/* Decorative circles for depth */}
-                <View
-                  className="absolute right-[-20px] top-[-30px] h-28 w-28 rounded-full bg-amber-500/40 dark:bg-amber-600/30"
-                  pointerEvents="none"
-                />
-                <View
-                  className="absolute bottom-[-10px] right-[60px] h-16 w-16 rounded-full bg-amber-700/30 dark:bg-amber-800/30"
-                  pointerEvents="none"
-                />
-
-                <Text className="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-200/80">
-                  Your balance
-                </Text>
-                <Text className="text-[26px] font-bold leading-tight tracking-tight text-white">
-                  Hey {displayName}.
-                </Text>
+            {/* Hero card — birds.jpg background */}
+            <ImageBackground
+              source={birdsImage}
+              style={styles.heroBg}
+              imageStyle={styles.heroBgImage}
+            >
+              {/* Dark gradient overlay */}
+              <View style={styles.heroOverlay} pointerEvents="none" />
+              <View style={styles.heroContent}>
+                <Text style={styles.heroLabel}>YOUR BALANCE</Text>
+                <Text style={styles.heroGreeting}>Hey {displayName}.</Text>
                 {(groups ?? []).length > 0 && (
-                  <Text className="mt-1.5 text-[15px] font-medium text-white/85">
+                  <Text style={styles.heroBalance}>
                     {totalBalance === 0
                       ? "You're all settled up 🎉"
                       : totalBalance > 0
@@ -293,7 +291,7 @@ export default function DashboardScreen() {
                   </Text>
                 )}
               </View>
-            </Card>
+            </ImageBackground>
 
             {/* Section header */}
             <View className="mb-2 flex-row items-center justify-between">
@@ -367,6 +365,74 @@ export default function DashboardScreen() {
           </>
         }
       />
+
+      {/* FAB — Add expense — only when groups exist */}
+      {hasGroups && (
+        <Pressable
+          onPress={() => router.push("/(app)/(dashboard)/add-expense-picker")}
+          style={[styles.fab, { bottom: insets.bottom + 24 }]}
+          accessibilityLabel="Add expense"
+          accessibilityRole="button"
+        >
+          <Plus size={26} color="#fff" strokeWidth={2.5} />
+        </Pressable>
+      )}
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  heroBg: {
+    marginBottom: 24,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  heroBgImage: {
+    borderRadius: 16,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  heroContent: {
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 24,
+  },
+  heroLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+    color: "rgba(255,255,255,0.65)",
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  heroGreeting: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#ffffff",
+    lineHeight: 36,
+    letterSpacing: -0.5,
+  },
+  heroBalance: {
+    marginTop: 6,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.88)",
+  },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#d97706",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+});

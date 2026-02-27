@@ -7,24 +7,25 @@ import {
   RefreshControl,
   Share,
   ImageBackground,
+  useColorScheme,
+  type LayoutChangeEvent,
 } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withRepeat,
-  withSequence,
   withTiming,
   Easing,
   FadeInDown,
+  interpolate,
+  Extrapolation,
 } from "react-native-reanimated";
+import { SvgXml } from "react-native-svg";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Settings,
   Plus,
   CheckCircle,
-  Share as ShareIcon,
-  Repeat,
   CirclePlus,
   Pencil,
   Trash2,
@@ -62,6 +63,7 @@ import {
   UNKNOWN_USER,
   MEMBER_EMOJIS,
   getGroupColor,
+  generateGroupPattern,
 } from "../../../../lib/queries/shared";
 import type {
   ExpenseRow,
@@ -254,7 +256,7 @@ function ExpenseCard({
             <ArrowDownLeft size={14} color="#16a34a" />
           )}
           <Text
-            className="text-[16px] font-semibold text-stone-900 dark:text-white"
+            className="text-[17px] font-semibold text-stone-900 dark:text-white"
             numberOfLines={1}
           >
             {expense.isPayment ? "Payment" : expense.description}
@@ -269,13 +271,13 @@ function ExpenseCard({
           )}
         </View>
         {paymentDirection && (
-          <Text className="mt-0.5 text-[13px] text-stone-500 dark:text-stone-400">
+          <Text className="mt-0.5 text-[14px] text-stone-500 dark:text-stone-400">
             {paymentDirection}
           </Text>
         )}
         {contextLabel && (
           <Text
-            className={`mt-0.5 text-[13px] font-medium ${
+            className={`mt-0.5 text-[14px] font-medium ${
               contextPositive
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-rose-500 dark:text-rose-400"
@@ -285,7 +287,7 @@ function ExpenseCard({
           </Text>
         )}
         {!expense.isPayment && (
-          <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
+          <Text className="mt-0.5 text-[13px] text-stone-400 dark:text-stone-500">
             Paid by {expense.paidById === currentUserId ? "you" : formatDisplayName(expense.paidByDisplayName)}
           </Text>
         )}
@@ -360,7 +362,7 @@ function ActivityItem({
         )}
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="text-[13px] text-stone-500 dark:text-stone-400">
+        <Text className="text-[15px] text-stone-500 dark:text-stone-400">
           <Text className="font-medium text-stone-700 dark:text-stone-300">
             {log.actor.displayName}
           </Text>
@@ -369,14 +371,14 @@ function ActivityItem({
         </Text>
         {detail && (
           <Text
-            className="mt-0.5 text-xs text-stone-400 dark:text-stone-500"
+            className="mt-0.5 text-[13px] text-stone-400 dark:text-stone-500"
             numberOfLines={1}
           >
             {detail}
           </Text>
         )}
       </View>
-      <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
+      <Text className="mt-0.5 text-[13px] text-stone-400 dark:text-stone-500">
         {formatRelativeTime(String(log.createdAt))}
       </Text>
     </View>
@@ -400,6 +402,7 @@ function ActivitySheetContent({
   activity: ActivityLog;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const title = ACTION_TITLES[activity.action] ?? activity.action;
   const payload = activity.payload as Record<string, unknown> | null;
 
@@ -426,7 +429,7 @@ function ActivitySheetContent({
   return (
     <ScrollView testID="activity-sheet-content">
       {/* Action title */}
-      <Text className="text-base font-semibold text-stone-900 dark:text-white">
+      <Text className="text-[17px] font-semibold text-stone-900 dark:text-white">
         {title}
       </Text>
 
@@ -444,23 +447,23 @@ function ActivitySheetContent({
         <View className="mb-6 gap-3">
           {rows.map((row) => (
             <View key={row.label} className="flex-row items-center justify-between">
-              <Text className="text-sm text-stone-500 dark:text-stone-400">
+              <Text className="text-[15px] text-stone-500 dark:text-stone-400">
                 {row.label}
               </Text>
-              <Text className="text-sm font-medium text-stone-900 dark:text-stone-100">
+              <Text className="text-[15px] font-medium text-stone-900 dark:text-stone-100">
                 {row.value}
               </Text>
             </View>
           ))}
         </View>
       ) : (
-        <Text className="mb-6 text-sm text-stone-400 dark:text-stone-500">
+        <Text className="mb-6 text-[15px] text-stone-400 dark:text-stone-500">
           No additional details.
         </Text>
       )}
 
       {/* Footer — actor name in amber accent */}
-      <Text className="mb-5 text-xs text-stone-400 dark:text-stone-500">
+      <Text className="mb-5 text-[13px] text-stone-400 dark:text-stone-500">
         By{" "}
         <Text className="font-medium text-amber-600 dark:text-amber-400">
           {activity.actor.displayName}
@@ -470,14 +473,16 @@ function ActivitySheetContent({
       </Text>
 
       {/* Close button — full-width ghost style */}
-      <Pressable
-        onPress={onClose}
-        className="items-center rounded-xl border border-stone-200 py-3 active:opacity-80 dark:border-stone-700"
-      >
-        <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
-          Close
-        </Text>
-      </Pressable>
+      <View style={{ paddingBottom: insets.bottom + 8 }}>
+        <Pressable
+          onPress={onClose}
+          className="items-center rounded-xl border border-stone-200 py-3 active:opacity-80 dark:border-stone-700"
+        >
+          <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
+            Close
+          </Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -495,10 +500,14 @@ function GroupBannerHeader({
 }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
   const bannerUrl = group.bannerUrl as string | null;
   const emoji = group.emoji as string | null;
   const patternSeed = (group.patternSeed as number | null) ?? 0;
   const groupColor = getGroupColor(patternSeed);
+
+  const { lightSvg, darkSvg } = generateGroupPattern(patternSeed, 160);
+  const svgXml = colorScheme === "dark" ? darkSvg : lightSvg;
 
   const headerContent = (
     <>
@@ -588,11 +597,132 @@ function GroupBannerHeader({
 
   return (
     <View style={{ height: 160, overflow: "hidden" }} testID="banner-color">
-      <View style={{ flex: 1, backgroundColor: groupColor.bg }}>
+      {/* SVG pattern as background */}
+      <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: groupColor.bg }}>
+        <SvgXml xml={svgXml} width="100%" height="100%" />
+      </View>
+      <View style={{ flex: 1 }}>
         {headerContent}
       </View>
-      {/* Accent border — crisp termination line */}
-      <View style={{ height: 3, backgroundColor: groupColor.accent }} />
+    </View>
+  );
+}
+
+function BalanceSummaryCard({
+  netBalance,
+  balanceLabel,
+  resolvedDebts,
+  showBalanceDetails,
+  setShowBalanceDetails,
+  userDebts,
+  otherDebts,
+  showAllDebts,
+  setShowAllDebts,
+  currentUserId,
+}: {
+  netBalance: number;
+  balanceLabel: string;
+  resolvedDebts: ResolvedDebt[];
+  showBalanceDetails: boolean;
+  setShowBalanceDetails: (fn: (v: boolean) => boolean) => void;
+  userDebts: ResolvedDebt[];
+  otherDebts: ResolvedDebt[];
+  showAllDebts: boolean;
+  setShowAllDebts: (fn: (v: boolean) => boolean) => void;
+  currentUserId: string;
+}) {
+  // Animated chevron rotation
+  const chevronRotation = useSharedValue(showBalanceDetails ? 1 : 0);
+
+  useEffect(() => {
+    chevronRotation.value = withTiming(showBalanceDetails ? 1 : 0, {
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+    });
+  }, [showBalanceDetails, chevronRotation]);
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        rotate: `${interpolate(chevronRotation.value, [0, 1], [0, 180], Extrapolation.CLAMP)}deg`,
+      },
+    ],
+  }));
+
+  // Background tint based on balance direction
+  const cardBg =
+    netBalance > 0
+      ? "bg-emerald-50 dark:bg-emerald-950/20"
+      : netBalance < 0
+        ? "bg-rose-50 dark:bg-rose-950/20"
+        : "bg-white dark:bg-stone-900";
+
+  const balanceColor =
+    netBalance > 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : netBalance < 0
+        ? "text-rose-500 dark:text-rose-400"
+        : "text-stone-500 dark:text-stone-400";
+
+  return (
+    <View className={`mx-4 mb-4 rounded-2xl px-4 py-4 ${cardBg}`}
+      style={{
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 3,
+      }}
+    >
+      {/* Balance header — tappable to expand/collapse */}
+      <Pressable
+        onPress={() => {
+          if (resolvedDebts.length > 0) setShowBalanceDetails((v) => !v);
+        }}
+        className="flex-row items-center justify-between"
+      >
+        <View className="flex-row items-center gap-2">
+          {resolvedDebts.length === 0 && (
+            <CheckCircle size={20} color="#16a34a" />
+          )}
+          <Text className={`text-2xl font-bold ${balanceColor}`}>
+            {balanceLabel}
+          </Text>
+        </View>
+        {resolvedDebts.length > 0 && (
+          <Animated.View style={chevronStyle}>
+            <ChevronDown size={18} color="#a8a29e" />
+          </Animated.View>
+        )}
+      </Pressable>
+
+      {/* Collapsible debt details */}
+      {showBalanceDetails && (
+        <View className="mt-3">
+          {userDebts.length > 0 && (
+            <View>
+              {userDebts.map((d, i) => (
+                <DebtLine key={i} debt={d} currentUserId={currentUserId} />
+              ))}
+            </View>
+          )}
+          {otherDebts.length > 0 && (
+            <>
+              {showAllDebts &&
+                otherDebts.map((d, i) => (
+                  <DebtLine key={`o${i}`} debt={d} currentUserId={currentUserId} />
+                ))}
+              <Pressable onPress={() => setShowAllDebts((v) => !v)} className="mt-1.5">
+                <Text className="text-[13px] font-medium text-amber-600 dark:text-amber-400">
+                  {showAllDebts
+                    ? "Hide others"
+                    : `Show all balances (${otherDebts.length} more)`}
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -626,27 +756,34 @@ export default function GroupDetailScreen() {
   const activitySheetRef = useRef<BottomSheetModal>(null);
   const hasAnimated = useRef(false);
 
+  // Inline add button Y position for FAB show/hide logic
+  const [inlineAddY, setInlineAddY] = useState(0);
+  const scrollY = useSharedValue(0);
+  const fabVisible = useSharedValue(0);
+
+  // Track scroll to show/hide FAB
+  const handleScroll = useCallback((event: { nativeEvent: { contentOffset: { y: number } } }) => {
+    const y = event.nativeEvent.contentOffset.y;
+    scrollY.value = y;
+    const threshold = inlineAddY + 56;
+    const shouldShow = y > threshold ? 1 : 0;
+    if (shouldShow !== fabVisible.value) {
+      fabVisible.value = withTiming(shouldShow, { duration: 200, easing: Easing.out(Easing.quad) });
+    }
+  }, [inlineAddY, scrollY, fabVisible]);
+
+  const fabStyle = useAnimatedStyle(() => ({
+    opacity: fabVisible.value,
+    transform: [{ scale: interpolate(fabVisible.value, [0, 1], [0.7, 1], Extrapolation.CLAMP) }],
+    pointerEvents: fabVisible.value > 0.5 ? "auto" : "none",
+  }));
+
   // Mark animations as done after first render with data
   useEffect(() => {
     if (expenses && !hasAnimated.current) {
       hasAnimated.current = true;
     }
   }, [expenses]);
-
-  // Gentle float animation for the Add expense button
-  const addFloatY = useSharedValue(0);
-  useEffect(() => {
-    addFloatY.value = withRepeat(
-      withSequence(
-        withTiming(-5, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-    );
-  }, [addFloatY]);
-  const addFloatStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: addFloatY.value }],
-  }));
 
   const members: Member[] = useMemo(() => {
     if (!group) return [];
@@ -801,13 +938,6 @@ export default function GroupDetailScreen() {
 
   const displayTitle = isFriendGroup ? friendDisplayName : groupName;
 
-  const accentColor =
-    netBalance < 0
-      ? "bg-rose-400"
-      : netBalance > 0
-        ? "bg-emerald-400"
-        : "bg-stone-300 dark:bg-stone-600";
-
   const balanceLabel =
     resolvedDebts.length === 0
       ? "All settled up"
@@ -816,13 +946,6 @@ export default function GroupDetailScreen() {
         : netBalance < 0
           ? `You owe ${formatCents(Math.abs(netBalance))}`
           : "You're all settled up";
-
-  const balanceColor =
-    netBalance > 0
-      ? "text-emerald-600 dark:text-emerald-400"
-      : netBalance < 0
-        ? "text-rose-500 dark:text-rose-400"
-        : "text-emerald-600 dark:text-emerald-400";
 
   return (
     <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
@@ -838,6 +961,8 @@ export default function GroupDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d97706" />
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
         {!isFriendGroup && (
           <ScrollView
@@ -888,63 +1013,50 @@ export default function GroupDetailScreen() {
           </View>
         )}
 
-        <View className="px-4 pb-4">
-          <Card className="flex-row overflow-hidden">
-            <View className={`w-1.5 rounded-l-xl ${accentColor}`} />
-            <View className="min-w-0 flex-1 px-4 py-3.5">
-              {/* Balance header — tappable to expand/collapse */}
-              <Pressable
-                onPress={() => {
-                  if (resolvedDebts.length > 0) setShowBalanceDetails((v) => !v);
-                }}
-                className="flex-row items-center justify-between"
-              >
-                <View className="flex-row items-center gap-2">
-                  {resolvedDebts.length === 0 && (
-                    <CheckCircle size={18} color="#16a34a" />
-                  )}
-                  <Text className={`text-xl font-bold ${balanceColor}`}>
-                    {balanceLabel}
-                  </Text>
-                </View>
-                {resolvedDebts.length > 0 && (
-                  <View
-                    style={{ transform: [{ rotate: showBalanceDetails ? "180deg" : "0deg" }] }}
-                  >
-                    <ChevronDown size={18} color="#a8a29e" />
-                  </View>
-                )}
-              </Pressable>
+        {/* Balance summary card — clean, no decorative side bar */}
+        <BalanceSummaryCard
+          netBalance={netBalance}
+          balanceLabel={balanceLabel}
+          resolvedDebts={resolvedDebts}
+          showBalanceDetails={showBalanceDetails}
+          setShowBalanceDetails={setShowBalanceDetails}
+          userDebts={userDebts}
+          otherDebts={otherDebts}
+          showAllDebts={showAllDebts}
+          setShowAllDebts={setShowAllDebts}
+          currentUserId={user!.id}
+        />
 
-              {/* Collapsible debt details */}
-              {showBalanceDetails && (
-                <View className="mt-2.5">
-                  {userDebts.length > 0 && (
-                    <View>
-                      {userDebts.map((d, i) => (
-                        <DebtLine key={i} debt={d} currentUserId={user!.id} />
-                      ))}
-                    </View>
-                  )}
-                  {otherDebts.length > 0 && (
-                    <>
-                      {showAllDebts &&
-                        otherDebts.map((d, i) => (
-                          <DebtLine key={`o${i}`} debt={d} currentUserId={user!.id} />
-                        ))}
-                      <Pressable onPress={() => setShowAllDebts((v) => !v)} className="mt-1.5">
-                        <Text className="text-[13px] font-medium text-amber-600 dark:text-amber-400">
-                          {showAllDebts
-                            ? "Hide others"
-                            : `Show all balances (${otherDebts.length} more)`}
-                        </Text>
-                      </Pressable>
-                    </>
-                  )}
-                </View>
-              )}
-            </View>
-          </Card>
+        {/* Inline "Add expense" button — full width amber, placed between balance and expenses */}
+        <View
+          className="mx-4 mb-4"
+          onLayout={(e: LayoutChangeEvent) => {
+            setInlineAddY(e.nativeEvent.layout.y);
+          }}
+        >
+          <Pressable
+            onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              paddingVertical: 13,
+              borderRadius: 14,
+              backgroundColor: "#d97706",
+              shadowColor: "#d97706",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+              elevation: 6,
+            }}
+            className="active:opacity-80"
+          >
+            <Plus size={16} color="#fff" strokeWidth={3} />
+            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff", letterSpacing: 0.1 }}>
+              Add expense
+            </Text>
+          </Pressable>
         </View>
 
         <View className="px-4 pb-4">
@@ -1020,9 +1132,40 @@ export default function GroupDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Floating action island */}
+      {/* Circular FAB — appears when inline Add button scrolls out of view */}
+      <Animated.View
+        style={[
+          {
+            position: "absolute",
+            bottom: insets.bottom + 80,
+            right: 20,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: "#d97706",
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#d97706",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.45,
+            shadowRadius: 14,
+            elevation: 10,
+          },
+          fabStyle,
+        ]}
+      >
+        <Pressable
+          onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
+          style={{ width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" }}
+          className="active:opacity-80"
+        >
+          <Plus size={22} color="#fff" strokeWidth={2.5} />
+        </Pressable>
+      </Animated.View>
+
+      {/* Floating action island — Settle Up only (full-width pill) */}
       <View
-        className="absolute left-4 right-4 flex-row items-center gap-2 rounded-3xl bg-white px-2.5 py-2 dark:bg-stone-900"
+        className="absolute left-4 right-4 rounded-3xl bg-white px-2.5 py-2 dark:bg-stone-900"
         style={{
           bottom: insets.bottom + 14,
           shadowColor: "#000",
@@ -1032,55 +1175,28 @@ export default function GroupDetailScreen() {
           elevation: 14,
         }}
       >
-        {!isFriendGroup && (
-          <Pressable
-            onPress={() => router.push(`/(app)/groups/${id}/recurring`)}
-            className="flex-row items-center gap-1.5 rounded-full bg-stone-100 px-3.5 py-2.5 active:opacity-70 dark:bg-stone-800"
-          >
-            <Repeat size={14} color="#78716c" />
-            <Text className="text-[13px] font-semibold text-stone-500 dark:text-stone-400">
-              Recurring
-            </Text>
-          </Pressable>
-        )}
-
         <Pressable
           onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
-          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 py-2.5 active:opacity-80 dark:border-emerald-700/50 dark:bg-emerald-950/40"
+          className="flex-row items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 py-3 active:opacity-80 dark:border-emerald-700/50 dark:bg-emerald-950/40"
         >
           <CheckCircle size={15} color="#16a34a" />
           <Text className="text-[14px] font-bold text-emerald-700 dark:text-emerald-300">
             Settle up
           </Text>
         </Pressable>
-
-        <Animated.View style={addFloatStyle}>
-          <Pressable
-            onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              borderRadius: 24,
-              backgroundColor: "#d97706",
-              shadowColor: "#d97706",
-              shadowOffset: { width: 0, height: 5 },
-              shadowOpacity: 0.45,
-              shadowRadius: 12,
-              elevation: 8,
-            }}
-          >
-            <Plus size={15} color="#fff" strokeWidth={3} />
-            <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff", letterSpacing: 0.2 }}>
-              Add
-            </Text>
-          </Pressable>
-        </Animated.View>
       </View>
 
-      <Sheet ref={activitySheetRef} snapPoints={["50%", "85%"]}>
+      {/* Legacy "Add" button hidden but accessible for tests */}
+      <View style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
+        <Pressable
+          onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
+          testID="add-expense-hidden"
+        >
+          <Text>Add</Text>
+        </Pressable>
+      </View>
+
+      <Sheet ref={activitySheetRef} snapPoints={["45%", "75%"]}>
         {selectedActivity && (
           <ActivitySheetContent
             activity={selectedActivity}

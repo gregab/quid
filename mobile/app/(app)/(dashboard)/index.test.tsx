@@ -13,6 +13,9 @@ vi.mock("lucide-react-native", () => ({
   Settings: () => null,
 }));
 
+// Stub out the birds.jpg asset — binary files can't be parsed by Vitest's VM.
+vi.mock("../../../assets/birds.jpg", () => ({ default: 1 }));
+
 // Mock auth
 vi.mock("../../../lib/auth", () => ({
   useAuth: vi.fn(() => ({

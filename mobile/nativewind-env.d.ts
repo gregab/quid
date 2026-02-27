@@ -85,3 +85,17 @@ declare module "react-native-safe-area-context" {
     className?: string;
   }
 }
+
+// Image asset imports — React Native bundler (Metro) resolves these to a numeric ID.
+declare module "*.jpg" {
+  const value: number;
+  export default value;
+}
+declare module "*.jpeg" {
+  const value: number;
+  export default value;
+}
+declare module "*.png" {
+  const value: number;
+  export default value;
+}

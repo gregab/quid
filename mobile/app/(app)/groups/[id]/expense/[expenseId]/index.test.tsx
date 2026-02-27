@@ -6,11 +6,11 @@ import {
   createTestQueryClient,
   makeExpense,
   makeGroupDetail,
-} from "../../../../../lib/test-utils";
+} from "../../../../../../lib/test-utils";
 
-import ExpenseDetailScreen from "./[expenseId]";
+import ExpenseDetailScreen from "./index";
 
-vi.mock("../../../../../lib/auth", () => ({
+vi.mock("../../../../../../lib/auth", () => ({
   useAuth: vi.fn(() => ({
     user: { id: "user-1", email: "alice@example.com" },
     session: { access_token: "tok" },
@@ -20,16 +20,15 @@ vi.mock("../../../../../lib/auth", () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-const mockUpdateAsync = vi.fn();
 const mockDeleteAsync = vi.fn();
 const mockStopRecurringAsync = vi.fn();
 const mockUseGroupDetail = vi.fn();
 const mockUseGroupExpenses = vi.fn();
 
-vi.mock("../../../../../lib/queries", () => ({
+vi.mock("../../../../../../lib/queries", () => ({
   useGroupDetail: () => mockUseGroupDetail(),
   useGroupExpenses: () => mockUseGroupExpenses(),
-  useUpdateExpense: () => ({ mutateAsync: mockUpdateAsync, isPending: false }),
+  useUpdateExpense: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useDeleteExpense: () => ({ mutateAsync: mockDeleteAsync, isPending: false }),
   useStopRecurringExpense: () => ({ mutateAsync: mockStopRecurringAsync, isPending: false }),
 }));
@@ -70,12 +69,11 @@ function renderWithProviders() {
 }
 
 describe("ExpenseDetailScreen", () => {
-  it("renders expense details in view mode", () => {
+  it("renders expense details", () => {
     renderWithProviders();
     expect(screen.getByText("Dinner")).toBeTruthy();
     expect(screen.getByText("$60.00")).toBeTruthy();
     expect(screen.getByText("2026-02-20")).toBeTruthy();
-    expect(screen.getByText("You")).toBeTruthy();
   });
 
   it("shows split breakdown", () => {
@@ -96,7 +94,7 @@ describe("ExpenseDetailScreen", () => {
     expect(screen.queryByText("Dinner")).toBeNull();
   });
 
-  it("does not show edit form initially", () => {
+  it("does not show Save button (no inline edit mode)", () => {
     renderWithProviders();
     expect(screen.queryByText("Save")).toBeNull();
   });
@@ -145,5 +143,33 @@ describe("ExpenseDetailScreen", () => {
   it("does not show stop recurring button for non-recurring expenses", () => {
     renderWithProviders(); // testExpense has no recurringExpense
     expect(screen.queryByText("Stop recurring")).toBeNull();
+  });
+
+  it("shows delete button when canDelete is true", () => {
+    renderWithProviders();
+    expect(screen.getByText("Delete expense")).toBeTruthy();
+  });
+
+  it("does not show delete button when canDelete is false", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ ...testExpense, canDelete: false })],
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.queryByText("Delete expense")).toBeNull();
+  });
+
+  it("shows edit button when canEdit is true", () => {
+    renderWithProviders();
+    expect(screen.getByText("Edit")).toBeTruthy();
+  });
+
+  it("does not show edit button when canEdit is false", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ ...testExpense, canEdit: false })],
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.queryByText("Edit")).toBeNull();
   });
 });

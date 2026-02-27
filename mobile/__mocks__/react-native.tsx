@@ -9,9 +9,20 @@ import React, { forwardRef, type ReactNode, type ChangeEvent, type MouseEventHan
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Props = Record<string, any> & { children?: ReactNode };
 
+function flattenStyle(style: unknown): React.CSSProperties {
+  if (!style) return {};
+  if (Array.isArray(style)) {
+    return Object.assign({}, ...style.map(flattenStyle));
+  }
+  if (typeof style === "function") {
+    return flattenStyle((style as (state: { pressed: boolean }) => unknown)({ pressed: false }));
+  }
+  return style as React.CSSProperties;
+}
+
 export const View = forwardRef<HTMLDivElement, Props>(
-  function MockView({ children, className, testID, ...rest }, ref) {
-    return <div data-testid={testID as string} className={className as string} ref={ref} {...rest}>{children}</div>;
+  function MockView({ children, className, testID, style, ...rest }, ref) {
+    return <div data-testid={testID as string} className={className as string} style={flattenStyle(style)} ref={ref} {...rest}>{children}</div>;
   },
 );
 
@@ -80,14 +91,14 @@ export const TextInput = forwardRef<HTMLInputElement, Props>(
 
 export const Pressable = forwardRef<HTMLButtonElement, Props>(
   function MockPressable({ onPress, children, testID, className, style, ...rest }, ref) {
-    // Resolve function-style style props (RN Pressable accepts ({ pressed }) => style)
-    const resolvedStyle = typeof style === "function" ? style({ pressed: false }) : style;
+    // Resolve function-style and array style props
+    const resolvedStyle = flattenStyle(style);
     return (
       <button
         onClick={onPress as MouseEventHandler}
         data-testid={testID as string}
         className={className as string}
-        style={resolvedStyle as React.CSSProperties}
+        style={resolvedStyle}
         ref={ref}
         type="button"
         {...rest}
@@ -132,6 +143,16 @@ export const Switch = forwardRef<HTMLInputElement, Props>(
 
 export const RefreshControl = () => null;
 
+export const ImageBackground = forwardRef<HTMLDivElement, Props>(
+  function MockImageBackground({ children, testID, style, imageStyle, ...rest }, ref) {
+    return (
+      <div data-testid={testID as string ?? "image-background"} style={flattenStyle(style)} ref={ref} {...rest}>
+        {children}
+      </div>
+    );
+  },
+);
+
 export const KeyboardAvoidingView = forwardRef<HTMLDivElement, Props>(
   function MockKAV({ children, className, testID, ...rest }, ref) {
     return <div data-testid={testID as string} className={className as string} ref={ref} {...rest}>{children}</div>;
@@ -161,6 +182,8 @@ export const Platform = {
 export const StyleSheet = {
   create: <T extends Record<string, unknown>>(styles: T): T => styles,
   flatten: (style: unknown) => style,
+  absoluteFillObject: { position: "absolute" as const, left: 0, right: 0, top: 0, bottom: 0 },
+  hairlineWidth: 1,
 };
 
 export const Dimensions = {

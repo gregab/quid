@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useContacts, useCreateFriendExpense } from "../../../lib/queries";
@@ -24,13 +24,14 @@ import type { Member } from "../../../lib/types";
 
 export default function AddFriendExpenseScreen() {
   const router = useRouter();
+  const { friendId } = useLocalSearchParams<{ friendId?: string }>();
   const { user } = useAuth();
   const { data: contacts } = useContacts();
   const createFriendExpense = useCreateFriendExpense();
   const insets = useSafeAreaInsets();
 
-  // Single-select: string | null
-  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
+  // Single-select: string | null — pre-selected when navigated from picker
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(friendId ?? null);
 
   const toggleFriend = (userId: string) => {
     setSelectedFriendId((prev) => (prev === userId ? null : userId));
