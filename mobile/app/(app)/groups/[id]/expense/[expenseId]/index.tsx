@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Pencil, Repeat, Users } from "lucide-react-native";
+import { Repeat } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../../../lib/auth";
 import { useToast } from "../../../../../../lib/toast";
@@ -18,7 +18,6 @@ import {
   useDeleteExpense,
   useStopRecurringExpense,
 } from "../../../../../../lib/queries";
-import { Card } from "../../../../../../components/ui/Card";
 import { LoadingSpinner } from "../../../../../../components/ui/LoadingSpinner";
 import { ScreenHeader } from "../../../../../../components/ui/ScreenHeader";
 import {
@@ -28,6 +27,21 @@ import {
   MEMBER_EMOJIS,
 } from "../../../../../../lib/queries/shared";
 import type { Member } from "../../../../../../lib/types";
+
+function formatDisplayDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year!, month! - 1, day!);
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
+function formatDateTime(isoStr: string): string {
+  const date = new Date(isoStr);
+  return (
+    date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) +
+    " at " +
+    date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+  );
+}
 
 export default function ExpenseDetailScreen() {
   const { id, expenseId } = useLocalSearchParams<{ id: string; expenseId: string }>();
@@ -141,173 +155,200 @@ export default function ExpenseDetailScreen() {
     );
   }
 
-  const headerTitle = expense.isPayment ? "Payment" : "Expense";
+  const payerName = formatDisplayName(expense.paidByDisplayName);
+  const recipientId = expense.participantIds[0];
+  const recipientName = recipientId ? getMemberName(recipientId) : "Unknown";
+
+  const splitsForDisplay = expense.splits.length > 0 ? expense.splits : [];
+
+  const createdByName = expense.createdById
+    ? expense.createdById === user?.id
+      ? "you"
+      : getMemberName(expense.createdById)
+    : null;
 
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
       <ScreenHeader
-        title={headerTitle}
+        title=""
         onBack={() => router.back()}
-        rightAction={
-          expense.canEdit ? (
-            <Pressable
-              onPress={() =>
-                router.push(
-                  `/(app)/groups/${id}/expense/${expenseId}/edit` as never,
-                )
-              }
-              className="flex-row items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 active:opacity-70 dark:bg-stone-800"
-            >
-              <Pencil size={14} color="#78716c" />
-              <Text className="text-xs font-medium text-stone-600 dark:text-stone-400">
-                Edit
-              </Text>
-            </Pressable>
-          ) : undefined
-        }
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero area */}
-        <View className="items-center px-6 pb-6 pt-8">
-          <Text className="mb-1 text-4xl font-bold text-amber-600 dark:text-amber-500">
-            {formatCents(expense.amountCents)}
-          </Text>
-          {!expense.isPayment && (
-            <Text className="mt-1 text-center text-xl font-semibold text-stone-900 dark:text-white">
-              {expense.description}
+        <View className="px-4 gap-5">
+          {/* ── Header ── */}
+          <View className="gap-1 pt-1">
+            <Text className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              {expense.isPayment ? "Payment" : "Expense"}
             </Text>
-          )}
-          {expense.recurringExpense && (
-            <View className="mt-3 flex-row items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 dark:bg-amber-950/30">
-              <Repeat size={12} color="#d97706" />
-              <Text className="text-xs font-semibold capitalize tracking-wide text-amber-700 dark:text-amber-400">
-                {expense.recurringExpense.frequency}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        <View className="px-4 gap-3">
-          {/* Details card */}
-          <Card className="overflow-hidden">
-            <View className="px-4 pt-4 pb-1">
-              <Text className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-                Details
-              </Text>
-            </View>
-            <View className="px-4 pb-4 gap-0">
-              <View className="flex-row items-center justify-between py-2.5 border-b border-stone-100 dark:border-stone-800/60">
-                <Text className="text-sm text-stone-500 dark:text-stone-400">Date</Text>
-                <Text className="text-sm font-medium text-stone-800 dark:text-stone-200">
-                  {expense.date}
+            <Text className="text-2xl font-bold text-stone-900 dark:text-white">
+              {expense.isPayment
+                ? `${payerName} → ${recipientName}`
+                : expense.description}
+            </Text>
+            <Text className="text-sm text-stone-400 dark:text-stone-500">
+              {formatDisplayDate(expense.date)}
+            </Text>
+            {expense.recurringExpense && (
+              <View className="mt-1 flex-row items-center gap-1.5 self-start rounded-full bg-amber-50 px-3 py-1.5 dark:bg-amber-950/30">
+                <Repeat size={12} color="#d97706" />
+                <Text className="text-xs font-semibold capitalize tracking-wide text-amber-700 dark:text-amber-400">
+                  {expense.recurringExpense.frequency}
                 </Text>
               </View>
-              <View className="flex-row items-center justify-between py-2.5 border-b border-stone-100 dark:border-stone-800/60">
-                <Text className="text-sm text-stone-500 dark:text-stone-400">Paid by</Text>
-                <View className="flex-row items-center gap-1.5">
-                  {expense.paidById === user?.id && (
-                    <View className="rounded-full bg-amber-100 px-2 py-0.5 dark:bg-amber-900/30">
-                      <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
-                        you
-                      </Text>
-                    </View>
-                  )}
-                  <Text className="text-sm font-medium text-stone-800 dark:text-stone-200">
-                    {expense.paidById === user?.id
-                      ? formatDisplayName(expense.paidByDisplayName)
-                      : formatDisplayName(expense.paidByDisplayName)}
+            )}
+          </View>
+
+          {expense.isPayment ? (
+            /* ── Payment: amount display ── */
+            <View className="flex-row items-baseline gap-1.5">
+              <Text className="text-2xl font-bold text-stone-900 dark:text-white">
+                {formatCents(expense.amountCents)}
+              </Text>
+              <Text className="text-sm text-stone-400 dark:text-stone-500">
+                · {formatDisplayDate(expense.date)}
+              </Text>
+            </View>
+          ) : (
+            /* ── Expense: paid by + split breakdown ── */
+            <View className="gap-4">
+              {/* Paid by */}
+              <View className="gap-1.5">
+                <Text className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                  Paid by
+                </Text>
+                <View className="flex-row items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/60 dark:bg-amber-950/20">
+                  <Text className="text-base font-semibold text-stone-900 dark:text-white">
+                    {payerName}{expense.paidById === user?.id ? " (you)" : ""}
+                  </Text>
+                  <Text className="text-base font-bold text-amber-600 dark:text-amber-400">
+                    {formatCents(expense.amountCents)}
                   </Text>
                 </View>
               </View>
-              {expense.splitType !== "equal" && (
-                <View className="flex-row items-center justify-between py-2.5">
-                  <Text className="text-sm text-stone-500 dark:text-stone-400">Split</Text>
-                  <Text className="text-sm font-medium capitalize text-stone-800 dark:text-stone-200">
-                    {expense.splitType}
+
+              {/* Split breakdown */}
+              {splitsForDisplay.length > 0 && (
+                <View className="gap-1.5">
+                  <Text className="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+                    Split{expense.splitType === "custom" ? " · custom" : ""}
                   </Text>
+                  <View className="gap-3">
+                    {splitsForDisplay.map((split) => {
+                      const isYou = split.userId === user?.id;
+                      const isPayer = split.userId === expense.paidById;
+                      const widthPct =
+                        expense.amountCents > 0
+                          ? (split.amountCents / expense.amountCents) * 100
+                          : 0;
+                      return (
+                        <View key={split.userId}>
+                          <View className="flex-row items-center justify-between mb-1.5">
+                            <View className="flex-row items-center gap-1.5 min-w-0 flex-1">
+                              <Text
+                                className="text-sm font-medium text-stone-800 dark:text-stone-200"
+                                numberOfLines={1}
+                              >
+                                {getMemberName(split.userId)}{isYou ? " (you)" : ""}
+                              </Text>
+                              {isPayer && (
+                                <View className="rounded bg-amber-100 px-1.5 py-0.5 dark:bg-amber-900/40">
+                                  <Text className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                                    paid
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
+                            <Text className="text-sm font-semibold text-stone-900 dark:text-stone-100 ml-3 shrink-0">
+                              {formatCents(split.amountCents)}
+                            </Text>
+                          </View>
+                          <View className="h-1.5 overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+                            <View
+                              className="h-full rounded-full bg-amber-400 dark:bg-amber-500"
+                              style={{ width: `${widthPct}%` }}
+                            />
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
                 </View>
               )}
             </View>
-          </Card>
+          )}
 
-          {/* Split breakdown card */}
-          <Card className="overflow-hidden">
-            <View className="px-4 pt-4 pb-1">
-              <View className="flex-row items-center gap-2 mb-3">
-                <Users size={12} color="#a8a29e" />
-                <Text className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-                  Split breakdown
+          {/* ── Added by metadata ── */}
+          {(createdByName || expense.createdAt) && (
+            <View className="gap-0.5">
+              {(createdByName || expense.createdAt) && (
+                <Text className="text-xs text-stone-400 dark:text-stone-500">
+                  {expense.isPayment ? "Recorded by " : "Added by "}
+                  <Text className="font-medium">{createdByName ?? "unknown"}</Text>
+                  {expense.createdAt ? ` · ${formatDateTime(expense.createdAt)}` : ""}
                 </Text>
+              )}
+              {expense.updatedAt && (
+                <Text className="text-xs text-stone-400 dark:text-stone-500">
+                  Last edited · {formatDateTime(expense.updatedAt)}
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* ── Recurring widget ── */}
+          {expense.recurringExpense && (
+            <View className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/20">
+              <View className="flex-row items-center justify-between gap-2 px-4 py-3">
+                <View className="flex-row items-center gap-2">
+                  <Repeat size={16} color="#d97706" />
+                  <Text className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                    Recurring · {expense.recurringExpense.frequency}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={handleStopRecurring}
+                  className="active:opacity-70"
+                >
+                  <Text className="text-xs font-medium text-rose-600 dark:text-rose-400">
+                    Stop recurring
+                  </Text>
+                </Pressable>
               </View>
             </View>
-            <View className="px-4 pb-4">
-              {expense.splits.map((s, idx) => {
-                const isYou = s.userId === user?.id;
-                const isPayer = s.userId === expense.paidById;
-                const isLast = idx === expense.splits.length - 1;
-                return (
-                  <View
-                    key={s.userId}
-                    className={`flex-row items-center justify-between py-3 ${
-                      !isLast ? "border-b border-stone-100 dark:border-stone-800/60" : ""
-                    }`}
-                  >
-                    <View className="flex-row items-center gap-2 flex-1">
-                      <Text
-                        className="text-sm font-medium text-stone-800 dark:text-stone-200 flex-shrink"
-                        numberOfLines={1}
-                      >
-                        {getMemberName(s.userId)}
-                      </Text>
-                      {isYou && (
-                        <Text className="text-[10px] text-stone-400 dark:text-stone-500">
-                          (you)
-                        </Text>
-                      )}
-                      {isPayer && (
-                        <View className="rounded bg-stone-100 px-1.5 py-0.5 dark:bg-stone-800">
-                          <Text className="text-[10px] font-medium text-stone-500 dark:text-stone-400">
-                            paid
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text className="text-sm font-semibold text-stone-900 dark:text-stone-100 ml-3">
-                      {formatCents(s.amountCents)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </Card>
-
-          {/* Stop recurring */}
-          {expense.recurringExpense && (
-            <Pressable
-              onPress={handleStopRecurring}
-              className="items-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 active:opacity-75 dark:border-rose-900 dark:bg-rose-950/30"
-            >
-              <Text className="text-sm font-semibold text-rose-600 dark:text-rose-400">
-                Stop recurring
-              </Text>
-            </Pressable>
           )}
 
-          {/* Delete button */}
-          {expense.canDelete && (
-            <Pressable
-              onPress={handleDelete}
-              className="items-center rounded-xl border border-stone-200 bg-white px-4 py-3.5 active:opacity-75 dark:border-stone-800 dark:bg-stone-900"
-            >
-              <Text className="text-sm font-semibold text-red-500 dark:text-red-400">
-                Delete {expense.isPayment ? "payment" : "expense"}
-              </Text>
-            </Pressable>
-          )}
+          {/* ── Action row ── */}
+          <View className="flex-row items-center justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800/60">
+            {expense.canDelete ? (
+              <Pressable
+                onPress={handleDelete}
+                className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 active:opacity-75 dark:border-rose-900 dark:bg-rose-950/30"
+              >
+                <Text className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                  Delete {expense.isPayment ? "payment" : "expense"}
+                </Text>
+              </Pressable>
+            ) : (
+              <View />
+            )}
+
+            {expense.canEdit && (
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    `/(app)/groups/${id}/expense/${expenseId}/edit` as never,
+                  )
+                }
+                className="flex-row items-center gap-1.5 rounded-xl border border-amber-500 bg-amber-600 px-5 py-3 active:opacity-80 dark:bg-amber-500"
+              >
+                <Text className="text-sm font-bold text-white">Edit</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -69,16 +69,28 @@ function renderWithProviders() {
 }
 
 describe("ExpenseDetailScreen", () => {
-  it("renders expense details", () => {
+  it("renders expense name and amount", () => {
     renderWithProviders();
     expect(screen.getByText("Dinner")).toBeTruthy();
     expect(screen.getByText("$60.00")).toBeTruthy();
-    expect(screen.getByText("2026-02-20")).toBeTruthy();
   });
 
-  it("shows split breakdown", () => {
+  it("renders formatted date", () => {
     renderWithProviders();
-    expect(screen.getByText("Split breakdown")).toBeTruthy();
+    // Date is formatted as "February 20, 2026"
+    expect(screen.getAllByText(/February 20, 2026/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows PAID BY section with payer and amount", () => {
+    renderWithProviders();
+    expect(screen.getByText("Paid by")).toBeTruthy();
+    // payer row shows name
+    expect(screen.getByText(/Alice W\./)).toBeTruthy();
+  });
+
+  it("shows SPLIT section with member amounts", () => {
+    renderWithProviders();
+    expect(screen.getByText(/^Split/)).toBeTruthy();
     expect(screen.getAllByText("$30.00").length).toBe(2);
   });
 
@@ -105,16 +117,16 @@ describe("ExpenseDetailScreen", () => {
       isLoading: false,
     });
     renderWithProviders();
-    expect(screen.getByText("monthly")).toBeTruthy();
+    expect(screen.getAllByText("monthly").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows custom split type when applicable", () => {
+  it("shows custom annotation in split label when splitType is custom", () => {
     mockUseGroupExpenses.mockReturnValue({
       data: [makeExpense({ ...testExpense, splitType: "custom", splits: [{ userId: "user-1", amountCents: 4000 }, { userId: "user-2", amountCents: 2000 }] })],
       isLoading: false,
     });
     renderWithProviders();
-    expect(screen.getByText("custom")).toBeTruthy();
+    expect(screen.getByText("Split · custom")).toBeTruthy();
   });
 
   it("shows payment label for payment expenses", () => {
@@ -126,7 +138,7 @@ describe("ExpenseDetailScreen", () => {
     expect(screen.getAllByText("Payment").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows payer badge in split breakdown", () => {
+  it("shows amber paid badge in split breakdown", () => {
     renderWithProviders();
     expect(screen.getByText("paid")).toBeTruthy();
   });
@@ -141,7 +153,7 @@ describe("ExpenseDetailScreen", () => {
   });
 
   it("does not show stop recurring button for non-recurring expenses", () => {
-    renderWithProviders(); // testExpense has no recurringExpense
+    renderWithProviders();
     expect(screen.queryByText("Stop recurring")).toBeNull();
   });
 
