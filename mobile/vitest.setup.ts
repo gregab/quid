@@ -60,6 +60,11 @@ vi.mock("expo-haptics", () => ({
   },
 }));
 
+// --- expo-linear-gradient ---
+vi.mock("expo-linear-gradient", () => ({
+  LinearGradient: vi.fn(({ children }: { children?: unknown }) => children ?? null),
+}));
+
 // --- expo-font ---
 vi.mock("expo-font", () => ({
   useFonts: vi.fn(() => [true, null]),

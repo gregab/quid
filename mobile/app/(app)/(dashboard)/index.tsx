@@ -8,6 +8,7 @@ import {
   ImageBackground,
   StyleSheet,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -276,8 +277,13 @@ export default function DashboardScreen() {
               style={styles.heroBg}
               imageStyle={styles.heroBgImage}
             >
-              {/* Dark gradient overlay */}
-              <View style={styles.heroOverlay} pointerEvents="none" />
+              {/* Dark gradient overlay — fades from semi-transparent at top to dark at bottom */}
+              <LinearGradient
+                colors={["rgba(0,0,0,0.20)", "rgba(0,0,0,0.45)", "rgba(0,0,0,0.70)"]}
+                locations={[0, 0.5, 1]}
+                style={StyleSheet.absoluteFillObject}
+                pointerEvents="none"
+              />
               <View style={styles.heroContent}>
                 <Text style={styles.heroLabel}>YOUR BALANCE</Text>
                 <Text style={styles.heroGreeting}>Hey {displayName}.</Text>
@@ -389,10 +395,6 @@ const styles = StyleSheet.create({
   },
   heroBgImage: {
     borderRadius: 16,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
   },
   heroContent: {
     paddingHorizontal: 20,

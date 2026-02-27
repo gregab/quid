@@ -10,6 +10,7 @@ import {
   useColorScheme,
   type LayoutChangeEvent,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -614,14 +615,12 @@ function GroupBannerHeader({
 
   const headerContent = (
     <>
-      {/* Full overlay for depth */}
-      <View
-        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }}
-      />
-
-      {/* Bottom gradient zone for name legibility */}
-      <View
-        style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 60, backgroundColor: "rgba(0,0,0,0.45)" }}
+      {/* Gradient overlay — fades from transparent at top to dark at bottom */}
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.70)"]}
+        locations={[0, 0.45, 1]}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        pointerEvents="none"
       />
 
       {/* Back button — pill style for visibility on any color */}
@@ -690,7 +689,7 @@ function GroupBannerHeader({
           style={{ flex: 1 }}
           testID="banner-image"
         >
-          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.3)" }}>
+          <View style={{ flex: 1 }}>
             {headerContent}
           </View>
         </ImageBackground>
@@ -785,12 +784,18 @@ function BalanceSummaryCard({
         className="flex-row items-center justify-between"
       >
         <View className="flex-row items-center gap-2">
-          {resolvedDebts.length === 0 && (
-            <CheckCircle size={20} color="#16a34a" />
+          {resolvedDebts.length === 0 ? (
+            <>
+              <CheckCircle size={16} color="#16a34a" />
+              <Text className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                {balanceLabel}
+              </Text>
+            </>
+          ) : (
+            <Text className={`text-xl font-bold ${balanceColor}`}>
+              {balanceLabel}
+            </Text>
           )}
-          <Text className={`text-2xl font-bold ${balanceColor}`}>
-            {balanceLabel}
-          </Text>
         </View>
         {resolvedDebts.length > 0 && (
           <Animated.View style={chevronStyle}>
@@ -1101,33 +1106,38 @@ export default function GroupDetailScreen() {
           currentUserId={user!.id}
         />
 
-        {/* Inline "Add expense" button — full width amber, placed between balance and expenses */}
+        {/* Action buttons — Settle up + Add expense, side by side */}
         <View
-          className="mx-4 mb-4"
+          className="mx-4 mb-4 flex-row gap-3"
           onLayout={(e: LayoutChangeEvent) => {
             setInlineAddY(e.nativeEvent.layout.y);
           }}
         >
+          {!isFriendGroup && (
+            <Pressable
+              onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
+              className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-emerald-600 py-3 active:opacity-80 dark:border-emerald-500"
+            >
+              <CheckCircle size={15} color="#16a34a" />
+              <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                Settle up
+              </Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
+            className={`${isFriendGroup ? "flex-1" : "flex-[1.4]"} flex-row items-center justify-center gap-2 rounded-xl py-3 active:opacity-80`}
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              paddingVertical: 13,
-              borderRadius: 14,
               backgroundColor: "#d97706",
               shadowColor: "#d97706",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-              elevation: 6,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.28,
+              shadowRadius: 8,
+              elevation: 5,
             }}
-            className="active:opacity-80"
           >
-            <Plus size={16} color="#fff" strokeWidth={3} />
-            <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff", letterSpacing: 0.1 }}>
+            <Plus size={15} color="#fff" strokeWidth={3} />
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff", letterSpacing: 0.1 }}>
               Add expense
             </Text>
           </Pressable>
