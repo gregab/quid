@@ -307,10 +307,10 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByText("Load more")).toBeTruthy();
   });
 
-  it("renders floating action bar with 'Settle up' and 'Add' buttons", () => {
+  it("renders inline action buttons with 'Settle up' and 'Add expense'", () => {
     renderWithProviders();
     expect(screen.getByText("Settle up")).toBeTruthy();
-    expect(screen.getByText("Add")).toBeTruthy();
+    expect(screen.getByText("Add expense")).toBeTruthy();
   });
 
   it("shows share invite button", () => {
@@ -369,11 +369,11 @@ describe("GroupDetailScreen", () => {
       expect(screen.queryByText("Recurring")).toBeNull();
     });
 
-    it("still shows settle up and add buttons", () => {
+    it("still shows add expense button", () => {
       mockUseGroupDetail.mockReturnValue({ data: friendGroupDetail, isLoading: false, refetch: vi.fn() });
       renderWithProviders();
-      expect(screen.getByText("Settle up")).toBeTruthy();
-      expect(screen.getByText("Add")).toBeTruthy();
+      expect(screen.queryByText("Settle up")).toBeNull();
+      expect(screen.getByText("Add expense")).toBeTruthy();
     });
   });
 

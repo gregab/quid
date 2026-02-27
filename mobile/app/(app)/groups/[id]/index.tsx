@@ -1247,39 +1247,6 @@ export default function GroupDetailScreen() {
         </Pressable>
       </Animated.View>
 
-      {/* Floating action island — Settle Up only (full-width pill) */}
-      <View
-        className="absolute left-4 right-4 rounded-3xl bg-white px-2.5 py-2 dark:bg-stone-900"
-        style={{
-          bottom: insets.bottom + 14,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.13,
-          shadowRadius: 22,
-          elevation: 14,
-        }}
-      >
-        <Pressable
-          onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
-          className="flex-row items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 py-3 active:opacity-80 dark:border-emerald-700/50 dark:bg-emerald-950/40"
-        >
-          <CheckCircle size={15} color="#16a34a" />
-          <Text className="text-[14px] font-bold text-emerald-700 dark:text-emerald-300">
-            Settle up
-          </Text>
-        </Pressable>
-      </View>
-
-      {/* Legacy "Add" button hidden but accessible for tests */}
-      <View style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}>
-        <Pressable
-          onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
-          testID="add-expense-hidden"
-        >
-          <Text>Add</Text>
-        </Pressable>
-      </View>
-
       <Sheet ref={activitySheetRef} snapPoints={["45%", "75%"]}>
         {selectedActivity && (
           <ActivitySheetContent
