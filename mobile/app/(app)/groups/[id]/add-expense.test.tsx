@@ -7,7 +7,11 @@ import { createTestQueryClient, makeGroupDetail } from "../../../../lib/test-uti
 // Must mock lucide at test level to prevent loading react-native-svg
 vi.mock("lucide-react-native", () => ({
   ChevronLeft: () => null,
+  ChevronRight: () => null,
   Check: () => null,
+  X: () => null,
+  Calendar: () => null,
+  SlidersHorizontal: () => null,
 }));
 
 // Mock DateTimePicker
@@ -18,6 +22,7 @@ vi.mock("@react-native-community/datetimepicker", () => ({
 // Mock safe area
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 import AddExpenseScreen from "./add-expense";
@@ -35,6 +40,8 @@ vi.mock("../../../../lib/auth", () => ({
 
 const mockMutateAsync = vi.fn();
 const mockUseGroupDetail = vi.fn();
+const mockRouterBack = vi.fn();
+const mockRouterPush = vi.fn();
 
 vi.mock("../../../../lib/queries", () => ({
   useGroupDetail: () => mockUseGroupDetail(),
@@ -49,6 +56,16 @@ afterEach(cleanup);
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useLocalSearchParams).mockReturnValue({ id: "group-1" });
+  vi.mocked(useRouter).mockReturnValue({
+    back: mockRouterBack,
+    push: mockRouterPush,
+    navigate: vi.fn(),
+    replace: vi.fn(),
+    dismiss: vi.fn(),
+    dismissAll: vi.fn(),
+    canGoBack: vi.fn(() => true),
+    setParams: vi.fn(),
+  } as unknown as ReturnType<typeof useRouter>);
   mockUseGroupDetail.mockReturnValue({
     data: makeGroupDetail(),
     isLoading: false,
@@ -66,60 +83,46 @@ function renderWithProviders() {
 }
 
 describe("AddExpenseScreen", () => {
-  it("renders form fields via ExpenseForm", () => {
+  it("renders amount and description inputs", () => {
     renderWithProviders();
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
     expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
+    expect(screen.getByPlaceholderText("What's it for?")).toBeTruthy();
   });
 
-  it("shows loading state when group is loading", () => {
+  it("renders screen title", () => {
+    renderWithProviders();
+    expect(screen.getByText("Add an expense")).toBeTruthy();
+  });
+
+  it("shows loading state when group is loading and members are empty", () => {
     mockUseGroupDetail.mockReturnValue({
       data: undefined,
       isLoading: true,
     });
     renderWithProviders();
-    expect(screen.queryByText("Add expense")).toBeNull();
+    expect(screen.queryByPlaceholderText("0.00")).toBeNull();
   });
 
-  it("renders header with title and cancel button", () => {
+  it("renders split options shortcut row", () => {
+    renderWithProviders();
+    expect(screen.getByText("Split options")).toBeTruthy();
+    expect(screen.getByText(/Paid by you/)).toBeTruthy();
+  });
+
+  it("renders Add expense button", () => {
     renderWithProviders();
     expect(screen.getAllByText("Add expense").length).toBeGreaterThan(0);
-    expect(screen.getByText("Cancel")).toBeTruthy();
   });
 
-  it("renders member selection for paid-by", () => {
-    renderWithProviders();
-    expect(screen.getByText("Paid by")).toBeTruthy();
-    expect(screen.getAllByText(/Alice W/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
-  });
-
-  it("renders split type options", () => {
-    renderWithProviders();
-    expect(screen.getByText("Split type")).toBeTruthy();
-    expect(screen.getByText("Equal")).toBeTruthy();
-    expect(screen.getByText("Custom")).toBeTruthy();
-    expect(screen.getByText("%")).toBeTruthy();
-  });
-
-  it("shows recurring toggle", () => {
-    renderWithProviders();
-    expect(screen.getByText("Recurring expense")).toBeTruthy();
-  });
-
-  it("submits with correct payload including splitType", async () => {
+  it("submits with equal split when Add expense is pressed", async () => {
     renderWithProviders();
 
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "50.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Pizza" },
-    });
+    fireEvent.changeText(screen.getByPlaceholderText("0.00"), "50.00");
+    fireEvent.changeText(screen.getByPlaceholderText("What's it for?"), "Pizza");
 
     const submitBtn = screen.getAllByText("Add expense").at(-1)!;
     await act(async () => {
-      fireEvent.click(submitBtn);
+      fireEvent.press(submitBtn);
     });
 
     expect(mockMutateAsync).toHaveBeenCalledWith(
@@ -128,6 +131,25 @@ describe("AddExpenseScreen", () => {
         description: "Pizza",
         amountCents: 5000,
         splitType: "equal",
+      }),
+    );
+  });
+
+  it("navigates to split screen when Split options is pressed", async () => {
+    renderWithProviders();
+
+    fireEvent.changeText(screen.getByPlaceholderText("0.00"), "30.00");
+    fireEvent.changeText(screen.getByPlaceholderText("What's it for?"), "Groceries");
+
+    await act(async () => {
+      fireEvent.press(screen.getByText("Split options"));
+    });
+
+    expect(mockRouterPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: expect.objectContaining({
+          description: "Groceries",
+        }),
       }),
     );
   });

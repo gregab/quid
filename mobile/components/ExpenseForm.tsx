@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -191,6 +191,16 @@ export function ExpenseForm({
 
   // Refs
   const initialized = useRef(false);
+  const amountInputRef = useRef<import("react-native").TextInput>(null);
+
+  // Focus amount input on mount (using ref instead of autoFocus prop to avoid
+  // focus theft when sibling inputs are tapped after layout animations)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      amountInputRef.current?.focus();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Initialize defaults once (only when no initialData)
   if (members.length > 0 && !initialized.current) {
@@ -390,6 +400,7 @@ export function ExpenseForm({
               $
             </Text>
             <TextInput
+              ref={amountInputRef}
               className="min-w-[80px] text-center text-6xl font-bold tracking-tight text-stone-900 dark:text-white"
               style={{ lineHeight: 72 }}
               placeholder="0.00"
@@ -401,7 +412,6 @@ export function ExpenseForm({
               }}
               onBlur={handleAmountBlur}
               keyboardType="decimal-pad"
-              autoFocus
             />
           </View>
 
@@ -416,10 +426,7 @@ export function ExpenseForm({
         </View>
 
         {/* ── Description ── */}
-        <Animated.View
-          entering={FadeInDown.duration(280).delay(60)}
-          className="mb-5"
-        >
+        <View className="mb-5">
           <SectionLabel>What's it for?</SectionLabel>
           <Input
             placeholder="Dinner, groceries, rent..."
@@ -432,13 +439,10 @@ export function ExpenseForm({
             returnKeyType="next"
             onSubmitEditing={goNext}
           />
-        </Animated.View>
+        </View>
 
         {/* ── Date ── */}
-        <Animated.View
-          entering={FadeInDown.duration(280).delay(100)}
-          className="mb-6"
-        >
+        <View className="mb-6">
           <SectionLabel>Date</SectionLabel>
           {/* iOS: inline compact date picker */}
           {Platform.OS === "ios" && showDatePicker && (
@@ -476,7 +480,7 @@ export function ExpenseForm({
               }}
             />
           )}
-        </Animated.View>
+        </View>
       </View>
     </ScrollView>
   );
