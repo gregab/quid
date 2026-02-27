@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "packages/*",
-    "mobile"
+    "packages/*"
   ],
   "scripts": {
     "dev": "next dev",
@@ -29,10 +28,7 @@
     "react-dom": "19.2.3",
     "zod": "^4.3.6"
   },
-  "overrides": {
-    "react-native-worklets": "0.5.1"
-  },
-  "devDependencies": {
+"devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
