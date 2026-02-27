@@ -54,6 +54,7 @@ import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { GroupDetailSkeleton } from "../../../../components/ui/SkeletonLoader";
 import { ErrorState } from "../../../../components/ui/ErrorState";
+import { EmptyState } from "../../../../components/ui/EmptyState";
 import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
@@ -1014,12 +1015,15 @@ export default function GroupDetailScreen() {
           </Text>
 
           {(expenses ?? []).length === 0 ? (
-            <Card className="items-center px-4 py-8">
-              <Text className="text-3xl">🧾</Text>
-              <Text className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-                No expenses yet. Add one to get started!
-              </Text>
-            </Card>
+            <EmptyState
+              icon={<Receipt size={28} color="#d97706" />}
+              title="No expenses yet"
+              subtitle="Add the first expense to start tracking who owes what"
+              action={{
+                label: "Add expense",
+                onPress: () => router.push(`/(app)/groups/${id}/add-expense`),
+              }}
+            />
           ) : (
             (expenses ?? []).map((expense) => (
               <SwipeableExpenseRow

@@ -112,10 +112,12 @@ describe("GroupDetailScreen", () => {
     expect(screen.getByText("All settled up")).toBeTruthy();
   });
 
-  it("shows empty expenses message", () => {
+  it("shows empty expenses state with action button", () => {
     mockUseGroupExpenses.mockReturnValue({ data: [], isLoading: false, refetch: vi.fn() });
     renderWithProviders();
-    expect(screen.getByText("No expenses yet. Add one to get started!")).toBeTruthy();
+    expect(screen.getByText("No expenses yet")).toBeTruthy();
+    expect(screen.getByText("Add the first expense to start tracking who owes what")).toBeTruthy();
+    expect(screen.getByText("Add expense")).toBeTruthy();
   });
 
   it("renders expense cards with descriptions", () => {
