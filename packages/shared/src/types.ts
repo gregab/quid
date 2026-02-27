@@ -64,6 +64,8 @@ export interface GroupSummary {
   balanceCents: number;
   isFriendGroup?: boolean;
   friendName?: string | null; // the other user's displayName, for friend groups
+  friendAvatarUrl?: string | null; // resolved: profilePictureUrl → avatarUrl
+  friendDefaultEmoji?: string | null; // the other user's defaultEmoji
 }
 
 /** A contact (user from shared groups) available for friend expenses. */

@@ -97,24 +97,33 @@ export function useGroups() {
       if (friendGroupIds.length > 0) {
         const { data: friendMembers } = await supabase
           .from("GroupMember")
-          .select("groupId, userId, User(displayName)")
+          .select("groupId, userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
           .in("groupId", friendGroupIds)
           .neq("userId", user.id);
 
-        const friendNameByGroup = new Map<string, string>();
+        const friendInfoByGroup = new Map<string, {
+          name: string;
+          avatarUrl: string | null;
+          defaultEmoji: string | null;
+        }>();
         for (const m of friendMembers ?? []) {
-          const name =
-            ((m.User as unknown as Record<string, unknown>)?.displayName as string) ??
-            UNKNOWN_USER;
-          friendNameByGroup.set(m.groupId, name);
+          const u = (m.User as unknown as Record<string, unknown>) ?? {};
+          friendInfoByGroup.set(m.groupId, {
+            name: (u.displayName as string) ?? UNKNOWN_USER,
+            avatarUrl: (u.profilePictureUrl as string) ?? (u.avatarUrl as string) ?? null,
+            defaultEmoji: (u.defaultEmoji as string) ?? null,
+          });
         }
 
-        return results.map((g) => ({
-          ...g,
-          friendName: g.isFriendGroup
-            ? (friendNameByGroup.get(g.id) ?? null)
-            : undefined,
-        }));
+        return results.map((g) => {
+          const info = friendInfoByGroup.get(g.id);
+          return {
+            ...g,
+            friendName: g.isFriendGroup ? (info?.name ?? null) : undefined,
+            friendAvatarUrl: g.isFriendGroup ? (info?.avatarUrl ?? null) : undefined,
+            friendDefaultEmoji: g.isFriendGroup ? (info?.defaultEmoji ?? null) : undefined,
+          };
+        });
       }
 
       return results;

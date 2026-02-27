@@ -235,7 +235,7 @@ export default function RecordPaymentScreen() {
                         className="flex-row items-center rounded-xl border border-stone-200 bg-white px-4 py-3.5 dark:border-stone-700 dark:bg-stone-900"
                       >
                         <Text className="mr-2.5 text-lg">
-                          {toM?.emoji ?? "🐦"}
+                          {toM?.emoji ?? ""}
                         </Text>
                         <View className="flex-1">
                           <Text className="text-sm font-semibold text-stone-900 dark:text-white">
@@ -278,7 +278,7 @@ export default function RecordPaymentScreen() {
                 <View className="items-center">
                   <View className="mb-2 h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                     <Text className="text-xl">
-                      {fromMember?.emoji ?? "🐦"}
+                      {fromMember?.emoji ?? ""}
                     </Text>
                   </View>
                   <Text
@@ -297,7 +297,7 @@ export default function RecordPaymentScreen() {
                 <View className="items-center">
                   <View className="mb-2 h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30">
                     <Text className="text-xl">
-                      {toMember?.emoji ?? "🐦"}
+                      {toMember?.emoji ?? ""}
                     </Text>
                   </View>
                   <Text

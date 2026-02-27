@@ -18,6 +18,7 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { DashboardSkeleton } from "../../../components/ui/SkeletonLoader";
 import { ErrorState } from "../../../components/ui/ErrorState";
 import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
+import { Avatar } from "../../../components/ui/Avatar";
 import { formatCents, BIRD_FACTS, formatDisplayName } from "../../../lib/queries/shared";
 import type { GroupSummary } from "../../../lib/types";
 
@@ -25,6 +26,7 @@ interface FriendInfo {
   userId: string;
   displayName: string;
   emoji: string | null;
+  avatarUrl: string | null;
   groupId: string;
   balanceCents: number;
 }
@@ -102,9 +104,11 @@ function FriendCard({ friend }: { friend: FriendInfo }) {
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
       {/* Avatar */}
-      <View className="h-11 w-11 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-        <Text className="text-lg">{friend.emoji ?? "🐦"}</Text>
-      </View>
+      <Avatar
+        imageUrl={friend.avatarUrl}
+        emoji={friend.emoji ?? undefined}
+        size="lg"
+      />
 
       {/* Name */}
       <View className="min-w-0 flex-1">
@@ -186,7 +190,8 @@ export default function DashboardScreen() {
       friendGroups.map((g) => ({
         userId: g.id,
         displayName: g.friendName ?? g.name,
-        emoji: g.emoji,
+        emoji: g.friendDefaultEmoji ?? g.emoji,
+        avatarUrl: g.friendAvatarUrl ?? null,
         groupId: g.id,
         balanceCents: g.balanceCents,
       })),
@@ -297,11 +302,10 @@ export default function DashboardScreen() {
               </Text>
               <Pressable
                 onPress={() => router.push("/(app)/(dashboard)/create-group")}
-                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
-                className="flex-row items-center gap-1 rounded-full bg-amber-600 px-3 py-1.5 dark:bg-amber-500"
+                className="flex-row items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1.5 active:opacity-80 dark:border-amber-700 dark:bg-amber-900/30"
               >
-                <Plus size={12} color="#fff" strokeWidth={3} />
-                <Text className="text-[11px] font-bold tracking-wide text-white">
+                <Plus size={13} color="#92400e" strokeWidth={2.5} />
+                <Text className="text-xs font-semibold text-amber-800 dark:text-amber-300">
                   New group
                 </Text>
               </Pressable>

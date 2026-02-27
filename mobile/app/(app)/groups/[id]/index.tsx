@@ -1,18 +1,16 @@
-import { useState, useMemo, useCallback, useRef, useEffect, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   RefreshControl,
-  Alert,
   Share,
   ImageBackground,
   ActivityIndicator,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from "react-native";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -37,6 +35,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronLeft,
+  ChevronDown,
   TrendingUp,
   TrendingDown,
   Receipt,
@@ -50,13 +49,13 @@ import {
   useGroupExpenses,
   useActivityLogs,
 } from "../../../../lib/queries";
-import { useDeleteExpense } from "../../../../lib/queries/expenses";
 import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { GroupDetailSkeleton } from "../../../../components/ui/SkeletonLoader";
 import { ErrorState } from "../../../../components/ui/ErrorState";
 import { EmptyState } from "../../../../components/ui/EmptyState";
 import { PressableRow } from "../../../../components/ui/PressableRow";
+import { LoadMoreButton } from "../../../../components/ui/LoadMoreButton";
 import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
@@ -125,13 +124,13 @@ function DebtLine({
       : "text-stone-500 dark:text-stone-400";
 
   return (
-    <View className="flex-row items-center gap-2 py-0.5">
-      <View className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
-      <Text className="min-w-0 flex-1 text-sm text-stone-500 dark:text-stone-400">
+    <View className="flex-row items-center gap-2.5 py-1">
+      <View className={`h-2 w-2 rounded-full ${dotColor}`} />
+      <Text className="min-w-0 flex-1 text-[15px] text-stone-500 dark:text-stone-400">
         <Text
           className={
             isOwing || isReceiving
-              ? "text-stone-700 dark:text-stone-200"
+              ? "font-medium text-stone-700 dark:text-stone-200"
               : ""
           }
         >
@@ -141,14 +140,14 @@ function DebtLine({
         <Text
           className={
             isOwing || isReceiving
-              ? "text-stone-700 dark:text-stone-200"
+              ? "font-medium text-stone-700 dark:text-stone-200"
               : ""
           }
         >
           {toName}
         </Text>
       </Text>
-      <Text className={`text-sm font-semibold ${amountColor}`}>
+      <Text className={`text-[15px] font-semibold ${amountColor}`}>
         {formatCents(debt.amountCents)}
       </Text>
     </View>
@@ -209,11 +208,11 @@ function ExpenseCard({
     if (amIPayer && mySplit) {
       const lent = expense.amountCents - mySplit.amountCents;
       if (lent > 0) {
-        contextLabel = `you lent ${formatCents(lent)}`;
+        contextLabel = `You lent ${formatCents(lent)}`;
         contextPositive = true;
       }
     } else if (!amIPayer && mySplit) {
-      contextLabel = `you owe ${formatCents(mySplit.amountCents)}`;
+      contextLabel = `You owe ${formatCents(mySplit.amountCents)}`;
     }
   }
 
@@ -226,7 +225,7 @@ function ExpenseCard({
       ? formatDisplayName(toMember.displayName)
       : UNKNOWN_USER;
     if (expense.paidById === currentUserId) {
-      paymentDirection = `you paid ${toName}`;
+      paymentDirection = `You paid ${toName}`;
     } else if (toId === currentUserId) {
       paymentDirection = `${formatDisplayName(expense.paidByDisplayName)} paid you`;
     } else {
@@ -239,42 +238,47 @@ function ExpenseCard({
   return (
     <PressableRow
       onPress={onPress}
-      className="flex-row items-center gap-3 border-b border-stone-100 py-3 dark:border-stone-800/60"
+      className="flex-row items-center gap-3.5 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
-      <View className="w-11 items-center rounded-lg bg-stone-100 py-1.5 dark:bg-stone-800">
-        <Text className="text-[10px] font-bold uppercase text-stone-400 dark:text-stone-500">
+      {/* Date badge */}
+      <View className="w-12 items-center rounded-xl bg-stone-100 py-2 dark:bg-stone-800">
+        <Text className="text-[10px] font-bold uppercase tracking-wide text-stone-400 dark:text-stone-500">
           {monthStr}
         </Text>
-        <Text className="text-lg font-bold leading-tight text-stone-700 dark:text-stone-300">
+        <Text className="text-xl font-bold leading-tight text-stone-700 dark:text-stone-300">
           {day}
         </Text>
       </View>
 
+      {/* Content */}
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-1.5">
           {expense.isPayment && (
-            <ArrowDownLeft size={12} color="#16a34a" />
+            <ArrowDownLeft size={14} color="#16a34a" />
           )}
           <Text
-            className="text-sm font-semibold text-stone-900 dark:text-white"
+            className="text-[16px] font-semibold text-stone-900 dark:text-white"
             numberOfLines={1}
           >
             {expense.isPayment ? "Payment" : expense.description}
           </Text>
           {expense.recurringExpense && (
-            <Text className="text-xs text-amber-600 dark:text-amber-400" accessibilityLabel="Recurring">
+            <Text className="text-sm text-amber-600 dark:text-amber-400" accessibilityLabel="Recurring">
               ↻
             </Text>
           )}
+          {expense.isPending && (
+            <View className="h-2 w-2 rounded-full bg-amber-400" />
+          )}
         </View>
         {paymentDirection && (
-          <Text className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+          <Text className="mt-0.5 text-[13px] text-stone-500 dark:text-stone-400">
             {paymentDirection}
           </Text>
         )}
         {contextLabel && (
           <Text
-            className={`mt-0.5 text-xs font-medium ${
+            className={`mt-0.5 text-[13px] font-medium ${
               contextPositive
                 ? "text-emerald-600 dark:text-emerald-400"
                 : "text-rose-500 dark:text-rose-400"
@@ -284,87 +288,36 @@ function ExpenseCard({
           </Text>
         )}
         {!expense.isPayment && (
-          <Text className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
-            Paid by {formatDisplayName(expense.paidByDisplayName)}
+          <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
+            Paid by {expense.paidById === currentUserId ? "you" : formatDisplayName(expense.paidByDisplayName)}
           </Text>
         )}
       </View>
 
-      <View className="items-end">
+      {/* Amount + badge */}
+      <View className="items-end gap-1">
+        <Text className="text-[15px] font-bold text-stone-800 dark:text-stone-200">
+          {formatCents(expense.amountCents)}
+        </Text>
         <View
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
+            width: 28,
+            height: 28,
+            borderRadius: 14,
             backgroundColor: badge.bgColor,
             borderWidth: 1,
-            borderColor: `${badge.iconColor}4D`,
+            borderColor: `${badge.iconColor}33`,
           }}
           className="items-center justify-center"
           testID="expense-badge"
         >
-          <badge.Icon size={16} color={badge.iconColor} />
+          <badge.Icon size={14} color={badge.iconColor} />
         </View>
-        <Text className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
-          {formatCents(expense.amountCents)}
-        </Text>
       </View>
-
-      {expense.isPending && (
-        <View className="h-2 w-2 rounded-full bg-amber-400" />
-      )}
     </PressableRow>
   );
 }
 
-function SwipeDeleteAction() {
-  return (
-    <View
-      style={{
-        backgroundColor: "#dc2626",
-        justifyContent: "center",
-        alignItems: "center",
-        width: 80,
-      }}
-      testID="swipe-delete-action"
-    >
-      <Trash2 size={18} color="#ffffff" />
-      <Text style={{ color: "#ffffff", fontSize: 11, fontWeight: "700", marginTop: 2 }}>
-        Delete
-      </Text>
-    </View>
-  );
-}
-
-function SwipeableExpenseRow({
-  canDelete,
-  onDelete,
-  children,
-}: {
-  canDelete: boolean;
-  onDelete: () => void;
-  children: ReactNode;
-}) {
-  if (!canDelete) {
-    return <>{children}</>;
-  }
-
-  return (
-    <ReanimatedSwipeable
-      friction={2}
-      rightThreshold={40}
-      renderRightActions={() => <SwipeDeleteAction />}
-      onSwipeableOpen={(direction) => {
-        if (direction === "right") {
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onDelete();
-        }
-      }}
-    >
-      {children}
-    </ReanimatedSwipeable>
-  );
-}
 
 const ACTIVITY_ICON_CONFIG: Record<
   string,
@@ -401,16 +354,16 @@ function ActivityItem({
   }
 
   const content = (
-    <View className="flex-row items-start gap-3 py-2.5">
+    <View className="flex-row items-start gap-3 py-3">
       <View className="mt-0.5" testID={`${log.action}-icon`}>
         {iconConfig ? (
-          <iconConfig.Icon size={14} color={iconConfig.color} />
+          <iconConfig.Icon size={16} color={iconConfig.color} />
         ) : (
           <View className="h-2 w-2 rounded-full bg-stone-300 dark:bg-stone-600" />
         )}
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="text-xs text-stone-500 dark:text-stone-400">
+        <Text className="text-[13px] text-stone-500 dark:text-stone-400">
           <Text className="font-medium text-stone-700 dark:text-stone-300">
             {log.actor.displayName}
           </Text>
@@ -419,14 +372,14 @@ function ActivityItem({
         </Text>
         {detail && (
           <Text
-            className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500"
+            className="mt-0.5 text-xs text-stone-400 dark:text-stone-500"
             numberOfLines={1}
           >
             {detail}
           </Text>
         )}
       </View>
-      <Text className="mt-0.5 text-[11px] text-stone-400 dark:text-stone-500">
+      <Text className="mt-0.5 text-xs text-stone-400 dark:text-stone-500">
         {formatRelativeTime(String(log.createdAt))}
       </Text>
     </View>
@@ -632,8 +585,6 @@ function GroupBannerHeader({
             {headerContent}
           </View>
         </ImageBackground>
-        {/* Accent border */}
-        <View style={{ height: 3, backgroundColor: groupColor.accent }} />
       </View>
     );
   }
@@ -669,10 +620,10 @@ export default function GroupDetailScreen() {
     refetch: refetchActivity,
   } = useActivityLogs(id!);
 
-  const deleteExpense = useDeleteExpense(id!);
 
   const [refreshing, setRefreshing] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
+  const [showBalanceDetails, setShowBalanceDetails] = useState(false);
   const [showAllDebts, setShowAllDebts] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
   const activitySheetRef = useRef<BottomSheetModal>(null);
@@ -710,8 +661,8 @@ export default function GroupDetailScreen() {
       return {
         userId: m.userId as string,
         displayName: (u?.displayName as string) ?? UNKNOWN_USER,
-        emoji: MEMBER_EMOJIS[i % MEMBER_EMOJIS.length],
-        avatarUrl: (u?.avatarUrl as string) ?? null,
+        emoji: (u?.defaultEmoji as string) ?? MEMBER_EMOJIS[i % MEMBER_EMOJIS.length],
+        avatarUrl: (u?.profilePictureUrl as string) ?? (u?.avatarUrl as string) ?? null,
       };
     });
   }, [group]);
@@ -760,6 +711,17 @@ export default function GroupDetailScreen() {
     [activityPages],
   );
 
+  // Client-side expense pagination — all expenses are fetched for balance
+  // correctness, but only a slice is rendered for performance.
+  const EXPENSES_PAGE_SIZE = 15;
+  const [expenseLimit, setExpenseLimit] = useState(EXPENSES_PAGE_SIZE);
+  const allExpenses = expenses ?? [];
+  const visibleExpenses = useMemo(
+    () => allExpenses.slice(0, expenseLimit),
+    [allExpenses, expenseLimit],
+  );
+  const hasMoreExpenses = allExpenses.length > expenseLimit;
+
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([refetchGroup(), refetchExpenses(), refetchActivity()]);
@@ -783,37 +745,6 @@ export default function GroupDetailScreen() {
     }
   };
 
-  const handleDeleteExpense = useCallback(
-    (expense: ExpenseRow) => {
-      const label = expense.isPayment ? "payment" : `"${expense.description}"`;
-      Alert.alert(
-        "Delete expense",
-        `Are you sure you want to delete ${label}?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => {
-              const participantNames = expense.splits.map((s) => {
-                const m = members.find((mem) => mem.userId === s.userId);
-                return m ? m.displayName : UNKNOWN_USER;
-              });
-              deleteExpense.mutate({
-                expenseId: expense.id,
-                description: expense.description,
-                amountCents: expense.amountCents,
-                paidByDisplayName: expense.paidByDisplayName,
-                date: expense.date,
-                participantDisplayNames: participantNames,
-              });
-            },
-          },
-        ],
-      );
-    },
-    [deleteExpense, members],
-  );
 
   const handleActivityPress = useCallback((log: ActivityLog) => {
     setSelectedActivity(log);
@@ -922,8 +853,6 @@ export default function GroupDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#d97706" />
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
-        onScroll={handleScroll}
-        scrollEventThrottle={400}
       >
         {!isFriendGroup && (
           <ScrollView
@@ -935,9 +864,10 @@ export default function GroupDetailScreen() {
             {members.map((m) => (
               <MemberPill
                 key={m.userId}
-                emoji={m.emoji ?? "🐦"}
+                emoji={m.emoji ?? ""}
                 displayName={formatDisplayName(m.displayName)}
                 isCurrentUser={m.userId === user?.id}
+                avatarUrl={m.avatarUrl}
               />
             ))}
             {inviteToken && (
@@ -958,7 +888,7 @@ export default function GroupDetailScreen() {
               >
                 <UserPlus size={12} color="#d97706" />
                 <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400e" }}>
-                  Invite members
+                  Share invite
                 </Text>
               </Pressable>
             )}
@@ -975,45 +905,58 @@ export default function GroupDetailScreen() {
 
         <View className="px-4 pb-4">
           <Card className="flex-row overflow-hidden">
-            <View className={`w-1 rounded-l-xl ${accentColor}`} />
-            <View className="min-w-0 flex-1 px-4 py-3">
-              <View className="flex-row items-center gap-1.5">
-                {resolvedDebts.length === 0 && (
-                  <CheckCircle size={16} color="#16a34a" />
-                )}
-                <Text className={`text-xl font-bold ${balanceColor}`}>
-                  {balanceLabel}
-                </Text>
-              </View>
-              {userDebts.length > 0 && (
-                <View className="mt-2">
-                  {userDebts.map((d, i) => (
-                    <DebtLine key={i} debt={d} currentUserId={user!.id} />
-                  ))}
+            <View className={`w-1.5 rounded-l-xl ${accentColor}`} />
+            <View className="min-w-0 flex-1 px-4 py-3.5">
+              {/* Balance header — tappable to expand/collapse */}
+              <Pressable
+                onPress={() => {
+                  if (resolvedDebts.length > 0) setShowBalanceDetails((v) => !v);
+                }}
+                className="flex-row items-center justify-between"
+              >
+                <View className="flex-row items-center gap-2">
+                  {resolvedDebts.length === 0 && (
+                    <CheckCircle size={18} color="#16a34a" />
+                  )}
+                  <Text className={`text-xl font-bold ${balanceColor}`}>
+                    {balanceLabel}
+                  </Text>
                 </View>
-              )}
-              {showAllDebts &&
-                otherDebts.map((d, i) => (
-                  <DebtLine key={`o${i}`} debt={d} currentUserId={user!.id} />
-                ))}
-              {otherDebts.length > 0 && (
-                <Pressable onPress={() => setShowAllDebts((v) => !v)}>
-                  <Text className="mt-1 text-xs font-medium text-stone-400 dark:text-stone-500">
-                    {showAllDebts
-                      ? "Show less"
-                      : `Show all balances (${otherDebts.length} more)`}
-                  </Text>
-                </Pressable>
-              )}
-              {resolvedDebts.length > 0 && (
-                <Pressable
-                  onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
-                  className="mt-3 self-start rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 active:opacity-80 dark:border-emerald-700/40 dark:bg-emerald-900/30"
-                >
-                  <Text className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                    Settle up
-                  </Text>
-                </Pressable>
+                {resolvedDebts.length > 0 && (
+                  <View
+                    style={{ transform: [{ rotate: showBalanceDetails ? "180deg" : "0deg" }] }}
+                  >
+                    <ChevronDown size={18} color="#a8a29e" />
+                  </View>
+                )}
+              </Pressable>
+
+              {/* Collapsible debt details */}
+              {showBalanceDetails && (
+                <View className="mt-2.5">
+                  {userDebts.length > 0 && (
+                    <View>
+                      {userDebts.map((d, i) => (
+                        <DebtLine key={i} debt={d} currentUserId={user!.id} />
+                      ))}
+                    </View>
+                  )}
+                  {otherDebts.length > 0 && (
+                    <>
+                      {showAllDebts &&
+                        otherDebts.map((d, i) => (
+                          <DebtLine key={`o${i}`} debt={d} currentUserId={user!.id} />
+                        ))}
+                      <Pressable onPress={() => setShowAllDebts((v) => !v)} className="mt-1.5">
+                        <Text className="text-[13px] font-medium text-amber-600 dark:text-amber-400">
+                          {showAllDebts
+                            ? "Hide others"
+                            : `Show all balances (${otherDebts.length} more)`}
+                        </Text>
+                      </Pressable>
+                    </>
+                  )}
+                </View>
               )}
             </View>
           </Card>
@@ -1024,7 +967,7 @@ export default function GroupDetailScreen() {
             Expenses
           </Text>
 
-          {(expenses ?? []).length === 0 ? (
+          {allExpenses.length === 0 ? (
             <EmptyState
               icon={<Receipt size={28} color="#d97706" />}
               title="No expenses yet"
@@ -1035,14 +978,11 @@ export default function GroupDetailScreen() {
               }}
             />
           ) : (
-            (expenses ?? []).map((expense, index) => (
-              <Animated.View
-                key={expense.id}
-                entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 30) : undefined}
-              >
-                <SwipeableExpenseRow
-                  canDelete={expense.canDelete}
-                  onDelete={() => handleDeleteExpense(expense)}
+            <>
+              {visibleExpenses.map((expense, index) => (
+                <Animated.View
+                  key={expense.id}
+                  entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 30) : undefined}
                 >
                   <ExpenseCard
                     expense={expense}
@@ -1050,9 +990,15 @@ export default function GroupDetailScreen() {
                     members={members}
                     onPress={() => router.push(`/(app)/groups/${id}/expense/${expense.id}`)}
                   />
-                </SwipeableExpenseRow>
-              </Animated.View>
-            ))
+                </Animated.View>
+              ))}
+              {hasMoreExpenses && (
+                <LoadMoreButton
+                  onPress={() => setExpenseLimit((prev) => prev + EXPENSES_PAGE_SIZE)}
+                  label={`Show more (${allExpenses.length - expenseLimit} remaining)`}
+                />
+              )}
+            </>
           )}
         </View>
 
@@ -1061,7 +1007,7 @@ export default function GroupDetailScreen() {
             Activity
           </Text>
           {activityLogs.length === 0 ? (
-            <Text className="text-sm text-stone-400 dark:text-stone-500">
+            <Text className="text-[15px] text-stone-400 dark:text-stone-500">
               No activity yet.
             </Text>
           ) : (
@@ -1077,10 +1023,12 @@ export default function GroupDetailScreen() {
                   />
                 </Animated.View>
               ))}
-              {isFetchingNextPage && (
-                <View className="items-center py-3">
-                  <ActivityIndicator size="small" color="#d97706" />
-                </View>
+              {hasNextPage && (
+                <LoadMoreButton
+                  onPress={() => void fetchNextPage()}
+                  loading={isFetchingNextPage}
+                  label="Load older activity"
+                />
               )}
             </>
           )}
@@ -1104,8 +1052,8 @@ export default function GroupDetailScreen() {
             onPress={() => router.push(`/(app)/groups/${id}/recurring`)}
             className="flex-row items-center gap-1.5 rounded-full bg-stone-100 px-3.5 py-2.5 active:opacity-70 dark:bg-stone-800"
           >
-            <Repeat size={13} color="#78716c" />
-            <Text className="text-[12px] font-semibold text-stone-500 dark:text-stone-400">
+            <Repeat size={14} color="#78716c" />
+            <Text className="text-[13px] font-semibold text-stone-500 dark:text-stone-400">
               Recurring
             </Text>
           </Pressable>
@@ -1115,8 +1063,8 @@ export default function GroupDetailScreen() {
           onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
           className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 py-2.5 active:opacity-80 dark:border-emerald-700/50 dark:bg-emerald-950/40"
         >
-          <CheckCircle size={14} color="#16a34a" />
-          <Text className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">
+          <CheckCircle size={15} color="#16a34a" />
+          <Text className="text-[14px] font-bold text-emerald-700 dark:text-emerald-300">
             Settle up
           </Text>
         </Pressable>

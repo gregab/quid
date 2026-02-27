@@ -5,9 +5,10 @@ import { Avatar } from "./Avatar";
 afterEach(cleanup);
 
 describe("Avatar", () => {
-  it("renders default emoji when no props given", () => {
+  it("renders empty text when no props given (no bird fallback)", () => {
     render(<Avatar />);
-    expect(screen.getByText("🐦")).toBeTruthy();
+    // Should NOT render 🐦
+    expect(screen.queryByText("🐦")).toBeNull();
   });
 
   it("renders custom emoji", () => {
@@ -26,8 +27,42 @@ describe("Avatar", () => {
     render(
       <Avatar imageUrl="https://example.com/photo.jpg" emoji="🦊" />,
     );
-    // Should show image, not emoji
     expect(document.querySelector("img")).toBeTruthy();
     expect(screen.queryByText("🦊")).toBeNull();
+  });
+
+  it("prefers profilePictureUrl over imageUrl", () => {
+    render(
+      <Avatar
+        profilePictureUrl="https://example.com/profile.jpg"
+        imageUrl="https://example.com/google.jpg"
+        emoji="🦊"
+      />,
+    );
+    const img = document.querySelector("img") as HTMLImageElement;
+    expect(img).toBeTruthy();
+    expect(img.src).toBe("https://example.com/profile.jpg");
+    expect(screen.queryByText("🦊")).toBeNull();
+  });
+
+  it("falls back to imageUrl when profilePictureUrl is null", () => {
+    render(
+      <Avatar
+        profilePictureUrl={null}
+        imageUrl="https://example.com/google.jpg"
+        emoji="🦊"
+      />,
+    );
+    const img = document.querySelector("img") as HTMLImageElement;
+    expect(img).toBeTruthy();
+    expect(img.src).toBe("https://example.com/google.jpg");
+  });
+
+  it("falls back to emoji when no image URLs are provided", () => {
+    render(
+      <Avatar profilePictureUrl={null} imageUrl={null} emoji="🦊" />,
+    );
+    expect(document.querySelector("img")).toBeNull();
+    expect(screen.getByText("🦊")).toBeTruthy();
   });
 });

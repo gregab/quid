@@ -15,7 +15,29 @@ describe("MemberPill", () => {
     render(
       <MemberPill emoji="🐼" displayName="A Very Long Display Name" />,
     );
-    // The component uses numberOfLines={1} — in our mock this just renders the text
     expect(screen.getByText("A Very Long Display Name")).toBeTruthy();
+  });
+
+  it("renders avatar image instead of emoji when avatarUrl is provided", () => {
+    render(
+      <MemberPill
+        emoji="🦊"
+        displayName="Alice"
+        avatarUrl="https://example.com/alice.jpg"
+      />,
+    );
+    const img = document.querySelector("img") as HTMLImageElement;
+    expect(img).toBeTruthy();
+    expect(img.src).toBe("https://example.com/alice.jpg");
+    // Emoji should not be rendered when image is shown
+    expect(screen.queryByText("🦊")).toBeNull();
+  });
+
+  it("renders emoji when avatarUrl is null", () => {
+    render(
+      <MemberPill emoji="🦊" displayName="Alice" avatarUrl={null} />,
+    );
+    expect(screen.getByText("🦊")).toBeTruthy();
+    expect(document.querySelector("img")).toBeNull();
   });
 });

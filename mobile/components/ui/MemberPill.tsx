@@ -1,15 +1,17 @@
-import { View, Text } from "react-native";
+import { View, Text, Image } from "react-native";
 
 interface MemberPillProps {
   emoji: string;
   displayName: string;
   isCurrentUser?: boolean;
+  avatarUrl?: string | null;
 }
 
 export function MemberPill({
   emoji,
   displayName,
   isCurrentUser = false,
+  avatarUrl,
 }: MemberPillProps) {
   return (
     <View
@@ -19,7 +21,14 @@ export function MemberPill({
           : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800"
       }`}
     >
-      <Text className="text-sm">{emoji}</Text>
+      {avatarUrl ? (
+        <Image
+          source={{ uri: avatarUrl }}
+          style={{ width: 18, height: 18, borderRadius: 9 }}
+        />
+      ) : (
+        <Text className="text-sm">{emoji}</Text>
+      )}
       <Text
         className={`text-xs font-semibold tracking-tight ${
           isCurrentUser
