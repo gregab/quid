@@ -19,6 +19,7 @@ import {
   useGroupExpenses,
   useUpdateExpense,
   useDeleteExpense,
+  useStopRecurringExpense,
 } from "../../../../../lib/queries";
 import { Card } from "../../../../../components/ui/Card";
 import { Button } from "../../../../../components/ui/Button";
@@ -50,6 +51,7 @@ export default function ExpenseDetailScreen() {
   const { data: expenses, isLoading } = useGroupExpenses(id!);
   const updateExpense = useUpdateExpense(id!);
   const deleteExpense = useDeleteExpense(id!);
+  const stopRecurring = useStopRecurringExpense(id!);
 
   const { showToast } = useToast();
 
@@ -137,6 +139,33 @@ export default function ExpenseDetailScreen() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update.");
     }
+  };
+
+  const handleStopRecurring = () => {
+    if (!expense?.recurringExpense) return;
+    Alert.alert(
+      "Stop recurring expense",
+      "Future auto-generated expenses will be cancelled. Existing expenses are not affected.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Stop recurring",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await stopRecurring.mutateAsync(expense.recurringExpense!.id);
+              void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              router.back();
+            } catch (err) {
+              showToast({
+                message: err instanceof Error ? err.message : "Failed to stop recurring.",
+                type: "error",
+              });
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleDelete = () => {
@@ -288,6 +317,17 @@ export default function ExpenseDetailScreen() {
                   );
                 })}
               </Card>
+
+              {expense.recurringExpense && (
+                <Pressable
+                  onPress={handleStopRecurring}
+                  className="mt-3 items-center rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 active:opacity-80 dark:border-rose-900 dark:bg-rose-950/30"
+                >
+                  <Text className="text-sm font-medium text-rose-600 dark:text-rose-400">
+                    Stop recurring
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ) : (
             <View className="gap-4">

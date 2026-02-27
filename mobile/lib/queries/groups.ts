@@ -233,3 +233,21 @@ export function useCreateGroup() {
     },
   });
 }
+
+/** Update a group's name. */
+export function useUpdateGroup(groupId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const { error } = await supabase
+        .from("Group")
+        .update({ name })
+        .eq("id", groupId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: groupKeys.detail(groupId) });
+      void queryClient.invalidateQueries({ queryKey: groupKeys.all });
+    },
+  });
+}

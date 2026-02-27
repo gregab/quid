@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Alert,
   Share,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -21,8 +22,14 @@ import {
   Trash2,
   XCircle,
   ArrowDownLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  TrendingUp,
+  TrendingDown,
+  Receipt,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import type { BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useAuth } from "../../../../lib/auth";
 import {
   useGroupDetail,
@@ -33,7 +40,7 @@ import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
 import { Button } from "../../../../components/ui/Button";
-import { ScreenHeader } from "../../../../components/ui/ScreenHeader";
+import { Sheet } from "../../../../components/ui/BottomSheet";
 import {
   buildRawDebts,
   simplifyDebts,
@@ -41,6 +48,7 @@ import {
   formatCents,
   UNKNOWN_USER,
   MEMBER_EMOJIS,
+  getGroupColor,
 } from "../../../../lib/queries/shared";
 import type {
   ExpenseRow,
@@ -130,6 +138,35 @@ function DebtLine({
   );
 }
 
+function getExpenseBadge(
+  expense: ExpenseRow,
+  currentUserId: string,
+): { bgColor: string; iconColor: string; Icon: React.ComponentType<{ size: number; color: string }> } {
+  if (expense.isPayment) {
+    const recipientSplit = expense.splits.find((s) => s.userId !== expense.paidById);
+    if (expense.paidById === currentUserId) {
+      return { bgColor: "#fef3c7", iconColor: "#d97706", Icon: ArrowUpRight };
+    }
+    if (recipientSplit?.userId === currentUserId) {
+      return { bgColor: "#d1fae5", iconColor: "#059669", Icon: ArrowDownLeft };
+    }
+    return { bgColor: "#f5f5f4", iconColor: "#78716c", Icon: Receipt };
+  }
+
+  const mySplit = expense.splits.find((s) => s.userId === currentUserId);
+  const amIPayer = expense.paidById === currentUserId;
+  if (amIPayer && mySplit) {
+    const lent = expense.amountCents - mySplit.amountCents;
+    if (lent > 0) {
+      return { bgColor: "#d1fae5", iconColor: "#059669", Icon: TrendingUp };
+    }
+  }
+  if (!amIPayer && mySplit) {
+    return { bgColor: "#ffe4e6", iconColor: "#f43f5e", Icon: TrendingDown };
+  }
+  return { bgColor: "#f5f5f4", iconColor: "#78716c", Icon: Receipt };
+}
+
 function ExpenseCard({
   expense,
   currentUserId,
@@ -179,6 +216,8 @@ function ExpenseCard({
       paymentDirection = `${formatDisplayName(expense.paidByDisplayName)} \u2192 ${toName}`;
     }
   }
+
+  const badge = getExpenseBadge(expense, currentUserId);
 
   return (
     <Pressable
@@ -234,9 +273,25 @@ function ExpenseCard({
         )}
       </View>
 
-      <Text className="text-sm font-semibold text-stone-700 dark:text-stone-300">
-        {formatCents(expense.amountCents)}
-      </Text>
+      <View className="items-end">
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            backgroundColor: badge.bgColor,
+            borderWidth: 1,
+            borderColor: `${badge.iconColor}4D`,
+          }}
+          className="items-center justify-center"
+          testID="expense-badge"
+        >
+          <badge.Icon size={16} color={badge.iconColor} />
+        </View>
+        <Text className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
+          {formatCents(expense.amountCents)}
+        </Text>
+      </View>
 
       {expense.isPending && (
         <View className="h-2 w-2 rounded-full bg-amber-400" />
@@ -256,7 +311,13 @@ const ACTIVITY_ICON_CONFIG: Record<
   payment_deleted: { Icon: XCircle, color: "#e11d48" },
 };
 
-function ActivityItem({ log }: { log: ActivityLog }) {
+function ActivityItem({
+  log,
+  onPress,
+}: {
+  log: ActivityLog;
+  onPress?: () => void;
+}) {
   const title = ACTION_TITLES[log.action] ?? log.action;
   const payload = log.payload as Record<string, unknown> | null;
   const iconConfig = ACTIVITY_ICON_CONFIG[log.action];
@@ -273,7 +334,7 @@ function ActivityItem({ log }: { log: ActivityLog }) {
     }
   }
 
-  return (
+  const content = (
     <View className="flex-row items-start gap-3 py-2.5">
       <View className="mt-0.5" testID={`${log.action}-icon`}>
         {iconConfig ? (
@@ -304,6 +365,222 @@ function ActivityItem({ log }: { log: ActivityLog }) {
       </Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} testID={`activity-item-${log.id}`} className="active:opacity-80">
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
+}
+
+function ActivitySheetContent({
+  activity,
+  onClose,
+}: {
+  activity: ActivityLog;
+  onClose: () => void;
+}) {
+  const title = ACTION_TITLES[activity.action] ?? activity.action;
+  const payload = activity.payload as Record<string, unknown> | null;
+
+  const rows: Array<{ label: string; value: string }> = [];
+
+  if (payload) {
+    if (payload.description) {
+      rows.push({ label: "Description", value: String(payload.description) });
+    }
+    if (payload.amountCents != null) {
+      rows.push({ label: "Amount", value: formatCents(payload.amountCents as number) });
+    }
+    if (payload.fromDisplayName) {
+      rows.push({ label: "From", value: String(payload.fromDisplayName) });
+    }
+    if (payload.toDisplayName) {
+      rows.push({ label: "To", value: String(payload.toDisplayName) });
+    }
+    if (payload.paidByDisplayName) {
+      rows.push({ label: "Paid by", value: String(payload.paidByDisplayName) });
+    }
+  }
+
+  return (
+    <ScrollView testID="activity-sheet-content">
+      {/* Action title */}
+      <Text className="text-base font-semibold text-stone-900 dark:text-white">
+        {title}
+      </Text>
+
+      {/* Divider */}
+      <View className="my-3 h-px bg-stone-100 dark:bg-stone-800" />
+
+      {/* Section header */}
+      {rows.length > 0 && (
+        <Text className="mb-3 text-xs font-semibold uppercase tracking-widest text-stone-400">
+          Details
+        </Text>
+      )}
+
+      {rows.length > 0 ? (
+        <View className="mb-6 gap-3">
+          {rows.map((row) => (
+            <View key={row.label} className="flex-row items-center justify-between">
+              <Text className="text-sm text-stone-500 dark:text-stone-400">
+                {row.label}
+              </Text>
+              <Text className="text-sm font-medium text-stone-900 dark:text-stone-100">
+                {row.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <Text className="mb-6 text-sm text-stone-400 dark:text-stone-500">
+          No additional details.
+        </Text>
+      )}
+
+      {/* Footer — actor name in amber accent */}
+      <Text className="mb-5 text-xs text-stone-400 dark:text-stone-500">
+        By{" "}
+        <Text className="font-medium text-amber-600 dark:text-amber-400">
+          {activity.actor.displayName}
+        </Text>
+        {" · "}
+        {formatRelativeTime(String(activity.createdAt))}
+      </Text>
+
+      {/* Close button — full-width ghost style */}
+      <Pressable
+        onPress={onClose}
+        className="items-center rounded-xl border border-stone-200 py-3 active:opacity-80 dark:border-stone-700"
+      >
+        <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
+          Close
+        </Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+function GroupBannerHeader({
+  group,
+  displayTitle,
+  isFriendGroup,
+  groupId,
+}: {
+  group: Record<string, unknown>;
+  displayTitle: string;
+  isFriendGroup: boolean;
+  groupId: string;
+}) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const bannerUrl = group.bannerUrl as string | null;
+  const emoji = group.emoji as string | null;
+  const patternSeed = (group.patternSeed as number | null) ?? 0;
+  const groupColor = getGroupColor(patternSeed);
+
+  const headerContent = (
+    <>
+      {/* Full overlay for depth */}
+      <View
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.25)" }}
+      />
+
+      {/* Bottom gradient zone for name legibility */}
+      <View
+        style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 60, backgroundColor: "rgba(0,0,0,0.45)" }}
+      />
+
+      {/* Back button — pill style for visibility on any color */}
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          position: "absolute",
+          top: insets.top + 8,
+          left: 12,
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: "rgba(0,0,0,0.3)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        className="active:opacity-70"
+        testID="banner-back"
+      >
+        <ChevronLeft size={22} color="#ffffff" />
+      </Pressable>
+
+      {/* Settings gear — same pill style as back button */}
+      {!isFriendGroup && (
+        <Pressable
+          onPress={() => router.push(`/(app)/groups/${groupId}/settings`)}
+          style={{
+            position: "absolute",
+            top: insets.top + 8,
+            right: 12,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: "rgba(0,0,0,0.3)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          className="active:opacity-70"
+        >
+          <Settings size={18} color="#ffffff" />
+        </Pressable>
+      )}
+
+      {/* Emoji — slightly elevated from center */}
+      {emoji && (
+        <View style={{ position: "absolute", top: "35%", left: 0, right: 0, alignItems: "center" }}>
+          <Text style={{ fontSize: 52 }}>{emoji}</Text>
+        </View>
+      )}
+
+      {/* Group name — bottom-left with letter spacing */}
+      <Text
+        style={{ position: "absolute", bottom: 12, left: 16, right: 16, letterSpacing: 0.3, fontSize: 18, fontWeight: "700", color: "#ffffff" }}
+        numberOfLines={1}
+      >
+        {displayTitle}
+      </Text>
+    </>
+  );
+
+  if (bannerUrl) {
+    return (
+      <View style={{ height: 160, overflow: "hidden" }}>
+        <ImageBackground
+          source={{ uri: bannerUrl }}
+          style={{ flex: 1 }}
+          testID="banner-image"
+        >
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.3)" }}>
+            {headerContent}
+          </View>
+        </ImageBackground>
+        {/* Accent border */}
+        <View style={{ height: 3, backgroundColor: groupColor.accent }} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ height: 160, overflow: "hidden" }} testID="banner-color">
+      <View style={{ flex: 1, backgroundColor: groupColor.bg }}>
+        {headerContent}
+      </View>
+      {/* Accent border — crisp termination line */}
+      <View style={{ height: 3, backgroundColor: groupColor.accent }} />
+    </View>
+  );
 }
 
 export default function GroupDetailScreen() {
@@ -328,6 +605,8 @@ export default function GroupDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showAllDebts, setShowAllDebts] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
+  const activitySheetRef = useRef<BottomSheetModal>(null);
 
   const members: Member[] = useMemo(() => {
     if (!group) return [];
@@ -412,6 +691,16 @@ export default function GroupDetailScreen() {
     }
   };
 
+  const handleActivityPress = useCallback((log: ActivityLog) => {
+    setSelectedActivity(log);
+    activitySheetRef.current?.present();
+  }, []);
+
+  const handleActivitySheetClose = useCallback(() => {
+    activitySheetRef.current?.dismiss();
+    setSelectedActivity(null);
+  }, []);
+
   if (groupLoading || expensesLoading) {
     return (
       <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
@@ -468,17 +757,12 @@ export default function GroupDetailScreen() {
         : "text-emerald-600 dark:text-emerald-400";
 
   return (
-    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-      <ScreenHeader
-        title={displayTitle}
-        onBack={() => router.back()}
-        rightAction={
-          !isFriendGroup ? (
-            <Pressable onPress={() => router.push(`/(app)/groups/${id}/settings`)}>
-              <Settings size={20} color="#78716c" />
-            </Pressable>
-          ) : undefined
-        }
+    <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <GroupBannerHeader
+        group={group as Record<string, unknown>}
+        displayTitle={displayTitle}
+        isFriendGroup={isFriendGroup}
+        groupId={id!}
       />
 
       <ScrollView
@@ -487,17 +771,11 @@ export default function GroupDetailScreen() {
         }
         contentContainerStyle={{ paddingBottom: 100 + insets.bottom }}
       >
-        <View className="px-4 pb-2 pt-3">
-          <Text className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">
-            {displayTitle}
-          </Text>
-        </View>
-
         {!isFriendGroup && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            className="px-4 pb-4"
+            className="px-4 pb-4 pt-3"
             contentContainerStyle={{ gap: 8 }}
           >
             {members.map((m) => (
@@ -615,7 +893,11 @@ export default function GroupDetailScreen() {
           ) : (
             <>
               {activityLogs.map((log) => (
-                <ActivityItem key={log.id} log={log} />
+                <ActivityItem
+                  key={log.id}
+                  log={log}
+                  onPress={() => handleActivityPress(log)}
+                />
               ))}
               {hasNextPage && (
                 <Button
@@ -665,6 +947,15 @@ export default function GroupDetailScreen() {
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+
+      <Sheet ref={activitySheetRef} snapPoints={["50%", "85%"]}>
+        {selectedActivity && (
+          <ActivitySheetContent
+            activity={selectedActivity}
+            onClose={handleActivitySheetClose}
+          />
+        )}
+      </Sheet>
+    </View>
   );
 }

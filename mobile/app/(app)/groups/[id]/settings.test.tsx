@@ -8,17 +8,6 @@ import {
   makeGroupDetail,
 } from "../../../../lib/test-utils";
 
-// Must mock lucide at test level to prevent loading react-native-svg
-vi.mock("lucide-react-native", () => ({
-  ChevronLeft: () => null,
-  ChevronRight: () => null,
-  Link: () => null,
-  UserPlus: () => null,
-  LogOut: () => null,
-  Users: () => null,
-  Hash: () => null,
-}));
-
 import GroupSettingsScreen from "./settings";
 
 // Mock auth
@@ -33,6 +22,7 @@ vi.mock("../../../../lib/auth", () => ({
 }));
 
 const mockLeaveAsync = vi.fn();
+const mockUpdateGroupAsync = vi.fn();
 const mockUseGroupDetail = vi.fn();
 const mockUseGroupExpenses = vi.fn();
 
@@ -42,12 +32,17 @@ vi.mock("../../../../lib/queries", () => ({
   useLeaveGroup: () => ({
     mutateAsync: mockLeaveAsync,
   }),
+  useUpdateGroup: () => ({
+    mutateAsync: mockUpdateGroupAsync,
+    isPending: false,
+  }),
 }));
 
 afterEach(cleanup);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUpdateGroupAsync.mockReset();
   vi.mocked(useLocalSearchParams).mockReturnValue({ id: "group-1" });
   mockUseGroupDetail.mockReturnValue({
     data: makeGroupDetail(),
@@ -149,5 +144,27 @@ describe("GroupSettingsScreen", () => {
   it("shows Back navigation", () => {
     renderWithProviders();
     expect(screen.getByText("Back")).toBeTruthy();
+  });
+
+  it("shows edit input when group name is tapped", async () => {
+    renderWithProviders();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Test Group"));
+    });
+    expect(screen.getByDisplayValue("Test Group")).toBeTruthy();
+  });
+
+  it("calls updateGroup when save is clicked after editing name", async () => {
+    mockUpdateGroupAsync.mockResolvedValueOnce(undefined);
+    renderWithProviders();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Test Group"));
+    });
+    const input = screen.getByDisplayValue("Test Group");
+    fireEvent.change(input, { target: { value: "New Name" } });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Save"));
+    });
+    expect(mockUpdateGroupAsync).toHaveBeenCalledWith({ name: "New Name" });
   });
 });

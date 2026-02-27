@@ -8,13 +8,6 @@ import {
   makeGroupDetail,
 } from "../../../../../lib/test-utils";
 
-vi.mock("lucide-react-native", () => ({
-  ChevronLeft: () => null,
-  Trash2: () => null,
-  Pencil: () => null,
-  Repeat: () => null,
-}));
-
 import ExpenseDetailScreen from "./[expenseId]";
 
 vi.mock("../../../../../lib/auth", () => ({
@@ -29,6 +22,7 @@ vi.mock("../../../../../lib/auth", () => ({
 
 const mockUpdateAsync = vi.fn();
 const mockDeleteAsync = vi.fn();
+const mockStopRecurringAsync = vi.fn();
 const mockUseGroupDetail = vi.fn();
 const mockUseGroupExpenses = vi.fn();
 
@@ -37,6 +31,7 @@ vi.mock("../../../../../lib/queries", () => ({
   useGroupExpenses: () => mockUseGroupExpenses(),
   useUpdateExpense: () => ({ mutateAsync: mockUpdateAsync, isPending: false }),
   useDeleteExpense: () => ({ mutateAsync: mockDeleteAsync, isPending: false }),
+  useStopRecurringExpense: () => ({ mutateAsync: mockStopRecurringAsync, isPending: false }),
 }));
 
 afterEach(cleanup);
@@ -136,5 +131,19 @@ describe("ExpenseDetailScreen", () => {
   it("shows payer badge in split breakdown", () => {
     renderWithProviders();
     expect(screen.getByText("paid")).toBeTruthy();
+  });
+
+  it("shows stop recurring button for recurring expenses", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ ...testExpense, recurringExpense: { id: "rec-1", frequency: "monthly" } })],
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.getByText("Stop recurring")).toBeTruthy();
+  });
+
+  it("does not show stop recurring button for non-recurring expenses", () => {
+    renderWithProviders(); // testExpense has no recurringExpense
+    expect(screen.queryByText("Stop recurring")).toBeNull();
   });
 });

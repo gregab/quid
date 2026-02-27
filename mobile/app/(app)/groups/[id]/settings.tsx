@@ -18,8 +18,11 @@ import {
   useGroupDetail,
   useGroupExpenses,
   useLeaveGroup,
+  useUpdateGroup,
 } from "../../../../lib/queries";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
+import { Button } from "../../../../components/ui/Button";
+import { Input } from "../../../../components/ui/Input";
 import {
   getUserDebtCents,
   formatCents,
@@ -74,8 +77,11 @@ export default function GroupSettingsScreen() {
   const leaveGroup = useLeaveGroup(id!);
 
   const { showToast } = useToast();
+  const updateGroup = useUpdateGroup(id!);
 
   const [leaving, setLeaving] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
 
   const outstandingCents = useMemo(() => {
     if (!expenses || !user) return 0;
@@ -92,6 +98,21 @@ export default function GroupSettingsScreen() {
       | unknown[]
       | undefined
   )?.length ?? 0;
+
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    try {
+      await updateGroup.mutateAsync({ name: trimmed });
+      setEditingName(false);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err) {
+      showToast({
+        message: err instanceof Error ? err.message : "Failed to update name.",
+        type: "error",
+      });
+    }
+  };
 
   const handleShareInvite = async () => {
     if (!inviteToken) return;
@@ -182,11 +203,38 @@ export default function GroupSettingsScreen() {
           Group info
         </Text>
         <View className="mb-6 gap-2">
-          <SettingsRow
-            icon={<Hash size={18} color="#78716c" />}
-            label="Group name"
-            value={groupName}
-          />
+          {editingName ? (
+            <View className="rounded-xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900">
+              <Input
+                label="Group name"
+                value={nameInput}
+                onChangeText={setNameInput}
+                autoFocus
+              />
+              <View className="mt-3 flex-row gap-2">
+                <View className="flex-1">
+                  <Button variant="secondary" onPress={() => setEditingName(false)}>
+                    Cancel
+                  </Button>
+                </View>
+                <View className="flex-1">
+                  <Button onPress={handleSaveName} loading={updateGroup.isPending}>
+                    Save
+                  </Button>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <SettingsRow
+              icon={<Hash size={18} color="#78716c" />}
+              label="Group name"
+              value={groupName}
+              onPress={() => {
+                setNameInput(groupName ?? "");
+                setEditingName(true);
+              }}
+            />
+          )}
           <SettingsRow
             icon={<Users size={18} color="#78716c" />}
             label="Members"
