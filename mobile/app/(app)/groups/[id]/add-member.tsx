@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   View,
   Text,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -59,8 +60,13 @@ export default function AddMemberScreen() {
         {/* Header */}
         <View style={{ paddingTop: insets.top }}>
           <ScreenHeader
-            title="Add Member"
+            title="Add member"
             onBack={() => router.back()}
+            rightAction={
+              <Pressable onPress={() => router.back()}>
+                <Text className="text-sm font-semibold text-amber-600 dark:text-amber-500">Done</Text>
+              </Pressable>
+            }
           />
         </View>
 

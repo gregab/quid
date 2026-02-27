@@ -15,6 +15,7 @@ import { Alert } from "react-native";
 vi.mock("lucide-react-native", () => ({
   ChevronLeft: () => null,
   Square: () => null,
+  Plus: () => null,
 }));
 
 vi.mock("expo-haptics", () => ({
@@ -116,12 +117,14 @@ describe("RecurringExpensesScreen", () => {
     renderWithProviders();
 
     expect(screen.getByText("Weekly groceries")).toBeTruthy();
-    expect(screen.getByText("$50.00 Weekly")).toBeTruthy();
+    expect(screen.getByText("$50.00")).toBeTruthy();
+    expect(screen.getAllByText("Weekly").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Paid by Alice")).toBeTruthy();
-    expect(screen.getByText("Next due: 2026-03-01")).toBeTruthy();
+    expect(screen.getByText("Next due 2026-03-01")).toBeTruthy();
 
     expect(screen.getByText("Monthly rent")).toBeTruthy();
-    expect(screen.getByText("$1000.00 Monthly")).toBeTruthy();
+    expect(screen.getByText("$1000.00")).toBeTruthy();
+    expect(screen.getAllByText("Monthly").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Paid by Bob")).toBeTruthy();
 
     // Two stop buttons

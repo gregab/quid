@@ -124,7 +124,7 @@ export default function InviteScreen() {
             </View>
 
             <Text className="mt-4 text-center text-xs leading-relaxed text-stone-400 dark:text-stone-500">
-              By joining, you'll be able to share expenses with this group.
+              You've been invited to join this group on Aviary.
             </Text>
           </View>
         </View>

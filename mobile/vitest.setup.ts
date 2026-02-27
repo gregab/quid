@@ -130,6 +130,14 @@ vi.mock("lucide-react-native", () => {
   );
 });
 
+// --- lib/toast ---
+vi.mock("./lib/toast", () => ({
+  useToast: vi.fn(() => ({
+    showToast: vi.fn(),
+  })),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 // --- Supabase client (default mock — tests can override) ---
 vi.mock("./lib/supabase", () => {
   const mockChain = {
