@@ -47,7 +47,6 @@ import {
   useGroupExpenses,
   useActivityLogs,
 } from "../../../../lib/queries";
-import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { GroupDetailSkeleton } from "../../../../components/ui/SkeletonLoader";
 import { ErrorState } from "../../../../components/ui/ErrorState";
