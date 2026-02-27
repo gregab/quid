@@ -35,5 +35,8 @@ export default defineConfig({
     environment: "happy-dom",
     globals: false,
     setupFiles: ["./vitest.setup.ts"],
+    // Force process exit after all tests complete — prevents hanging due to
+    // dangling async ops (TanStack Query timers, happy-dom, etc.)
+    forceExit: true,
   },
 });

@@ -152,12 +152,7 @@ describe("useStopRecurringExpense", () => {
   });
 
   it("optimistically removes the recurring expense from cache", async () => {
-    let resolveRpc: (value: unknown) => void;
-    mockRpcFn.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRpc = resolve;
-      }) as never,
-    );
+    mockRpcFn.mockResolvedValueOnce({ data: null, error: null } as never);
 
     const queryClient = createTestQueryClient();
     const existing: RecurringExpenseRow[] = [
@@ -191,18 +186,15 @@ describe("useStopRecurringExpense", () => {
     );
 
     await act(async () => {
-      result.current.mutate("rec-1");
+      await result.current.mutateAsync("rec-1");
     });
 
+    // onMutate filtered out rec-1; invalidateQueries doesn't remove cache data
     const cache = queryClient.getQueryData<RecurringExpenseRow[]>(
       groupKeys.recurringExpenses("group-1"),
     );
     expect(cache).toHaveLength(1);
     expect(cache![0]!.id).toBe("rec-2");
-
-    await act(async () => {
-      resolveRpc!({ data: null, error: null });
-    });
   });
 
   it("rolls back cache on error", async () => {
@@ -241,12 +233,11 @@ describe("useStopRecurringExpense", () => {
       }
     });
 
-    await waitFor(() => {
-      const cache = queryClient.getQueryData<RecurringExpenseRow[]>(
-        groupKeys.recurringExpenses("group-1"),
-      );
-      expect(cache).toEqual(existing);
-    });
+    // onError restores cache synchronously
+    const cache = queryClient.getQueryData<RecurringExpenseRow[]>(
+      groupKeys.recurringExpenses("group-1"),
+    );
+    expect(cache).toEqual(existing);
   });
 
   it("invalidates recurring expenses and expenses on settled", async () => {

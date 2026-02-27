@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { renderHook, cleanup, waitFor, act } from "@testing-library/react";
+import { renderHook, cleanup, act } from "@testing-library/react";
 import { useCreatePayment } from "./payments";
 import { groupKeys } from "./keys";
 import { createTestQueryClient, createWrapper } from "./test-utils";
@@ -79,10 +79,7 @@ describe("useCreatePayment", () => {
   });
 
   it("adds optimistic payment to cache", async () => {
-    let resolveRpc: (value: unknown) => void;
-    mockRpcFn.mockReturnValueOnce(
-      new Promise((resolve) => { resolveRpc = resolve; }) as never,
-    );
+    mockRpcFn.mockResolvedValueOnce({ data: "pay-1", error: null } as never);
 
     const queryClient = createTestQueryClient();
     queryClient.setQueryData<ExpenseRow[]>(groupKeys.expenses("group-1"), []);
@@ -92,7 +89,7 @@ describe("useCreatePayment", () => {
     });
 
     await act(async () => {
-      result.current.mutate({
+      await result.current.mutateAsync({
         groupId: "group-1",
         amountCents: 1500,
         date: "2026-02-25",
@@ -102,6 +99,7 @@ describe("useCreatePayment", () => {
       });
     });
 
+    // onMutate set the optimistic item; invalidateQueries doesn't remove cache data
     const cache = queryClient.getQueryData<ExpenseRow[]>(
       groupKeys.expenses("group-1"),
     );
@@ -110,17 +108,10 @@ describe("useCreatePayment", () => {
     expect(cache?.[0]?.isPending).toBe(true);
     expect(cache?.[0]?.description).toBe("Payment");
     expect(cache?.[0]?.paidByDisplayName).toBe("Alice");
-
-    await act(async () => {
-      resolveRpc!({ data: "pay-1", error: null });
-    });
   });
 
   it("includes settledUp flag in optimistic payment", async () => {
-    let resolveRpc: (value: unknown) => void;
-    mockRpcFn.mockReturnValueOnce(
-      new Promise((resolve) => { resolveRpc = resolve; }) as never,
-    );
+    mockRpcFn.mockResolvedValueOnce({ data: "pay-1", error: null } as never);
 
     const queryClient = createTestQueryClient();
     queryClient.setQueryData<ExpenseRow[]>(groupKeys.expenses("group-1"), []);
@@ -130,7 +121,7 @@ describe("useCreatePayment", () => {
     });
 
     await act(async () => {
-      result.current.mutate({
+      await result.current.mutateAsync({
         groupId: "group-1",
         amountCents: 1500,
         date: "2026-02-25",
@@ -145,10 +136,6 @@ describe("useCreatePayment", () => {
       groupKeys.expenses("group-1"),
     );
     expect(cache?.[0]?.settledUp).toBe(true);
-
-    await act(async () => {
-      resolveRpc!({ data: "pay-1", error: null });
-    });
   });
 
   it("rolls back on error", async () => {
@@ -180,12 +167,11 @@ describe("useCreatePayment", () => {
       }
     });
 
-    await waitFor(() => {
-      const cache = queryClient.getQueryData<ExpenseRow[]>(
-        groupKeys.expenses("group-1"),
-      );
-      expect(cache).toEqual(existing);
-    });
+    // onError restores cache synchronously
+    const cache = queryClient.getQueryData<ExpenseRow[]>(
+      groupKeys.expenses("group-1"),
+    );
+    expect(cache).toEqual(existing);
   });
 
   it("invalidates expenses, activity, and all groups on settled", async () => {

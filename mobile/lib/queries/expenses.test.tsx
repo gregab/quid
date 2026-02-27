@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { renderHook, cleanup, waitFor, act } from "@testing-library/react";
+import { renderHook, cleanup, act } from "@testing-library/react";
 import { useCreateExpense, useUpdateExpense, useDeleteExpense } from "./expenses";
 import { groupKeys } from "./keys";
 import { createTestQueryClient, createWrapper } from "./test-utils";
 import type { ExpenseRow, Member } from "../types";
 
-// vi.hoisted ensures mockRpcFn is available when the hoisted vi.mock factory runs
 const { mockRpcFn } = vi.hoisted(() => ({
   mockRpcFn: vi.fn().mockResolvedValue({ data: null, error: null }),
 }));
@@ -112,10 +111,7 @@ describe("useCreateExpense", () => {
   });
 
   it("adds optimistic expense to cache on mutate", async () => {
-    let resolveRpc: (value: unknown) => void;
-    mockRpcFn.mockReturnValueOnce(
-      new Promise((resolve) => { resolveRpc = resolve; }) as never,
-    );
+    mockRpcFn.mockResolvedValueOnce({ data: "exp-new", error: null } as never);
 
     const queryClient = createTestQueryClient();
     queryClient.setQueryData<ExpenseRow[]>(groupKeys.expenses("group-1"), []);
@@ -124,9 +120,8 @@ describe("useCreateExpense", () => {
       wrapper: createWrapper(queryClient),
     });
 
-    // Start mutation — onMutate runs synchronously within act
     await act(async () => {
-      result.current.mutate({
+      await result.current.mutateAsync({
         groupId: "group-1",
         description: "Optimistic Test",
         amountCents: 1000,
@@ -138,18 +133,13 @@ describe("useCreateExpense", () => {
       });
     });
 
-    // Check optimistic cache was set
+    // onMutate set the optimistic item; invalidateQueries (onSettled) doesn't remove it
     const cache = queryClient.getQueryData<ExpenseRow[]>(
       groupKeys.expenses("group-1"),
     );
     expect(cache?.length).toBe(1);
     expect(cache?.[0]?.description).toBe("Optimistic Test");
     expect(cache?.[0]?.isPending).toBe(true);
-
-    // Resolve the pending RPC
-    await act(async () => {
-      resolveRpc!({ data: "exp-new", error: null });
-    });
   });
 
   it("rolls back optimistic update on error", async () => {
@@ -197,13 +187,11 @@ describe("useCreateExpense", () => {
       }
     });
 
-    // Cache should be rolled back to original
-    await waitFor(() => {
-      const cache = queryClient.getQueryData<ExpenseRow[]>(
-        groupKeys.expenses("group-1"),
-      );
-      expect(cache).toEqual(existingExpenses);
-    });
+    // onError restores the previous cache synchronously
+    const cache = queryClient.getQueryData<ExpenseRow[]>(
+      groupKeys.expenses("group-1"),
+    );
+    expect(cache).toEqual(existingExpenses);
   });
 
   it("maps percentage splitType to custom for RPC", async () => {
@@ -368,10 +356,7 @@ describe("useDeleteExpense", () => {
   });
 
   it("optimistically removes expense from cache", async () => {
-    let resolveRpc: (value: unknown) => void;
-    mockRpcFn.mockReturnValueOnce(
-      new Promise((resolve) => { resolveRpc = resolve; }) as never,
-    );
+    mockRpcFn.mockResolvedValueOnce({ data: null, error: null } as never);
 
     const queryClient = createTestQueryClient();
     const expenses: ExpenseRow[] = [
@@ -409,7 +394,7 @@ describe("useDeleteExpense", () => {
     });
 
     await act(async () => {
-      result.current.mutate({
+      await result.current.mutateAsync({
         expenseId: "exp-1",
         description: "To Delete",
         amountCents: 1000,
@@ -419,16 +404,12 @@ describe("useDeleteExpense", () => {
       });
     });
 
+    // onMutate filtered out exp-1; invalidateQueries doesn't remove cache data
     const cache = queryClient.getQueryData<ExpenseRow[]>(
       groupKeys.expenses("group-1"),
     );
     expect(cache?.length).toBe(1);
     expect(cache?.[0]?.id).toBe("exp-2");
-
-    // Resolve the pending RPC
-    await act(async () => {
-      resolveRpc!({ data: null, error: null });
-    });
   });
 
   it("rolls back on error", async () => {
@@ -474,11 +455,10 @@ describe("useDeleteExpense", () => {
       }
     });
 
-    await waitFor(() => {
-      const cache = queryClient.getQueryData<ExpenseRow[]>(
-        groupKeys.expenses("group-1"),
-      );
-      expect(cache).toEqual(expenses);
-    });
+    // onError restores cache synchronously
+    const cache = queryClient.getQueryData<ExpenseRow[]>(
+      groupKeys.expenses("group-1"),
+    );
+    expect(cache).toEqual(expenses);
   });
 });

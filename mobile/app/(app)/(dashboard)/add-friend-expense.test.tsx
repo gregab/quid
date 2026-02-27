@@ -103,9 +103,10 @@ describe("AddFriendExpenseScreen", () => {
 
   it("deselects friend when same chip clicked again", () => {
     renderWithProviders();
-    fireEvent.click(screen.getByText("Bob S."));
+    // Use getAllByText[0] — after selection, ExpenseForm also renders the name
+    fireEvent.click(screen.getAllByText("Bob S.")[0]!);
     expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
-    fireEvent.click(screen.getByText("Bob S."));
+    fireEvent.click(screen.getAllByText("Bob S.")[0]!);
     expect(screen.queryByPlaceholderText("What's this for?")).toBeNull();
   });
 
