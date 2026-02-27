@@ -41,14 +41,14 @@ export const Easing = {
 };
 
 const AnimatedView = forwardRef<HTMLDivElement, Props>(
-  function AnimatedView({ children, ...props }, ref) {
-    return <div ref={ref} {...props}>{children}</div>;
+  function AnimatedView({ children, testID, className, entering: _entering, exiting: _exiting, style: _style, ...props }, ref) {
+    return <div ref={ref} data-testid={testID as string} className={className as string} {...props}>{children}</div>;
   },
 );
 
 const AnimatedText = forwardRef<HTMLSpanElement, Props>(
-  function AnimatedText({ children, ...props }, ref) {
-    return <span ref={ref} {...props}>{children}</span>;
+  function AnimatedText({ children, testID, className, entering: _entering, exiting: _exiting, style: _style, ...props }, ref) {
+    return <span ref={ref} data-testid={testID as string} className={className as string} {...props}>{children}</span>;
   },
 );
 

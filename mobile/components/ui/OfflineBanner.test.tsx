@@ -6,17 +6,6 @@ vi.mock("../../lib/useNetworkStatus", () => ({
   useNetworkStatus: () => ({ isConnected: mockIsConnected }),
 }));
 
-// Override useAnimatedStyle to return empty style (RN transforms aren't valid CSS)
-vi.mock("react-native-reanimated", async () => {
-  const actual = await vi.importActual<typeof import("react-native-reanimated")>(
-    "react-native-reanimated",
-  );
-  return {
-    ...actual,
-    useAnimatedStyle: () => ({}),
-  };
-});
-
 import { OfflineBanner } from "./OfflineBanner";
 
 afterEach(cleanup);

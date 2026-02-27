@@ -233,26 +233,10 @@ vi.mock("@react-native-community/datetimepicker", () => ({
 }));
 
 // --- lucide-react-native ---
-vi.mock("lucide-react-native", () => {
-  return new Proxy(
-    {},
-    {
-      get: (_target, name) => {
-        if (typeof name === "string") {
-          // Return a simple component stub for any icon
-          return (props: Record<string, unknown>) => {
-            const React = require("react");
-            return React.createElement("span", {
-              "data-testid": `icon-${name}`,
-              ...props,
-            });
-          };
-        }
-        return undefined;
-      },
-    },
-  );
-});
+// Handled via resolve.alias + server.deps.inline in vitest.config.ts pointing to
+// __mocks__/lucide-react-native.ts which exports all named icons as stubs.
+// DO NOT add a vi.mock() for lucide here — a Proxy factory without ownKeys causes
+// vitest to fall back to loading the real barrel, which hangs indefinitely.
 
 // --- react-native-svg ---
 vi.mock("react-native-svg", () => ({

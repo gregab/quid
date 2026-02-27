@@ -6,17 +6,6 @@ vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 
-// Override useAnimatedStyle to return empty style (RN transforms aren't valid CSS)
-vi.mock("react-native-reanimated", async () => {
-  const actual = await vi.importActual<typeof import("react-native-reanimated")>(
-    "react-native-reanimated",
-  );
-  return {
-    ...actual,
-    useAnimatedStyle: () => ({}),
-  };
-});
-
 import { ExpenseForm } from "./ExpenseForm";
 import type { ExpenseFormProps } from "./ExpenseForm";
 import type { Member } from "../lib/types";
