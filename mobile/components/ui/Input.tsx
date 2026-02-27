@@ -1,5 +1,5 @@
+import React, { useState, forwardRef } from "react";
 import { View, Text, TextInput, type TextInputProps } from "react-native";
-import { useState } from "react";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -8,14 +8,17 @@ interface InputProps extends TextInputProps {
   multiline?: boolean;
 }
 
-export function Input({
-  label,
-  error,
-  prefix,
-  multiline,
-  editable = true,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<TextInput, InputProps>(function Input(
+  {
+    label,
+    error,
+    prefix,
+    multiline,
+    editable = true,
+    ...props
+  },
+  ref,
+) {
   const [focused, setFocused] = useState(false);
   const disabled = editable === false;
 
@@ -42,6 +45,7 @@ export function Input({
           </Text>
         )}
         <TextInput
+          ref={ref}
           className={`min-w-0 flex-1 text-base text-stone-900 dark:bg-stone-900 dark:text-stone-100 ${prefix ? "pl-1 pr-3 py-2.5" : "px-3 py-2.5"} ${multiline ? "min-h-[80px]" : ""}`}
           placeholderTextColor="#a8a29e"
           multiline={multiline}
@@ -65,4 +69,4 @@ export function Input({
       )}
     </View>
   );
-}
+});
