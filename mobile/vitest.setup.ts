@@ -79,6 +79,19 @@ vi.mock("expo-clipboard", () => ({
   getStringAsync: vi.fn(() => Promise.resolve("")),
 }));
 
+// --- expo-web-browser ---
+vi.mock("expo-web-browser", () => ({
+  openAuthSessionAsync: vi.fn(() =>
+    Promise.resolve({ type: "cancel" }),
+  ),
+  maybeCompleteAuthSession: vi.fn(),
+}));
+
+// --- expo-auth-session ---
+vi.mock("expo-auth-session", () => ({
+  makeRedirectUri: vi.fn(() => "aviary://redirect"),
+}));
+
 // --- expo-router ---
 vi.mock("expo-router", () => ({
   useRouter: vi.fn(() => ({
@@ -140,6 +153,40 @@ vi.mock("expo-notifications", () => ({
 // --- expo-device ---
 vi.mock("expo-device", () => ({
   isDevice: true,
+}));
+
+// --- expo-auth-session ---
+vi.mock("expo-auth-session", () => ({
+  makeRedirectUri: vi.fn(() => "aviary://auth/callback"),
+}));
+
+// --- expo-web-browser ---
+vi.mock("expo-web-browser", () => ({
+  openAuthSessionAsync: vi.fn(() =>
+    Promise.resolve({ type: "success", url: "aviary://auth/callback" }),
+  ),
+  maybeCompleteAuthSession: vi.fn(),
+  warmUpAsync: vi.fn(() => Promise.resolve()),
+  coolDownAsync: vi.fn(() => Promise.resolve()),
+}));
+
+// --- expo-crypto ---
+vi.mock("expo-crypto", () => ({
+  getRandomBytesAsync: vi.fn((size: number) =>
+    Promise.resolve(new Uint8Array(size)),
+  ),
+  digestStringAsync: vi.fn(() => Promise.resolve("mock-hash")),
+  CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+}));
+
+// --- @react-native-community/netinfo ---
+vi.mock("@react-native-community/netinfo", () => ({
+  default: {
+    addEventListener: vi.fn(() => vi.fn()),
+    fetch: vi.fn(() =>
+      Promise.resolve({ isConnected: true, isInternetReachable: true }),
+    ),
+  },
 }));
 
 // --- @gorhom/bottom-sheet ---
@@ -217,6 +264,18 @@ vi.mock("./lib/supabase", () => {
         }),
         signUp: vi.fn().mockResolvedValue({
           data: { user: null },
+          error: null,
+        }),
+        signInWithOAuth: vi.fn().mockResolvedValue({
+          data: { url: "https://accounts.google.com/o/oauth2/auth?...", provider: "google" },
+          error: null,
+        }),
+        resetPasswordForEmail: vi.fn().mockResolvedValue({
+          data: {},
+          error: null,
+        }),
+        setSession: vi.fn().mockResolvedValue({
+          data: { session: null },
           error: null,
         }),
         signOut: vi.fn().mockResolvedValue({ error: null }),

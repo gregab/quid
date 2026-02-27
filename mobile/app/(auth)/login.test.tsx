@@ -137,6 +137,16 @@ describe("LoginScreen", () => {
     expect(replace).toHaveBeenCalledWith("/invite/invite-abc");
   });
 
+  it("renders Continue with Google button", () => {
+    render(<LoginScreen />);
+    expect(screen.getByText("Continue with Google")).toBeTruthy();
+  });
+
+  it("renders Forgot password link", () => {
+    render(<LoginScreen />);
+    expect(screen.getByText("Forgot password?")).toBeTruthy();
+  });
+
   it("does not redirect after successful login when no next param", async () => {
     const replace = vi.fn();
     vi.mocked(useRouter).mockReturnValue({
