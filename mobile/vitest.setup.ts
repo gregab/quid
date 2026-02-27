@@ -301,6 +301,10 @@ vi.mock("./lib/supabase", () => {
           data: { session: null },
           error: null,
         }),
+        exchangeCodeForSession: vi.fn().mockResolvedValue({
+          data: { session: null },
+          error: null,
+        }),
         signOut: vi.fn().mockResolvedValue({ error: null }),
         getSession: vi.fn().mockResolvedValue({
           data: { session: null },
