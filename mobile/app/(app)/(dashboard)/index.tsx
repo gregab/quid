@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   Pressable,
   RefreshControl,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronRight, Plus, Settings } from "lucide-react-native";
@@ -163,6 +164,14 @@ export default function DashboardScreen() {
   const { data: profile } = useCurrentUser();
   const { data: contacts } = useContacts();
   const [refreshing, setRefreshing] = useState(false);
+  const hasAnimated = useRef(false);
+
+  // Mark animations as done after first render with data
+  useEffect(() => {
+    if (groups && !hasAnimated.current) {
+      hasAnimated.current = true;
+    }
+  }, [groups]);
 
   const birdFact = useMemo(
     () => BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)],
@@ -306,7 +315,13 @@ export default function DashboardScreen() {
             </View>
           </>
         }
-        renderItem={({ item }) => <GroupCard group={item} />}
+        renderItem={({ item, index }) => (
+          <Animated.View
+            entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 40) : undefined}
+          >
+            <GroupCard group={item} />
+          </Animated.View>
+        )}
         ListEmptyComponent={
           <EmptyState
             icon={<Text className="text-2xl">🪺</Text>}
@@ -330,8 +345,13 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
 
-                {friends.map((friend) => (
-                  <FriendCard key={friend.groupId} friend={friend} />
+                {friends.map((friend, index) => (
+                  <Animated.View
+                    key={friend.groupId}
+                    entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 40) : undefined}
+                  >
+                    <FriendCard friend={friend} />
+                  </Animated.View>
                 ))}
               </View>
             )}

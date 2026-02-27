@@ -20,6 +20,7 @@ import Animated, {
   withSequence,
   withTiming,
   Easing,
+  FadeInDown,
 } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -674,6 +675,14 @@ export default function GroupDetailScreen() {
   const [showAllDebts, setShowAllDebts] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
   const activitySheetRef = useRef<BottomSheetModal>(null);
+  const hasAnimated = useRef(false);
+
+  // Mark animations as done after first render with data
+  useEffect(() => {
+    if (expenses && !hasAnimated.current) {
+      hasAnimated.current = true;
+    }
+  }, [expenses]);
 
   // Gentle float animation for the Add expense button
   const addFloatY = useSharedValue(0);
@@ -1025,19 +1034,23 @@ export default function GroupDetailScreen() {
               }}
             />
           ) : (
-            (expenses ?? []).map((expense) => (
-              <SwipeableExpenseRow
+            (expenses ?? []).map((expense, index) => (
+              <Animated.View
                 key={expense.id}
-                canDelete={expense.canDelete}
-                onDelete={() => handleDeleteExpense(expense)}
+                entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 30) : undefined}
               >
-                <ExpenseCard
-                  expense={expense}
-                  currentUserId={user!.id}
-                  members={members}
-                  onPress={() => router.push(`/(app)/groups/${id}/expense/${expense.id}`)}
-                />
-              </SwipeableExpenseRow>
+                <SwipeableExpenseRow
+                  canDelete={expense.canDelete}
+                  onDelete={() => handleDeleteExpense(expense)}
+                >
+                  <ExpenseCard
+                    expense={expense}
+                    currentUserId={user!.id}
+                    members={members}
+                    onPress={() => router.push(`/(app)/groups/${id}/expense/${expense.id}`)}
+                  />
+                </SwipeableExpenseRow>
+              </Animated.View>
             ))
           )}
         </View>
@@ -1052,12 +1065,16 @@ export default function GroupDetailScreen() {
             </Text>
           ) : (
             <>
-              {activityLogs.map((log) => (
-                <ActivityItem
+              {activityLogs.map((log, index) => (
+                <Animated.View
                   key={log.id}
-                  log={log}
-                  onPress={() => handleActivityPress(log)}
-                />
+                  entering={!hasAnimated.current ? FadeInDown.duration(200).delay(index * 30) : undefined}
+                >
+                  <ActivityItem
+                    log={log}
+                    onPress={() => handleActivityPress(log)}
+                  />
+                </Animated.View>
               ))}
               {isFetchingNextPage && (
                 <View className="items-center py-3">
