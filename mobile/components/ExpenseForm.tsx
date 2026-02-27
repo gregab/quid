@@ -327,7 +327,7 @@ export function ExpenseForm({
                 key={type}
                 onPress={() => setSplitType(type)}
                 className={`flex-1 items-center rounded-md py-2 ${
-                  splitType === type ? "bg-amber-600 shadow-sm dark:bg-amber-500" : ""
+                  splitType === type ? "bg-amber-600 dark:bg-amber-500" : ""
                 }`}
               >
                 <Text
@@ -520,7 +520,7 @@ export function ExpenseForm({
                     onPress={() => setRecurringFrequency(freq)}
                     className={`flex-1 items-center rounded-md py-2 ${
                       recurringFrequency === freq
-                        ? "bg-amber-600 shadow-sm dark:bg-amber-500"
+                        ? "bg-amber-600 dark:bg-amber-500"
                         : ""
                     }`}
                   >

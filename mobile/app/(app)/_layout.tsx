@@ -21,7 +21,7 @@ export default function AppLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen name="invite/[token]" />
-      <Stack.Screen name="settings" />
+      <Stack.Screen name="settings/index" />
     </Stack>
   );
 }

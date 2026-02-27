@@ -33,7 +33,8 @@ export function Input({
         </Text>
       )}
       <View
-        className={`w-full flex-row items-center rounded-lg border ${borderColor} ${focused && !error ? "shadow-sm" : ""}`}
+        className={`w-full flex-row items-center rounded-lg border ${borderColor}`}
+        style={focused && !error ? { elevation: 2, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 } : undefined}
       >
         {prefix && (
           <Text className="pl-3 text-base text-stone-400 dark:text-stone-500">
