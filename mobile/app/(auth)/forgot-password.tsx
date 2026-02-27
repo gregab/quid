@@ -1,0 +1,146 @@
+import { useState } from "react";
+import {
+  View,
+  Text,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Pressable,
+} from "react-native";
+import { Link } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { TriangleAlert } from "lucide-react-native";
+import { supabase } from "../../lib/supabase";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Card } from "../../components/ui/Card";
+import { friendlyAuthError } from "../../lib/authErrors";
+
+export default function ForgotPasswordScreen() {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      setError("Please enter your email.");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    const { error: authError } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      { redirectTo: "aviary://auth/callback" },
+    );
+
+    setLoading(false);
+
+    if (authError) {
+      setError(friendlyAuthError(authError.message));
+    } else {
+      setEmailSent(true);
+    }
+  };
+
+  if (emailSent) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="mb-2 text-5xl">📬</Text>
+          <Text className="mb-2 text-xl font-bold text-stone-800 dark:text-stone-100">
+            Check your inbox
+          </Text>
+          <Text className="mb-6 text-center text-sm text-stone-500 dark:text-stone-400">
+            We sent a password reset link to {email}. Check your email and
+            follow the link to reset your password.
+          </Text>
+          <Link href="/(auth)/login" asChild>
+            <Pressable accessibilityRole="link">
+              <Text className="text-sm font-semibold text-amber-600 dark:text-amber-500">
+                Back to login
+              </Text>
+            </Pressable>
+          </Link>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1"
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+          keyboardShouldPersistTaps="handled"
+          className="px-6"
+        >
+          {/* Hero */}
+          <View className="mb-8 items-center">
+            <Text className="mb-2 text-5xl">🐦</Text>
+            <Text className="font-serif-logo text-4xl text-stone-800 dark:text-stone-100">
+              Aviary
+            </Text>
+            <Text className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+              Reset your password
+            </Text>
+          </View>
+
+          {/* Form card */}
+          <Card variant="elevated" className="px-5 py-6">
+            <View className="gap-4">
+              {error ? (
+                <View className="flex-row items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/50">
+                  <TriangleAlert size={16} color="#d97706" />
+                  <Text className="min-w-0 flex-1 text-xs text-amber-800 dark:text-amber-300">
+                    {error}
+                  </Text>
+                </View>
+              ) : null}
+
+              <Text className="text-sm text-stone-500 dark:text-stone-400">
+                Enter your email address and we&apos;ll send you a link to reset
+                your password.
+              </Text>
+
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                placeholder="you@example.com"
+              />
+
+              <Button
+                onPress={handleResetPassword}
+                loading={loading}
+                size="lg"
+              >
+                Send Reset Link
+              </Button>
+            </View>
+          </Card>
+
+          {/* Back to login link */}
+          <View className="mt-6 flex-row items-center justify-center gap-1">
+            <Link href="/(auth)/login" asChild>
+              <Pressable accessibilityRole="link">
+                <Text className="text-sm font-semibold text-amber-600 dark:text-amber-500">
+                  Back to login
+                </Text>
+              </Pressable>
+            </Link>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
