@@ -92,6 +92,16 @@ vi.mock("expo-auth-session", () => ({
   makeRedirectUri: vi.fn(() => "aviary://redirect"),
 }));
 
+// --- react-native-gesture-handler/ReanimatedSwipeable ---
+vi.mock("react-native-gesture-handler/ReanimatedSwipeable", () => {
+  const React = require("react");
+  return {
+    default: ({ children, onSwipeableOpen, renderRightActions }: Record<string, unknown>) => {
+      return React.createElement("div", { "data-testid": "swipeable" }, children);
+    },
+  };
+});
+
 // --- expo-router ---
 vi.mock("expo-router", () => ({
   useRouter: vi.fn(() => ({

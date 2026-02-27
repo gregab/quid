@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect, type ReactNode } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Share,
   ImageBackground,
 } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -45,6 +46,7 @@ import {
   useGroupExpenses,
   useActivityLogs,
 } from "../../../../lib/queries";
+import { useDeleteExpense } from "../../../../lib/queries/expenses";
 import { Card } from "../../../../components/ui/Card";
 import { MemberPill } from "../../../../components/ui/MemberPill";
 import { LoadingSpinner } from "../../../../components/ui/LoadingSpinner";
@@ -306,6 +308,55 @@ function ExpenseCard({
         <View className="h-2 w-2 rounded-full bg-amber-400" />
       )}
     </Pressable>
+  );
+}
+
+function SwipeDeleteAction() {
+  return (
+    <View
+      style={{
+        backgroundColor: "#dc2626",
+        justifyContent: "center",
+        alignItems: "center",
+        width: 80,
+      }}
+      testID="swipe-delete-action"
+    >
+      <Trash2 size={18} color="#ffffff" />
+      <Text style={{ color: "#ffffff", fontSize: 11, fontWeight: "700", marginTop: 2 }}>
+        Delete
+      </Text>
+    </View>
+  );
+}
+
+function SwipeableExpenseRow({
+  canDelete,
+  onDelete,
+  children,
+}: {
+  canDelete: boolean;
+  onDelete: () => void;
+  children: ReactNode;
+}) {
+  if (!canDelete) {
+    return <>{children}</>;
+  }
+
+  return (
+    <ReanimatedSwipeable
+      friction={2}
+      rightThreshold={40}
+      renderRightActions={() => <SwipeDeleteAction />}
+      onSwipeableOpen={(direction) => {
+        if (direction === "right") {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onDelete();
+        }
+      }}
+    >
+      {children}
+    </ReanimatedSwipeable>
   );
 }
 
@@ -611,6 +662,8 @@ export default function GroupDetailScreen() {
     refetch: refetchActivity,
   } = useActivityLogs(id!);
 
+  const deleteExpense = useDeleteExpense(id!);
+
   const [refreshing, setRefreshing] = useState(false);
   const [celebration, setCelebration] = useState<string | null>(null);
   const [showAllDebts, setShowAllDebts] = useState(false);
@@ -714,6 +767,38 @@ export default function GroupDetailScreen() {
       // User cancelled
     }
   };
+
+  const handleDeleteExpense = useCallback(
+    (expense: ExpenseRow) => {
+      const label = expense.isPayment ? "payment" : `"${expense.description}"`;
+      Alert.alert(
+        "Delete expense",
+        `Are you sure you want to delete ${label}?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: () => {
+              const participantNames = expense.splits.map((s) => {
+                const m = members.find((mem) => mem.userId === s.userId);
+                return m ? m.displayName : UNKNOWN_USER;
+              });
+              deleteExpense.mutate({
+                expenseId: expense.id,
+                description: expense.description,
+                amountCents: expense.amountCents,
+                paidByDisplayName: expense.paidByDisplayName,
+                date: expense.date,
+                participantDisplayNames: participantNames,
+              });
+            },
+          },
+        ],
+      );
+    },
+    [deleteExpense, members],
+  );
 
   const handleActivityPress = useCallback((log: ActivityLog) => {
     setSelectedActivity(log);
@@ -903,13 +988,18 @@ export default function GroupDetailScreen() {
             </Card>
           ) : (
             (expenses ?? []).map((expense) => (
-              <ExpenseCard
+              <SwipeableExpenseRow
                 key={expense.id}
-                expense={expense}
-                currentUserId={user!.id}
-                members={members}
-                onPress={() => router.push(`/(app)/groups/${id}/expense/${expense.id}`)}
-              />
+                canDelete={expense.canDelete}
+                onDelete={() => handleDeleteExpense(expense)}
+              >
+                <ExpenseCard
+                  expense={expense}
+                  currentUserId={user!.id}
+                  members={members}
+                  onPress={() => router.push(`/(app)/groups/${id}/expense/${expense.id}`)}
+                />
+              </SwipeableExpenseRow>
             ))
           )}
         </View>

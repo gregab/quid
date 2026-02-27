@@ -39,6 +39,14 @@ vi.mock("../../../../lib/queries", () => ({
   useActivityLogs: () => mockUseActivityLogs(),
 }));
 
+const mockDeleteMutate = vi.fn();
+vi.mock("../../../../lib/queries/expenses", () => ({
+  useDeleteExpense: () => ({
+    mutate: mockDeleteMutate,
+    isPending: false,
+  }),
+}));
+
 afterEach(cleanup);
 
 beforeEach(() => {
@@ -317,6 +325,28 @@ describe("GroupDetailScreen", () => {
   it("renders back button in banner", () => {
     renderWithProviders();
     expect(screen.getByTestId("banner-back")).toBeTruthy();
+  });
+
+  // --- Swipe-to-delete tests ---
+
+  it("wraps deletable expenses in swipeable wrapper", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ canDelete: true })],
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    renderWithProviders();
+    expect(screen.getByTestId("swipeable")).toBeTruthy();
+  });
+
+  it("does not wrap non-deletable expenses in swipeable", () => {
+    mockUseGroupExpenses.mockReturnValue({
+      data: [makeExpense({ canDelete: false })],
+      isLoading: false,
+      refetch: vi.fn(),
+    });
+    renderWithProviders();
+    expect(screen.queryByTestId("swipeable")).toBeNull();
   });
 
   // --- Friend group tests ---
