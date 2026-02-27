@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Repeat } from "lucide-react-native";
+import { X, Repeat } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useAuth } from "../../../../../../lib/auth";
 import { useToast } from "../../../../../../lib/toast";
@@ -19,7 +19,6 @@ import {
   useStopRecurringExpense,
 } from "../../../../../../lib/queries";
 import { LoadingSpinner } from "../../../../../../components/ui/LoadingSpinner";
-import { ScreenHeader } from "../../../../../../components/ui/ScreenHeader";
 import {
   formatCents,
   formatDisplayName,
@@ -139,19 +138,19 @@ export default function ExpenseDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
         <LoadingSpinner />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!expense) {
     return (
-      <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
         <View className="flex-1 items-center justify-center">
           <Text className="text-stone-500">Expense not found</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -168,11 +167,11 @@ export default function ExpenseDetailScreen() {
     : null;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
-      <ScreenHeader
-        title=""
-        onBack={() => router.back()}
-      />
+    <View className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      {/* Drag handle */}
+      <View className="items-center pt-3 pb-1">
+        <View className="h-1 w-10 rounded-full bg-stone-300 dark:bg-stone-600" />
+      </View>
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 32 }}
@@ -322,35 +321,47 @@ export default function ExpenseDetailScreen() {
           )}
 
           {/* ── Action row ── */}
-          <View className="flex-row items-center justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800/60">
-            {expense.canDelete ? (
-              <Pressable
-                onPress={handleDelete}
-                className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 active:opacity-75 dark:border-rose-900 dark:bg-rose-950/30"
-              >
-                <Text className="text-sm font-semibold text-rose-600 dark:text-rose-400">
-                  Delete {expense.isPayment ? "payment" : "expense"}
-                </Text>
-              </Pressable>
-            ) : (
-              <View />
-            )}
+          <SafeAreaView edges={["bottom"]}>
+            <View className="flex-row items-center justify-between gap-3 border-t border-stone-100 pt-4 dark:border-stone-800/60">
+              {expense.canDelete ? (
+                <Pressable
+                  onPress={handleDelete}
+                  className="rounded-xl border border-rose-200 bg-rose-50 px-5 py-3 active:opacity-75 dark:border-rose-900 dark:bg-rose-950/30"
+                >
+                  <Text className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                    Delete {expense.isPayment ? "payment" : "expense"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View />
+              )}
 
-            {expense.canEdit && (
               <Pressable
-                onPress={() =>
-                  router.push(
-                    `/(app)/groups/${id}/expense/${expenseId}/edit` as never,
-                  )
-                }
-                className="flex-row items-center gap-1.5 rounded-xl border border-amber-500 bg-amber-600 px-5 py-3 active:opacity-80 dark:bg-amber-500"
+                onPress={() => router.back()}
+                accessibilityLabel="Close"
+                className="items-center justify-center rounded-full p-2 active:opacity-60"
               >
-                <Text className="text-sm font-bold text-white">Edit</Text>
+                <X size={20} color="#a8a29e" strokeWidth={2} />
               </Pressable>
-            )}
-          </View>
+
+              {expense.canEdit ? (
+                <Pressable
+                  onPress={() =>
+                    router.push(
+                      `/(app)/groups/${id}/expense/${expenseId}/edit` as never,
+                    )
+                  }
+                  className="flex-row items-center gap-1.5 rounded-xl border border-amber-500 bg-amber-600 px-5 py-3 active:opacity-80 dark:bg-amber-500"
+                >
+                  <Text className="text-sm font-bold text-white">Edit</Text>
+                </Pressable>
+              ) : (
+                <View />
+              )}
+            </View>
+          </SafeAreaView>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

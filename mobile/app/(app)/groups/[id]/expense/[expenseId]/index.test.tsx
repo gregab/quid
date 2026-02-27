@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -183,5 +183,13 @@ describe("ExpenseDetailScreen", () => {
     });
     renderWithProviders();
     expect(screen.queryByText("Edit")).toBeNull();
+  });
+
+  it("close button calls router.back()", () => {
+    const mockBack = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({ back: mockBack } as unknown as ReturnType<typeof useRouter>);
+    renderWithProviders();
+    fireEvent.click(screen.getByLabelText("Close"));
+    expect(mockBack).toHaveBeenCalled();
   });
 });
