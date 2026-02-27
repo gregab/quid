@@ -5,7 +5,7 @@ import { DashboardFriends } from "./DashboardFriends";
 import type { DashboardContact, DashboardGroup } from "./DashboardAddExpenseForm";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { formatCents } from "@/lib/format";
-import { GroupThumbnail } from "@/components/GroupThumbnail";
+import { GroupBannerCard } from "./GroupBannerCard";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { BIRD_FACTS } from "@aviary/shared";
 
@@ -219,77 +219,25 @@ export default async function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div>
+          <div className="grid grid-cols-2 gap-3">
             {regularGroups.map((group, i) => {
               const memberCount = memberCountMap.get(group.id) ?? 0;
               const balance = balanceMap.get(group.id) ?? 0;
               const hasExpenses = groupsWithExpenses.has(group.id);
 
               return (
-                <Link
+                <GroupBannerCard
                   key={group.id}
-                  href={`/groups/${group.id}`}
-                  prefetch={false}
-                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < regularGroups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
-                  style={{ animationDelay: `${i * 80}ms` }}
-                >
-                  {/* Thumbnail */}
-                  <GroupThumbnail patternSeed={group.patternSeed} bannerUrl={group.bannerUrl} />
-
-                  {/* Left: group info */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-base sm:text-[15px] font-semibold text-stone-900 dark:text-white">
-                      {group.name}
-                    </p>
-                    <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-stone-400 dark:text-stone-500">
-                      <span>{memberCount} {memberCount === 1 ? "member" : "members"}</span>
-                      <span className="text-stone-300 dark:text-stone-700">&middot;</span>
-                      <span>
-                        {new Date(group.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Right: balance + chevron */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {balance !== 0 && (
-                      <div className="text-right">
-                        <p className={`text-[11px] ${
-                          balance > 0
-                            ? "text-emerald-600/70 dark:text-emerald-400/70"
-                            : "text-rose-600/70 dark:text-rose-400/70"
-                        }`}>
-                          {balance > 0 ? "you are owed" : "you owe"}
-                        </p>
-                        <p className={`text-sm font-semibold ${
-                          balance > 0
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-rose-600 dark:text-rose-400"
-                        }`}>
-                          {formatCents(Math.abs(balance))}
-                        </p>
-                      </div>
-                    )}
-                    {balance === 0 && hasExpenses && (
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                          settled
-                        </p>
-                      </div>
-                    )}
-                    <svg
-                      className="h-4 w-4 text-stone-300 dark:text-stone-600 transition-transform duration-150 group-hover:translate-x-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
+                  id={group.id}
+                  name={group.name}
+                  patternSeed={group.patternSeed}
+                  bannerUrl={group.bannerUrl}
+                  memberCount={memberCount}
+                  createdAt={group.createdAt}
+                  balance={balance}
+                  hasExpenses={hasExpenses}
+                  animationDelay={i * 60}
+                />
               );
             })}
           </div>
