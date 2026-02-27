@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import {
+  ChevronLeft,
   ChevronRight,
   LogOut,
   Moon,
@@ -19,6 +20,7 @@ import {
   Shield,
   FileText,
   Trash2,
+  AlertTriangle,
 } from "lucide-react-native";
 import { useAuth } from "../../../lib/auth";
 import { useColorSchemePreference } from "../../../lib/colorScheme";
@@ -95,6 +97,11 @@ export default function SettingsScreen() {
   const [displayName, setDisplayName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
 
+  const groupsWithDebt = useMemo(
+    () => (groups ?? []).filter((g) => Math.abs(g.balanceCents) > 0),
+    [groups],
+  );
+
   const startEditName = () => {
     setDisplayName(profile?.displayName ?? "");
     setEditingName(true);
@@ -122,51 +129,53 @@ export default function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    const groupsWithBalance = (groups ?? []).filter(
-      (g) => g.balanceCents !== 0,
-    );
-
-    let message = "This will permanently delete your account and all your data. This cannot be undone.";
-    if (groupsWithBalance.length > 0) {
-      const balanceList = groupsWithBalance
-        .map((g) => `${g.name}: ${formatCents(Math.abs(g.balanceCents))}`)
-        .join("\n");
-      message = `You have outstanding balances:\n\n${balanceList}\n\nDeleting your account will not settle these debts. Are you sure?`;
+    if (groupsWithDebt.length > 0) {
+      Alert.alert(
+        "Can't delete account",
+        `You have outstanding balances in ${groupsWithDebt.length} group${groupsWithDebt.length > 1 ? "s" : ""}. Settle up in all groups before deleting your account.`,
+        [{ text: "Got it" }],
+      );
+      return;
     }
 
-    Alert.alert("Delete account", message, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete my account",
-        style: "destructive",
-        onPress: () => {
-          Alert.alert(
-            "Final confirmation",
-            "This is irreversible. Are you absolutely sure?",
-            [
-              { text: "Cancel", style: "cancel" },
-              {
-                text: "Yes, delete",
-                style: "destructive",
-                onPress: async () => {
-                  try {
-                    await deleteAccount.mutateAsync();
-                    router.replace("/(auth)/login");
-                  } catch (err) {
-                    showToast({
-                      message: err instanceof Error
-                        ? err.message
-                        : "Failed to delete account.",
-                      type: "error",
-                    });
-                  }
+    Alert.alert(
+      "Delete account",
+      "This will permanently delete your account and all your data. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete my account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Final confirmation",
+              "This is irreversible. Are you absolutely sure?",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      await deleteAccount.mutateAsync();
+                      router.replace("/(auth)/login");
+                    } catch (err) {
+                      showToast({
+                        message:
+                          err instanceof Error
+                            ? err.message
+                            : "Failed to delete account.",
+                        type: "error",
+                      });
+                    }
+                  },
                 },
-              },
-            ],
-          );
+              ],
+            );
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   if (isLoading) {
@@ -179,6 +188,22 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#faf9f7] dark:bg-[#0c0a09]">
+      {/* Header */}
+      <View className="flex-row items-center justify-between border-b border-stone-100 px-4 pb-3 pt-2 dark:border-stone-800/60">
+        <Pressable
+          onPress={() => router.back()}
+          className="flex-row items-center gap-1"
+        >
+          <ChevronLeft size={20} color="#78716c" />
+          <Text className="text-sm text-stone-500">Back</Text>
+        </Pressable>
+        <Text className="text-base font-semibold text-stone-900 dark:text-white">
+          Settings
+        </Text>
+        {/* Spacer to center title */}
+        <View style={{ width: 52 }} />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1"
@@ -187,10 +212,6 @@ export default function SettingsScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text className="mb-6 text-xl font-bold tracking-tight text-stone-900 dark:text-white">
-            Settings
-          </Text>
-
           {/* Profile header */}
           <View className="mb-6 items-center">
             <View className="mb-3 h-20 w-20 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
@@ -290,33 +311,67 @@ export default function SettingsScreen() {
             />
           </Card>
 
-          {/* Actions */}
-          <View className="gap-3">
-            <Button
-              variant="ghost"
-              onPress={signOut}
-            >
-              <View className="flex-row items-center gap-2">
-                <LogOut size={16} color="#78716c" />
-                <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
-                  Sign out
-                </Text>
-              </View>
-            </Button>
+          {/* Danger zone */}
+          <Text className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+            Danger zone
+          </Text>
 
-            <Button
-              variant="danger"
-              onPress={handleDeleteAccount}
-              loading={deleteAccount.isPending}
-            >
-              <View className="flex-row items-center gap-2">
-                <Trash2 size={16} color="#ffffff" />
-                <Text className="text-sm font-semibold text-white">
-                  Delete account
+          {/* Outstanding balances warning */}
+          {groupsWithDebt.length > 0 && (
+            <View className="mb-3 flex-row items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800/40 dark:bg-amber-900/20">
+              <AlertTriangle size={16} color="#d97706" style={{ marginTop: 1 }} />
+              <View className="min-w-0 flex-1">
+                <Text className="text-sm font-semibold text-amber-800 dark:text-amber-400">
+                  Outstanding balances
+                </Text>
+                <Text className="mt-0.5 text-xs leading-relaxed text-amber-700 dark:text-amber-500">
+                  You have unsettled balances in{" "}
+                  {groupsWithDebt.length === 1
+                    ? `1 group (${formatCents(Math.abs(groupsWithDebt[0].balanceCents))})`
+                    : `${groupsWithDebt.length} groups`}
+                  . Settle up before deleting your account.
                 </Text>
               </View>
-            </Button>
-          </View>
+            </View>
+          )}
+
+          <Card className="mb-4 overflow-hidden border border-red-100 dark:border-red-900/30">
+            <View className="px-4 py-3">
+              <View className="mb-3 flex-row items-center gap-2">
+                <View className="h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <Trash2 size={16} color="#dc2626" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-semibold text-red-600 dark:text-red-400">
+                    Delete account
+                  </Text>
+                  <Text className="text-xs text-stone-500 dark:text-stone-400">
+                    Permanently removes all your data
+                  </Text>
+                </View>
+              </View>
+              <Button
+                variant="danger"
+                onPress={handleDeleteAccount}
+                loading={deleteAccount.isPending}
+              >
+                Delete my account
+              </Button>
+            </View>
+          </Card>
+
+          {/* Sign out */}
+          <Button
+            variant="ghost"
+            onPress={signOut}
+          >
+            <View className="flex-row items-center gap-2">
+              <LogOut size={16} color="#78716c" />
+              <Text className="text-sm font-semibold text-stone-600 dark:text-stone-400">
+                Sign out
+              </Text>
+            </View>
+          </Button>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

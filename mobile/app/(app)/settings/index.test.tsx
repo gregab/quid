@@ -8,6 +8,7 @@ import { createTestQueryClient, makeGroup } from "../../../lib/test-utils";
 
 // Mock lucide-react-native to prevent hanging in happy-dom
 vi.mock("lucide-react-native", () => ({
+  ChevronLeft: () => null,
   ChevronRight: () => null,
   LogOut: () => null,
   Moon: () => null,
@@ -15,6 +16,7 @@ vi.mock("lucide-react-native", () => ({
   Shield: () => null,
   FileText: () => null,
   Trash2: () => null,
+  AlertTriangle: () => null,
 }));
 
 // Mock colorScheme provider
@@ -85,6 +87,21 @@ describe("SettingsScreen", () => {
   it("renders settings title", () => {
     renderWithProviders();
     expect(screen.getByText("Settings")).toBeTruthy();
+  });
+
+  it("renders back button and navigates back on press", () => {
+    const back = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back,
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
+    renderWithProviders();
+    const backButton = screen.getByText("Back").closest("button")!;
+    fireEvent.click(backButton);
+    expect(back).toHaveBeenCalled();
   });
 
   it("shows loading state", () => {
@@ -176,7 +193,7 @@ describe("SettingsScreen", () => {
 
   it("renders Delete account button", () => {
     renderWithProviders();
-    expect(screen.getByText("Delete account")).toBeTruthy();
+    expect(screen.getByText("Delete my account")).toBeTruthy();
   });
 
   it("renders Privacy Policy link that opens in browser", () => {
@@ -215,7 +232,7 @@ describe("SettingsScreen", () => {
     renderWithProviders();
 
     await act(async () => {
-      fireEvent.click(screen.getByText("Delete account"));
+      fireEvent.click(screen.getByText("Delete my account"));
     });
 
     // Alert mock auto-confirms last button for both double-confirmation dialogs
@@ -253,19 +270,48 @@ describe("SettingsScreen", () => {
     expect(mockUpdateAsync).not.toHaveBeenCalled();
   });
 
-  it("does not crash when groups have outstanding balances and delete is pressed", () => {
+  it("blocks account deletion when user has outstanding balances", async () => {
+    const alertSpy = vi.spyOn(Alert, "alert");
     mockUseGroups.mockReturnValue({
       data: [
-        { id: "g1", name: "Trip", balanceCents: 5000 },
-        { id: "g2", name: "Rent", balanceCents: 0 },
+        makeGroup({ id: "g1", name: "Trip", balanceCents: 5000 }),
+        makeGroup({ id: "g2", name: "Rent", balanceCents: 0 }),
       ],
     });
 
     renderWithProviders();
-    // Should not throw — the Alert dialog handles the balance warning
-    expect(() => {
-      fireEvent.click(screen.getByText("Delete account"));
-    }).not.toThrow();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Delete my account"));
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Can't delete account",
+      expect.stringContaining("1 group"),
+      expect.any(Array),
+    );
+    expect(mockDeleteAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows outstanding balances warning banner when user has debts", () => {
+    mockUseGroups.mockReturnValue({
+      data: [
+        makeGroup({ id: "g1", name: "Trip", balanceCents: 5000 }),
+        makeGroup({ id: "g2", name: "Rent", balanceCents: 0 }),
+      ],
+    });
+
+    renderWithProviders();
+    expect(screen.getByText("Outstanding balances")).toBeTruthy();
+  });
+
+  it("does not show outstanding balances warning when all balances are zero", () => {
+    mockUseGroups.mockReturnValue({
+      data: [makeGroup({ id: "g1", name: "Rent", balanceCents: 0 })],
+    });
+
+    renderWithProviders();
+    expect(screen.queryByText("Outstanding balances")).toBeNull();
   });
 
   it("shows profile avatar emoji", () => {
