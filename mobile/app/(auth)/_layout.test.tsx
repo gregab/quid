@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import AuthLayout from "./_layout";
 
 // Mock auth with controllable return value
@@ -9,23 +9,28 @@ vi.mock("../../lib/auth", () => ({
   useAuth: (...args: unknown[]) => mockUseAuth(...args),
 }));
 
-// Override expo-router for this test to track router.replace calls
-vi.mock("expo-router", () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    canGoBack: vi.fn(() => true),
-  })),
-  useLocalSearchParams: vi.fn(() => ({})),
-  useSegments: vi.fn(() => []),
-  Link: ({ children }: { children: React.ReactNode }) => children,
-  Stack: Object.assign(
-    ({ children }: { children: React.ReactNode }) => children,
-    { Screen: () => null },
-  ),
-  Slot: () => null,
-}));
+// Override expo-router for this test
+vi.mock("expo-router", () => {
+  const React = require("react");
+  return {
+    useRouter: vi.fn(() => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    })),
+    useLocalSearchParams: vi.fn(() => ({})),
+    useSegments: vi.fn(() => []),
+    Link: ({ children }: { children: React.ReactNode }) => children,
+    Stack: Object.assign(
+      ({ children }: { children: React.ReactNode }) => children,
+      { Screen: () => null },
+    ),
+    Slot: () => null,
+    Redirect: ({ href }: { href: string }) =>
+      React.createElement("div", { "data-testid": "redirect", "data-href": href }),
+  };
+});
 
 afterEach(cleanup);
 
@@ -44,14 +49,6 @@ describe("AuthLayout", () => {
   });
 
   it("redirects to dashboard when already authenticated", () => {
-    const replace = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({
-      push: vi.fn(),
-      replace,
-      back: vi.fn(),
-      canGoBack: vi.fn(() => true),
-    } as unknown as ReturnType<typeof useRouter>);
-
     mockUseAuth.mockReturnValue({
       session: { user: { id: "user-1" }, access_token: "token" },
       loading: false,
@@ -59,7 +56,8 @@ describe("AuthLayout", () => {
 
     render(<AuthLayout />);
 
-    expect(replace).toHaveBeenCalledWith("/(app)/(dashboard)");
+    const redirect = screen.getByTestId("redirect");
+    expect(redirect.getAttribute("data-href")).toBe("/(app)/(dashboard)");
   });
 
   it("renders Stack when not authenticated", () => {
@@ -68,16 +66,10 @@ describe("AuthLayout", () => {
     render(<AuthLayout />);
 
     expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.queryByTestId("redirect")).toBeNull();
   });
 
   it("redirects to next param when authenticated with next", () => {
-    const replace = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({
-      push: vi.fn(),
-      replace,
-      back: vi.fn(),
-      canGoBack: vi.fn(() => true),
-    } as unknown as ReturnType<typeof useRouter>);
     vi.mocked(useLocalSearchParams).mockReturnValue({ next: "/invite/invite-abc" });
 
     mockUseAuth.mockReturnValue({
@@ -87,17 +79,11 @@ describe("AuthLayout", () => {
 
     render(<AuthLayout />);
 
-    expect(replace).toHaveBeenCalledWith("/invite/invite-abc");
+    const redirect = screen.getByTestId("redirect");
+    expect(redirect.getAttribute("data-href")).toBe("/invite/invite-abc");
   });
 
   it("redirects to dashboard when authenticated without next param", () => {
-    const replace = vi.fn();
-    vi.mocked(useRouter).mockReturnValue({
-      push: vi.fn(),
-      replace,
-      back: vi.fn(),
-      canGoBack: vi.fn(() => true),
-    } as unknown as ReturnType<typeof useRouter>);
     vi.mocked(useLocalSearchParams).mockReturnValue({});
 
     mockUseAuth.mockReturnValue({
@@ -107,6 +93,7 @@ describe("AuthLayout", () => {
 
     render(<AuthLayout />);
 
-    expect(replace).toHaveBeenCalledWith("/(app)/(dashboard)");
+    const redirect = screen.getByTestId("redirect");
+    expect(redirect.getAttribute("data-href")).toBe("/(app)/(dashboard)");
   });
 });

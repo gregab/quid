@@ -111,22 +111,27 @@ vi.mock("react-native-gesture-handler/ReanimatedSwipeable", () => {
 });
 
 // --- expo-router ---
-vi.mock("expo-router", () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
-    canGoBack: vi.fn(() => true),
-  })),
-  useLocalSearchParams: vi.fn(() => ({})),
-  useSegments: vi.fn(() => []),
-  Link: ({ children }: { children: React.ReactNode }) => children,
-  Stack: Object.assign(
-    ({ children }: { children: React.ReactNode }) => children,
-    { Screen: () => null },
-  ),
-  Slot: () => null,
-}));
+vi.mock("expo-router", () => {
+  const React = require("react");
+  return {
+    useRouter: vi.fn(() => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    })),
+    useLocalSearchParams: vi.fn(() => ({})),
+    useSegments: vi.fn(() => []),
+    Link: ({ children }: { children: React.ReactNode }) => children,
+    Stack: Object.assign(
+      ({ children }: { children: React.ReactNode }) => children,
+      { Screen: () => null },
+    ),
+    Slot: () => null,
+    Redirect: ({ href }: { href: string }) =>
+      React.createElement("div", { "data-testid": "redirect", "data-href": href }),
+  };
+});
 
 // --- expo-status-bar ---
 vi.mock("expo-status-bar", () => ({
