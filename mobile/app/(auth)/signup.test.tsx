@@ -168,6 +168,11 @@ describe("SignupScreen", () => {
     expect(screen.getByText("An account with this email already exists. Try logging in instead.")).toBeTruthy();
   });
 
+  it("renders Continue with Google button", () => {
+    render(<SignupScreen />);
+    expect(screen.getByText("Continue with Google")).toBeTruthy();
+  });
+
   it("trims whitespace from display name and email", async () => {
     const mockSignUp = vi.mocked(supabase.auth.signUp);
     mockSignUp.mockResolvedValueOnce({

@@ -10,6 +10,8 @@ import {
 import { Link } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TriangleAlert } from "lucide-react-native";
+import { makeRedirectUri } from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -23,6 +25,7 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
   const handleSignup = async () => {
@@ -64,6 +67,50 @@ export default function SignupScreen() {
       setError(friendlyAuthError(authError.message));
     } else {
       setEmailSent(true);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+
+    try {
+      const redirectUri = makeRedirectUri({ scheme: "aviary", path: "auth/callback" });
+
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (oauthError || !data.url) {
+        setError(oauthError ? friendlyAuthError(oauthError.message) : "Something went wrong. Please try again.");
+        setGoogleLoading(false);
+        return;
+      }
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+
+      if (result.type === "success" && result.url) {
+        const url = new URL(result.url);
+        const fragment = url.hash.substring(1);
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+        }
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -160,6 +207,25 @@ export default function SignupScreen() {
 
               <Button onPress={handleSignup} loading={loading} size="lg">
                 Sign Up
+              </Button>
+
+              {/* Divider */}
+              <View className="flex-row items-center gap-3">
+                <View className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+                <Text className="text-xs text-stone-400 dark:text-stone-500">
+                  or
+                </Text>
+                <View className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
+              </View>
+
+              {/* Google Sign-In */}
+              <Button
+                onPress={handleGoogleSignIn}
+                loading={googleLoading}
+                variant="secondary"
+                size="lg"
+              >
+                Continue with Google
               </Button>
             </View>
           </Card>
