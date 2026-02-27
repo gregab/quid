@@ -142,6 +142,7 @@ vi.mock("expo-status-bar", () => ({
 vi.mock("expo-linking", () => ({
   createURL: vi.fn((path: string) => `aviary://${path}`),
   openURL: vi.fn(() => Promise.resolve()),
+  getInitialURL: vi.fn(() => Promise.resolve(null)),
 }));
 
 // --- expo-constants ---

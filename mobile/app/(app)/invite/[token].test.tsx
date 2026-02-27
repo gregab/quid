@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { createTestQueryClient } from "../../../lib/test-utils";
 import InviteScreen from "./[token]";
 
@@ -181,5 +182,115 @@ describe("InviteScreen", () => {
 
     expect(replace).toHaveBeenCalledWith("/(auth)/login?next=/invite/invite-abc");
     expect(screen.queryByText("Join")).toBeNull();
+  });
+
+  it("redirects to group when already a member", () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
+    mockUseInvitePreview.mockReturnValue({
+      data: {
+        id: "group-1",
+        name: "Trip Group",
+        memberCount: 4,
+        isMember: true,
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderWithProviders();
+
+    expect(replace).toHaveBeenCalledWith("/(app)/groups/group-1");
+  });
+
+  it("triggers haptics on successful join", async () => {
+    mockJoinMutateAsync.mockResolvedValueOnce({ groupId: "group-1" });
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
+    mockUseInvitePreview.mockReturnValue({
+      data: {
+        id: "group-1",
+        name: "Trip Group",
+        memberCount: 4,
+        isMember: false,
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderWithProviders();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Join Trip Group"));
+    });
+
+    expect(Haptics.notificationAsync).toHaveBeenCalled();
+  });
+
+  it("navigates to dashboard from invalid invite error screen", () => {
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({
+      push: vi.fn(),
+      replace,
+      back: vi.fn(),
+      canGoBack: vi.fn(() => true),
+    } as unknown as ReturnType<typeof useRouter>);
+
+    mockUseInvitePreview.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error("Not found"),
+    });
+    renderWithProviders();
+
+    fireEvent.click(screen.getByText("Go to dashboard"));
+    expect(replace).toHaveBeenCalledWith("/(app)/(dashboard)");
+  });
+
+  it("shows generic error when join fails with non-Error", async () => {
+    mockJoinMutateAsync.mockRejectedValueOnce("unknown failure");
+    mockUseInvitePreview.mockReturnValue({
+      data: {
+        id: "group-1",
+        name: "Trip Group",
+        memberCount: 4,
+        isMember: false,
+      },
+      isLoading: false,
+      error: null,
+    });
+    renderWithProviders();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Join Trip Group"));
+    });
+
+    expect(screen.getByText("Failed to join group.")).toBeTruthy();
+  });
+
+  it("renders null when not authenticated and preview has no data", () => {
+    mockUseAuth.mockReturnValue({
+      user: null,
+      session: null,
+      loading: false,
+      signOut: vi.fn(),
+    });
+    mockUseInvitePreview.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+    const { container } = renderWithProviders();
+    // Should render nothing (null)
+    expect(container.innerHTML).toBe("");
   });
 });

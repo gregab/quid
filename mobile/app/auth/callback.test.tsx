@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
 import { supabase } from "../../lib/supabase";
 import AuthCallbackScreen from "./callback";
 
@@ -84,5 +85,46 @@ describe("AuthCallbackScreen", () => {
         "No confirmation code found. The link may have expired.",
       ),
     ).toBeTruthy();
+  });
+
+  it("falls back to Linking.getInitialURL when code is not in params", async () => {
+    vi.mocked(useLocalSearchParams).mockReturnValue({});
+    vi.mocked(Linking.getInitialURL).mockResolvedValue(
+      "aviary://auth/callback?code=url-code",
+    );
+    vi.mocked(supabase.auth.exchangeCodeForSession).mockResolvedValue({
+      data: { session: { access_token: "tok", refresh_token: "ref" } },
+      error: null,
+    } as never);
+
+    await act(async () => {
+      render(<AuthCallbackScreen />);
+    });
+
+    expect(supabase.auth.exchangeCodeForSession).toHaveBeenCalledWith(
+      "url-code",
+    );
+    expect(mockReplace).toHaveBeenCalledWith("/(app)/(dashboard)");
+  });
+
+  it("shows generic error when exchangeCodeForSession throws", async () => {
+    vi.mocked(useLocalSearchParams).mockReturnValue({ code: "throw-code" });
+    vi.mocked(supabase.auth.exchangeCodeForSession).mockRejectedValue(
+      new Error("network error"),
+    );
+
+    await act(async () => {
+      render(<AuthCallbackScreen />);
+    });
+
+    expect(screen.getByText("Unable to verify")).toBeTruthy();
+    expect(
+      screen.getByText("Something went wrong. Please try again."),
+    ).toBeTruthy();
+
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(mockReplace).toHaveBeenCalledWith("/(auth)/login");
   });
 });

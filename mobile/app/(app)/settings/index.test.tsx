@@ -3,7 +3,29 @@ import { render, screen, cleanup, fireEvent, act } from "@testing-library/react"
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import * as Linking from "expo-linking";
+import { Alert } from "react-native";
 import { createTestQueryClient, makeGroup } from "../../../lib/test-utils";
+
+// Mock lucide-react-native to prevent hanging in happy-dom
+vi.mock("lucide-react-native", () => ({
+  ChevronRight: () => null,
+  LogOut: () => null,
+  Moon: () => null,
+  Pencil: () => null,
+  Shield: () => null,
+  FileText: () => null,
+  Trash2: () => null,
+}));
+
+// Mock colorScheme provider
+vi.mock("../../../lib/colorScheme", () => ({
+  useColorSchemePreference: vi.fn(() => ({
+    preference: "system",
+    colorScheme: "light",
+    cyclePreference: vi.fn(),
+  })),
+}));
+
 import SettingsScreen from "./index";
 
 const mockSignOut = vi.fn();
@@ -79,19 +101,21 @@ describe("SettingsScreen", () => {
     expect(screen.getByText("alice@example.com")).toBeTruthy();
   });
 
-  it("displays display name", () => {
+  it("displays display name in profile header and settings row", () => {
     renderWithProviders();
-    expect(screen.getByText("Alice Wonderland")).toBeTruthy();
+    // Appears in profile header and in the SettingsRow value
+    expect(screen.getAllByText("Alice Wonderland").length).toBe(2);
   });
 
-  it("renders Edit button for display name", () => {
+  it("renders tappable display name row", () => {
     renderWithProviders();
-    expect(screen.getByText("Edit")).toBeTruthy();
+    expect(screen.getByText("Display name")).toBeTruthy();
   });
 
-  it("shows edit form when Edit is pressed", () => {
+  it("shows edit form when display name row is pressed", () => {
     renderWithProviders();
-    fireEvent.click(screen.getByText("Edit"));
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
     expect(screen.getByText("Save")).toBeTruthy();
     expect(screen.getByText("Cancel")).toBeTruthy();
   });
@@ -100,7 +124,8 @@ describe("SettingsScreen", () => {
     mockUpdateAsync.mockResolvedValueOnce(undefined);
     renderWithProviders();
 
-    fireEvent.click(screen.getByText("Edit"));
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
 
     // The input should be pre-filled with current name
     const input = screen.getByDisplayValue("Alice Wonderland");
@@ -116,7 +141,8 @@ describe("SettingsScreen", () => {
   it("shows validation error for empty display name", async () => {
     renderWithProviders();
 
-    fireEvent.click(screen.getByText("Edit"));
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
 
     const input = screen.getByDisplayValue("Alice Wonderland");
     fireEvent.change(input, { target: { value: "   " } });
@@ -132,17 +158,19 @@ describe("SettingsScreen", () => {
   it("shows dark mode status", () => {
     renderWithProviders();
     expect(screen.getByText("Dark mode")).toBeTruthy();
-    expect(screen.getByText("Off (follows system)")).toBeTruthy();
+    expect(screen.getByText("System")).toBeTruthy();
   });
 
-  it("renders Log out button", () => {
+  it("renders Sign out button", () => {
     renderWithProviders();
-    expect(screen.getByText("Log out")).toBeTruthy();
+    expect(screen.getByText("Sign out")).toBeTruthy();
   });
 
-  it("calls signOut when Log out is pressed", () => {
+  it("calls signOut when Sign out is pressed", () => {
     renderWithProviders();
-    fireEvent.click(screen.getByText("Log out"));
+    const signOutText = screen.getByText("Sign out");
+    const button = signOutText.closest("button")!;
+    fireEvent.click(button);
     expect(mockSignOut).toHaveBeenCalled();
   });
 
@@ -193,5 +221,95 @@ describe("SettingsScreen", () => {
     // Alert mock auto-confirms last button for both double-confirmation dialogs
     expect(mockDeleteAsync).toHaveBeenCalled();
     expect(replace).toHaveBeenCalledWith("/(auth)/login");
+  });
+
+  it("cancels edit mode without saving", () => {
+    renderWithProviders();
+
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
+    expect(screen.getByText("Save")).toBeTruthy();
+
+    fireEvent.click(screen.getByText("Cancel"));
+    // Should be back to display mode
+    expect(screen.queryByText("Save")).toBeNull();
+    expect(screen.getAllByText("Alice Wonderland").length).toBe(2);
+    expect(mockUpdateAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows validation error for name exceeding max length", async () => {
+    renderWithProviders();
+
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
+    const input = screen.getByDisplayValue("Alice Wonderland");
+    fireEvent.change(input, { target: { value: "A".repeat(100) } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Save"));
+    });
+
+    expect(screen.getByText(/characters or less/)).toBeTruthy();
+    expect(mockUpdateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not crash when groups have outstanding balances and delete is pressed", () => {
+    mockUseGroups.mockReturnValue({
+      data: [
+        { id: "g1", name: "Trip", balanceCents: 5000 },
+        { id: "g2", name: "Rent", balanceCents: 0 },
+      ],
+    });
+
+    renderWithProviders();
+    // Should not throw — the Alert dialog handles the balance warning
+    expect(() => {
+      fireEvent.click(screen.getByText("Delete account"));
+    }).not.toThrow();
+  });
+
+  it("shows profile avatar emoji", () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { displayName: "Alice", email: "alice@example.com", defaultEmoji: "🦅" },
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.getByText("🦅")).toBeTruthy();
+  });
+
+  it("falls back to default emoji when none is set", () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { displayName: "Alice", email: "alice@example.com" },
+      isLoading: false,
+    });
+    renderWithProviders();
+    expect(screen.getByText("🐦")).toBeTruthy();
+  });
+
+  it("shows error when update profile fails", async () => {
+    mockUpdateAsync.mockRejectedValueOnce(new Error("Network error"));
+    renderWithProviders();
+
+    const row = screen.getByText("Display name").closest("button")!;
+    fireEvent.click(row);
+
+    const input = screen.getByDisplayValue("Alice Wonderland");
+    fireEvent.change(input, { target: { value: "New Name" } });
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Save"));
+    });
+
+    expect(screen.getByText("Network error")).toBeTruthy();
+  });
+
+  it("shows dash when display name is null", () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: { displayName: null, email: "alice@example.com" },
+      isLoading: false,
+    });
+    renderWithProviders();
+    // "—" em-dash shown as fallback
+    expect(screen.getAllByText("—").length).toBeGreaterThan(0);
   });
 });
