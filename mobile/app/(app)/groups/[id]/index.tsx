@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,14 @@ import {
   Share,
   ImageBackground,
 } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -27,6 +35,7 @@ import {
   TrendingUp,
   TrendingDown,
   Receipt,
+  UserPlus,
 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import type { BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -608,6 +617,21 @@ export default function GroupDetailScreen() {
   const [selectedActivity, setSelectedActivity] = useState<ActivityLog | null>(null);
   const activitySheetRef = useRef<BottomSheetModal>(null);
 
+  // Gentle float animation for the Add expense button
+  const addFloatY = useSharedValue(0);
+  useEffect(() => {
+    addFloatY.value = withRepeat(
+      withSequence(
+        withTiming(-5, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+    );
+  }, [addFloatY]);
+  const addFloatStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: addFloatY.value }],
+  }));
+
   const members: Member[] = useMemo(() => {
     if (!group) return [];
     const gm = (group as Record<string, unknown>).GroupMember as
@@ -786,21 +810,29 @@ export default function GroupDetailScreen() {
                 isCurrentUser={m.userId === user?.id}
               />
             ))}
+            {inviteToken && (
+              <Pressable
+                onPress={handleShareInvite}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1.5,
+                  borderColor: "#fcd34d",
+                  backgroundColor: "#fef9e7",
+                }}
+                className="active:opacity-70"
+              >
+                <UserPlus size={12} color="#d97706" />
+                <Text style={{ fontSize: 12, fontWeight: "600", color: "#92400e" }}>
+                  Invite members
+                </Text>
+              </Pressable>
+            )}
           </ScrollView>
-        )}
-
-        {!isFriendGroup && inviteToken && (
-          <View className="px-4 pb-4">
-            <Pressable
-              onPress={handleShareInvite}
-              className="flex-row items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 active:opacity-80 dark:border-amber-700/40 dark:bg-amber-950/20"
-            >
-              <ShareIcon size={15} color="#d97706" />
-              <Text className="flex-1 text-sm font-medium text-amber-800 dark:text-amber-300">
-                Invite members
-              </Text>
-            </Pressable>
-          </View>
         )}
 
         {celebration && (
@@ -913,39 +945,64 @@ export default function GroupDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Floating action island */}
       <View
-        className="absolute bottom-0 left-0 right-0 border-t border-stone-200 bg-[#faf9f7]/95 dark:border-stone-800 dark:bg-[#0c0a09]/95"
-        style={{ paddingBottom: insets.bottom }}
+        className="absolute left-4 right-4 flex-row items-center gap-2 rounded-3xl bg-white px-2.5 py-2 dark:bg-stone-900"
+        style={{
+          bottom: insets.bottom + 14,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.13,
+          shadowRadius: 22,
+          elevation: 14,
+        }}
       >
-        <View className="flex-row items-center justify-center gap-2 px-4 py-2.5">
-          {!isFriendGroup && (
-            <Pressable
-              onPress={() => router.push(`/(app)/groups/${id}/recurring`)}
-              className="flex-row items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 active:opacity-80 dark:border-stone-700 dark:bg-stone-800"
-            >
-              <Repeat size={14} color="#78716c" />
-              <Text className="text-xs font-semibold text-stone-600 dark:text-stone-300">
-                Recurring
-              </Text>
-            </Pressable>
-          )}
+        {!isFriendGroup && (
           <Pressable
-            onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
-            className="flex-row items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 active:opacity-80 dark:border-emerald-700 dark:bg-emerald-900/30"
+            onPress={() => router.push(`/(app)/groups/${id}/recurring`)}
+            className="flex-row items-center gap-1.5 rounded-full bg-stone-100 px-3.5 py-2.5 active:opacity-70 dark:bg-stone-800"
           >
-            <CheckCircle size={14} color="#16a34a" />
-            <Text className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-              Settle up
+            <Repeat size={13} color="#78716c" />
+            <Text className="text-[12px] font-semibold text-stone-500 dark:text-stone-400">
+              Recurring
             </Text>
           </Pressable>
+        )}
+
+        <Pressable
+          onPress={() => router.push(`/(app)/groups/${id}/record-payment`)}
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 py-2.5 active:opacity-80 dark:border-emerald-700/50 dark:bg-emerald-950/40"
+        >
+          <CheckCircle size={14} color="#16a34a" />
+          <Text className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">
+            Settle up
+          </Text>
+        </Pressable>
+
+        <Animated.View style={addFloatStyle}>
           <Pressable
             onPress={() => router.push(`/(app)/groups/${id}/add-expense`)}
-            className="flex-row items-center gap-1.5 rounded-full bg-amber-600 px-5 py-2 active:opacity-90 dark:bg-amber-500"
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              borderRadius: 24,
+              backgroundColor: "#d97706",
+              shadowColor: "#d97706",
+              shadowOffset: { width: 0, height: 5 },
+              shadowOpacity: 0.45,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
           >
-            <Plus size={14} color="#fff" strokeWidth={3} />
-            <Text className="text-xs font-bold text-white">Add</Text>
+            <Plus size={15} color="#fff" strokeWidth={3} />
+            <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff", letterSpacing: 0.2 }}>
+              Add
+            </Text>
           </Pressable>
-        </View>
+        </Animated.View>
       </View>
 
       <Sheet ref={activitySheetRef} snapPoints={["50%", "85%"]}>

@@ -13,18 +13,18 @@ export function MemberPill({
 }: MemberPillProps) {
   return (
     <View
-      className={`flex-row items-center gap-1.5 rounded-full px-3 py-1.5 ${
+      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
         isCurrentUser
-          ? "bg-amber-100 dark:bg-amber-900/30"
-          : "bg-stone-100 dark:bg-stone-800"
+          ? "border-amber-200 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-900/30"
+          : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800"
       }`}
     >
       <Text className="text-sm">{emoji}</Text>
       <Text
-        className={`text-xs font-medium ${
+        className={`text-xs font-semibold tracking-tight ${
           isCurrentUser
             ? "text-amber-800 dark:text-amber-200"
-            : "text-stone-700 dark:text-stone-300"
+            : "text-stone-600 dark:text-stone-300"
         }`}
         numberOfLines={1}
       >
