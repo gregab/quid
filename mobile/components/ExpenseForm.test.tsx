@@ -1,20 +1,21 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, act } from "@testing-library/react";
 
-// Mock lucide-react-native before importing component
-vi.mock("lucide-react-native", () => ({
-  Check: () => null,
-}));
-
-// Mock DateTimePicker (global mock returns null; use same pattern here)
-vi.mock("@react-native-community/datetimepicker", () => ({
-  default: () => null,
-}));
-
-// Mock safe area
+// Mock safe area (not in global setup)
 vi.mock("react-native-safe-area-context", () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
+
+// Override useAnimatedStyle to return empty style (RN transforms aren't valid CSS)
+vi.mock("react-native-reanimated", async () => {
+  const actual = await vi.importActual<typeof import("react-native-reanimated")>(
+    "react-native-reanimated",
+  );
+  return {
+    ...actual,
+    useAnimatedStyle: () => ({}),
+  };
+});
 
 import { ExpenseForm } from "./ExpenseForm";
 import type { ExpenseFormProps } from "./ExpenseForm";
@@ -40,6 +41,17 @@ function renderForm(overrides: Partial<ExpenseFormProps> = {}) {
   return render(<ExpenseForm {...defaultProps(overrides)} />);
 }
 
+/** Fill in step 0 (amount + description) and advance to step 1. */
+function fillStep0AndAdvance(amount = "20.00", desc = "Lunch") {
+  fireEvent.change(screen.getByPlaceholderText("0.00"), {
+    target: { value: amount },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
+    target: { value: desc },
+  });
+  fireEvent.click(screen.getByText("Next"));
+}
+
 afterEach(cleanup);
 
 beforeEach(() => {
@@ -47,155 +59,127 @@ beforeEach(() => {
   mockOnSubmit.mockResolvedValue(undefined);
 });
 
-describe("ExpenseForm — rendering", () => {
+describe("ExpenseForm — Step 0: Quick Entry", () => {
   it("renders amount input with placeholder '0.00'", () => {
     renderForm();
     expect(screen.getByPlaceholderText("0.00")).toBeTruthy();
   });
 
-  it("renders description input with placeholder", () => {
+  it("renders description input", () => {
     renderForm();
-    expect(screen.getByPlaceholderText("What's this for?")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Dinner, groceries, rent...")).toBeTruthy();
+  });
+
+  it("renders step indicator", () => {
+    renderForm();
+    // Should show "How much?" label
+    expect(screen.getByText("How much?")).toBeTruthy();
+  });
+
+  it("shows Next button on step 0", () => {
+    renderForm();
+    expect(screen.getByText("Next")).toBeTruthy();
+  });
+
+  it("blocks advance when amount is empty", () => {
+    renderForm();
+    fireEvent.change(screen.getByPlaceholderText("Dinner, groceries, rent..."), {
+      target: { value: "Lunch" },
+    });
+    fireEvent.click(screen.getByText("Next"));
+    // Should still be on step 0 — "How much?" still visible
+    expect(screen.getByText("How much?")).toBeTruthy();
+  });
+
+  it("blocks advance when description is empty", () => {
+    renderForm();
+    fireEvent.change(screen.getByPlaceholderText("0.00"), {
+      target: { value: "20.00" },
+    });
+    fireEvent.click(screen.getByText("Next"));
+    // Error message should appear
+    expect(screen.getByText("Add a description")).toBeTruthy();
+  });
+});
+
+describe("ExpenseForm — Step 1: Split Options", () => {
+  it("advances to step 1 when amount and description are filled", () => {
+    renderForm();
+    fillStep0AndAdvance();
+    // Step 1 should show "Paid by"
+    expect(screen.getByText("Paid by")).toBeTruthy();
   });
 
   it("renders Paid by section with all member pills", () => {
     renderForm();
-    expect(screen.getByText("Paid by")).toBeTruthy();
-    expect(screen.getAllByText(/Alice W/).length).toBeGreaterThan(0);
+    fillStep0AndAdvance();
+    expect(screen.getByText("You")).toBeTruthy(); // current user shows as "You"
     expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
   });
 
-  it("renders Split type segmented control: Equal / Custom / %", () => {
+  it("renders Split type segmented control", () => {
     renderForm();
+    fillStep0AndAdvance();
     expect(screen.getByText("Split type")).toBeTruthy();
     expect(screen.getByText("Equal")).toBeTruthy();
     expect(screen.getByText("Custom")).toBeTruthy();
     expect(screen.getByText("%")).toBeTruthy();
   });
 
-  it("renders Split between section with all members", () => {
+  it("renders Split between section", () => {
     renderForm();
+    fillStep0AndAdvance();
     expect(screen.getByText("Split between")).toBeTruthy();
   });
 
-  it("shows recurring toggle when showRecurring=true", () => {
-    renderForm({ showRecurring: true });
-    expect(screen.getByText("Recurring expense")).toBeTruthy();
-  });
-
-  it("hides recurring toggle when showRecurring=false", () => {
-    renderForm({ showRecurring: false });
-    expect(screen.queryByText("Recurring expense")).toBeNull();
-  });
-
-  it("renders submit button with default label 'Add expense'", () => {
+  it("shows Back button on step 1", () => {
     renderForm();
-    expect(screen.getAllByText("Add expense").length).toBeGreaterThan(0);
+    fillStep0AndAdvance();
+    expect(screen.getByText("Back")).toBeTruthy();
   });
 
-  it("renders submit button with custom submitLabel", () => {
-    renderForm({ submitLabel: "Save" });
-    expect(screen.getByText("Save")).toBeTruthy();
+  it("going Back returns to step 0 with preserved values", () => {
+    renderForm();
+    fillStep0AndAdvance("25.00", "Coffee");
+    fireEvent.click(screen.getByText("Back"));
+    // Should be back on step 0
+    expect(screen.getByText("How much?")).toBeTruthy();
+    // Values should be preserved
+    expect((screen.getByPlaceholderText("0.00") as HTMLInputElement).value).toBe("25.00");
   });
-});
 
-describe("ExpenseForm — interactions", () => {
   it("clicking paid-by pill selects that member", () => {
     renderForm();
-    // Click Bob's pill in the Paid by section
+    fillStep0AndAdvance();
     const bobPills = screen.getAllByText(/Bob S/);
     fireEvent.click(bobPills[0]!);
-    // No error — just interaction smoke test
-    expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
-  });
-
-  it("clicking unselected participant adds them; clicking selected removes them (not last)", () => {
-    renderForm();
-    // Both start selected. Click Alice to deselect (still 1 left).
-    const aliceRows = screen.getAllByText(/Alice W/);
-    // Find the one in the Split between section (after Paid by pills)
-    fireEvent.click(aliceRows[0]!);
-    // Bob should still be selected (we can still see both names, just in diff styles)
     expect(screen.getAllByText(/Bob S/).length).toBeGreaterThan(0);
   });
 
   it("cannot deselect last participant", () => {
     renderForm({ members: [alice] });
-    // Only Alice — click to try to deselect (multiple elements match, pick first)
-    fireEvent.click(screen.getAllByText(/Alice W/)[0]!);
-    // Alice still visible (not removed)
-    expect(screen.getAllByText(/Alice W/).length).toBeGreaterThan(0);
+    fillStep0AndAdvance();
+    // Click the participant row to try to deselect
+    fireEvent.click(screen.getAllByText("You")[0]!);
+    // Should still show the member
+    expect(screen.getAllByText("You").length).toBeGreaterThan(0);
   });
 
-  it("switching to Custom shows per-member amount inputs", () => {
+  it("shows summary badge with amount and description", () => {
     renderForm();
-    fireEvent.click(screen.getByText("Custom"));
-    // Custom amount inputs appear (0.00 placeholders)
-    const customInputs = screen.getAllByPlaceholderText("0.00");
-    // There's the main amount input + one per participant
-    expect(customInputs.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("switching to % shows per-member percentage inputs and running total", () => {
-    renderForm();
-    fireEvent.click(screen.getByText("%"));
-    // Percentage inputs with placeholder "0" appear
-    const pctInputs = screen.getAllByPlaceholderText("0");
-    expect(pctInputs.length).toBeGreaterThanOrEqual(1);
-    // Running total shows
-    expect(screen.getByText(/0% \/ 100%/)).toBeTruthy();
-  });
-
-  it("enabling recurring toggle shows frequency segmented control", () => {
-    renderForm({ showRecurring: true });
-    // Find the checkbox input (Switch mock renders as <input type="checkbox">)
-    const checkbox = document.querySelector('input[type="checkbox"]') as HTMLElement | null;
-    if (checkbox) {
-      fireEvent.click(checkbox);
-    }
-    // After toggling, frequency options should appear
-    // (may or may not work depending on Switch mock - just ensure no crash)
-    expect(screen.getByText("Recurring expense")).toBeTruthy();
+    fillStep0AndAdvance("50.00", "Dinner");
+    expect(screen.getByText(/\$50\.00/)).toBeTruthy();
+    expect(screen.getByText(/Dinner/)).toBeTruthy();
   });
 });
 
-describe("ExpenseForm — submit behavior", () => {
-  it("does NOT call onSubmit when description is empty", async () => {
+describe("ExpenseForm — submit with equal split", () => {
+  it("submits from step 1 when equal split (no step 2)", async () => {
     renderForm();
-    // Button is disabled when description is empty — onSubmit should not be called
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "50.00" },
-    });
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
+    fillStep0AndAdvance("20.00", "Lunch");
 
-  it("does NOT call onSubmit when amount is zero", async () => {
-    renderForm();
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Coffee" },
-    });
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
-
-  it("calls onSubmit with splitType: 'equal' when Equal mode", async () => {
-    renderForm();
-
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "20.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Lunch" },
-    });
-
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    // On step 1 with equal split, the submit button should show the label
+    const submitBtn = screen.getByText("Add expense");
     await act(async () => {
       fireEvent.click(submitBtn);
     });
@@ -209,78 +193,11 @@ describe("ExpenseForm — submit behavior", () => {
     );
   });
 
-  it("calls onSubmit with splitType: 'custom' and correct splitAmounts when Custom", async () => {
-    renderForm();
-
-    // Set amount first
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "30.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Groceries" },
-    });
-
-    // Switch to custom
-    fireEvent.click(screen.getByText("Custom"));
-
-    // Fill in custom amounts (3000 cents total: 2000 + 1000)
-    const customInputs = screen.getAllByPlaceholderText("0.00");
-    // customInputs[0] is the main amount, [1] is first participant, [2] is second
-    if (customInputs.length >= 3) {
-      fireEvent.change(customInputs[1]!, { target: { value: "20.00" } });
-      fireEvent.change(customInputs[2]!, { target: { value: "10.00" } });
-    }
-
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
-
-    if (mockOnSubmit.mock.calls.length > 0) {
-      const call = mockOnSubmit.mock.calls[0]![0] as { splitType: string };
-      expect(call.splitType).toBe("custom");
-    }
-  });
-
-  it("does NOT call onSubmit when custom amounts don't sum to total", async () => {
-    renderForm();
-
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "30.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Dinner" },
-    });
-
-    fireEvent.click(screen.getByText("Custom"));
-
-    // Fill in wrong amounts (10 + 10 = 20, not 30)
-    const customInputs = screen.getAllByPlaceholderText("0.00");
-    if (customInputs.length >= 3) {
-      fireEvent.change(customInputs[1]!, { target: { value: "10.00" } });
-      fireEvent.change(customInputs[2]!, { target: { value: "10.00" } });
-    }
-
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
-    await act(async () => {
-      fireEvent.click(submitBtn);
-    });
-
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/Split amounts must equal the total/)).toBeTruthy();
-  });
-
   it("submitted date is in YYYY-MM-DD local format", async () => {
     renderForm();
+    fillStep0AndAdvance("10.00", "Coffee");
 
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "10.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Coffee" },
-    });
-
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+    const submitBtn = screen.getByText("Add expense");
     await act(async () => {
       fireEvent.click(submitBtn);
     });
@@ -290,35 +207,105 @@ describe("ExpenseForm — submit behavior", () => {
       expect(call.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
   });
+});
 
-  it("calls onSubmit with normalized splitType 'custom' for percentage mode", async () => {
+describe("ExpenseForm — Step 2: Advanced split", () => {
+  it("switching to Custom and advancing shows custom amount inputs", () => {
     renderForm();
+    fillStep0AndAdvance("30.00", "Groceries");
 
-    fireEvent.change(screen.getByPlaceholderText("0.00"), {
-      target: { value: "100.00" },
-    });
-    fireEvent.change(screen.getByPlaceholderText("What's this for?"), {
-      target: { value: "Rent" },
-    });
+    // Switch to custom split
+    fireEvent.click(screen.getByText("Custom"));
+
+    // Advance to step 2
+    fireEvent.click(screen.getByText("Next"));
+
+    // Should see custom amount inputs (placeholder "0.00")
+    const customInputs = screen.getAllByPlaceholderText("0.00");
+    expect(customInputs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("switching to % and advancing shows percentage inputs", () => {
+    renderForm();
+    fillStep0AndAdvance("100.00", "Rent");
 
     fireEvent.click(screen.getByText("%"));
+    fireEvent.click(screen.getByText("Next"));
 
-    // Fill in percentages summing to 100
     const pctInputs = screen.getAllByPlaceholderText("0");
-    if (pctInputs.length >= 2) {
-      fireEvent.change(pctInputs[0]!, { target: { value: "50" } });
-      fireEvent.change(pctInputs[1]!, { target: { value: "50" } });
-    }
+    expect(pctInputs.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/0% \/ 100%/)).toBeTruthy();
+  });
 
-    const submitBtn = screen.getAllByText("Add expense").at(-1)!;
+  it("does NOT submit when custom amounts don't match total", async () => {
+    renderForm();
+    fillStep0AndAdvance("30.00", "Dinner");
+
+    fireEvent.click(screen.getByText("Custom"));
+    fireEvent.click(screen.getByText("Next"));
+
+    // Fill in wrong amounts
+    const customInputs = screen.getAllByPlaceholderText("0.00");
+    fireEvent.change(customInputs[0]!, { target: { value: "10.00" } });
+    fireEvent.change(customInputs[1]!, { target: { value: "10.00" } });
+
+    const submitBtn = screen.getByText("Add expense");
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it("submits custom split when amounts match total", async () => {
+    renderForm();
+    fillStep0AndAdvance("30.00", "Groceries");
+
+    fireEvent.click(screen.getByText("Custom"));
+    fireEvent.click(screen.getByText("Next"));
+
+    const customInputs = screen.getAllByPlaceholderText("0.00");
+    fireEvent.change(customInputs[0]!, { target: { value: "20.00" } });
+    fireEvent.change(customInputs[1]!, { target: { value: "10.00" } });
+
+    const submitBtn = screen.getByText("Add expense");
     await act(async () => {
       fireEvent.click(submitBtn);
     });
 
     if (mockOnSubmit.mock.calls.length > 0) {
       const call = mockOnSubmit.mock.calls[0]![0] as { splitType: string };
-      // percentage mode normalizes to "custom"
       expect(call.splitType).toBe("custom");
     }
+  });
+
+  it("submits percentage split normalized to custom", async () => {
+    renderForm();
+    fillStep0AndAdvance("100.00", "Rent");
+
+    fireEvent.click(screen.getByText("%"));
+    fireEvent.click(screen.getByText("Next"));
+
+    const pctInputs = screen.getAllByPlaceholderText("0");
+    fireEvent.change(pctInputs[0]!, { target: { value: "50" } });
+    fireEvent.change(pctInputs[1]!, { target: { value: "50" } });
+
+    const submitBtn = screen.getByText("Add expense");
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    if (mockOnSubmit.mock.calls.length > 0) {
+      const call = mockOnSubmit.mock.calls[0]![0] as { splitType: string };
+      expect(call.splitType).toBe("custom");
+    }
+  });
+});
+
+describe("ExpenseForm — custom submit label", () => {
+  it("renders submit button with custom label on equal split step 1", () => {
+    renderForm({ submitLabel: "Save changes" });
+    fillStep0AndAdvance();
+    expect(screen.getByText("Save changes")).toBeTruthy();
   });
 });
