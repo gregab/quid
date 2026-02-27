@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { View, Text, TextInput, FlatList, Pressable } from "react-native";
+import { View, Text, TextInput, FlatList, Pressable, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ChevronRight, Search } from "lucide-react-native";
@@ -132,7 +132,7 @@ export default function AddExpensePickerScreen() {
         }
         className="flex-row items-center gap-3 border-b border-stone-100 bg-[#faf9f7] px-5 py-3.5 active:bg-stone-50 dark:border-stone-800/60 dark:bg-[#0c0a09] dark:active:bg-stone-900"
       >
-        <Avatar imageUrl={contact.avatarUrl} size="lg" />
+        <Avatar imageUrl={contact.avatarUrl} emoji={contact.defaultEmoji} size="lg" />
         <View className="min-w-0 flex-1">
           <Text
             className="text-[15px] font-semibold text-stone-900 dark:text-white"
@@ -189,25 +189,30 @@ export default function AddExpensePickerScreen() {
       </View>
 
       {/* List */}
-      {isEmpty ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-center text-[15px] text-stone-400 dark:text-stone-500">
-            {q ? `No results for "${query}"` : "No groups or friends yet."}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={listData}
-          keyExtractor={(item) => {
-            if (item.kind === "section") return `section-${item.label}`;
-            if (item.kind === "group") return `group-${item.group.id}`;
-            return `friend-${item.contact.userId}`;
-          }}
-          renderItem={renderItem}
-          contentContainerStyle={{ paddingBottom: 40 }}
-          keyboardShouldPersistTaps="handled"
-        />
-      )}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        {isEmpty ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <Text className="text-center text-[15px] text-stone-400 dark:text-stone-500">
+              {q ? `No results for "${query}"` : "No groups or friends yet."}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={listData}
+            keyExtractor={(item) => {
+              if (item.kind === "section") return `section-${item.label}`;
+              if (item.kind === "group") return `group-${item.group.id}`;
+              return `friend-${item.contact.userId}`;
+            }}
+            renderItem={renderItem}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

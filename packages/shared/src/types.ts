@@ -73,4 +73,5 @@ export interface Contact {
   userId: string;
   displayName: string;
   avatarUrl: string | null;
+  defaultEmoji: string;
 }

@@ -3,6 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
+      "@aviary/shared": [
+        "../packages/shared/src/index.ts"
+      ],
       "@aviary/shared/*": [
         "../packages/shared/src/*"
       ]

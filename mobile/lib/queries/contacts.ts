@@ -36,7 +36,7 @@ export function useContacts() {
       // Fetch all members of regular groups with user data
       const { data: allMembers, error: contactError } = await supabase
         .from("GroupMember")
-        .select("userId, User(displayName, avatarUrl, profilePictureUrl)")
+        .select("userId, User(displayName, avatarUrl, profilePictureUrl, defaultEmoji)")
         .in("groupId", regularGroupIds);
 
       if (contactError) throw contactError;
@@ -53,6 +53,7 @@ export function useContacts() {
             userId: m.userId,
             displayName: (u.displayName as string) ?? "Unknown",
             avatarUrl: (u.profilePictureUrl as string) ?? (u.avatarUrl as string) ?? null,
+            defaultEmoji: (u.defaultEmoji as string) ?? "🐦",
           });
         }
       }
