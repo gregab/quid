@@ -7,9 +7,6 @@ import {
   RefreshControl,
   Share,
   ImageBackground,
-  ActivityIndicator,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -755,18 +752,6 @@ export default function GroupDetailScreen() {
     activitySheetRef.current?.dismiss();
     setSelectedActivity(null);
   }, []);
-
-  const handleScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-      const distanceFromBottom =
-        contentSize.height - layoutMeasurement.height - contentOffset.y;
-      if (distanceFromBottom < 200 && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    },
-    [hasNextPage, isFetchingNextPage, fetchNextPage],
-  );
 
   if (groupLoading || expensesLoading) {
     return (

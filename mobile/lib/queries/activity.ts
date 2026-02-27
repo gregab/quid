@@ -3,8 +3,8 @@ import { supabase } from "../supabase";
 import { groupKeys } from "./keys";
 import type { ActivityLog } from "../types";
 
-const INITIAL_PAGE_SIZE = 10;
-const PAGE_SIZE = 20;
+const INITIAL_PAGE_SIZE = 15;
+const PAGE_SIZE = 15;
 
 /** Infinite-scroll activity logs for a group. */
 export function useActivityLogs(groupId: string) {
