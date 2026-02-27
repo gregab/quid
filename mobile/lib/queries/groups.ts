@@ -104,7 +104,7 @@ export function useGroups() {
         const friendNameByGroup = new Map<string, string>();
         for (const m of friendMembers ?? []) {
           const name =
-            ((m.User as Record<string, unknown>)?.displayName as string) ??
+            ((m.User as unknown as Record<string, unknown>)?.displayName as string) ??
             UNKNOWN_USER;
           friendNameByGroup.set(m.groupId, name);
         }

@@ -162,7 +162,7 @@ export default function AddFriendExpenseScreen() {
             style={{ paddingBottom: insets.bottom + 8 }}
             className="border-t border-stone-100 bg-[#faf9f7] px-4 pt-3 dark:border-stone-800/60 dark:bg-[#0c0a09]"
           >
-            <Button disabled>Select a friend above</Button>
+            <Button disabled onPress={() => {}}>Select a friend above</Button>
           </View>
         )}
       </KeyboardAvoidingView>
