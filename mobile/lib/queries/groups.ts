@@ -81,7 +81,7 @@ export function useGroups() {
         id: g.id as string,
         name: g.name as string,
         createdAt: g.createdAt as string,
-        patternSeed: (g.patternSeed as string) ?? null,
+        patternSeed: (g.patternSeed as number) ?? null,
         bannerUrl: (g.bannerUrl as string) ?? null,
         emoji: (g.emoji as string) ?? null,
         memberCount: memberCounts.get(g.id as string) ?? 1,

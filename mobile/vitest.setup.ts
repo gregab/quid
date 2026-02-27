@@ -130,6 +130,15 @@ vi.mock("lucide-react-native", () => {
   );
 });
 
+// --- react-native-svg ---
+vi.mock("react-native-svg", () => ({
+  SvgXml: () => null,
+  Svg: () => null,
+  Path: () => null,
+  Rect: () => null,
+  Circle: () => null,
+}));
+
 // --- lib/toast ---
 vi.mock("./lib/toast", () => ({
   useToast: vi.fn(() => ({

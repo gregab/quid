@@ -57,7 +57,7 @@ export interface GroupSummary {
   id: string;
   name: string;
   createdAt: string;
-  patternSeed: string | null;
+  patternSeed: number | null;
   bannerUrl: string | null;
   emoji: string | null;
   memberCount: number;

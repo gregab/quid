@@ -14,6 +14,7 @@ import { useGroups, useCurrentUser, useContacts } from "../../../lib/queries";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { DashboardSkeleton } from "../../../components/ui/SkeletonLoader";
+import { GroupThumbnail } from "../../../components/ui/GroupThumbnail";
 import { formatCents, BIRD_FACTS, formatDisplayName } from "../../../lib/queries/shared";
 import type { GroupSummary } from "../../../lib/types";
 
@@ -42,9 +43,7 @@ function GroupCard({ group }: { group: GroupSummary }) {
       className="flex-row items-center gap-3 border-b border-stone-100 py-3.5 dark:border-stone-800/60"
     >
       {/* Thumbnail */}
-      <View className="h-11 w-11 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30">
-        <Text className="text-lg">{group.emoji ?? "🐦"}</Text>
-      </View>
+      <GroupThumbnail patternSeed={group.patternSeed} bannerUrl={group.bannerUrl} />
 
       {/* Group info */}
       <View className="min-w-0 flex-1">
