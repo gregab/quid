@@ -23,14 +23,29 @@
     "ios": {
       "bundleIdentifier": "com.gregbigelow.aviary",
       "buildNumber": "1",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": ["applinks:aviary.gregbigelow.com"]
     },
     "android": {
       "package": "com.gregbigelow.aviary",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#faf9f7"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "aviary.gregbigelow.com",
+              "pathPrefix": "/invite"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "plugins": [
       "expo-router",
