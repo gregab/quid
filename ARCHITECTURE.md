@@ -39,39 +39,54 @@ packages/shared/                         # @aviary/shared — pure TS business l
 mobile/                                  # React Native app (Expo SDK 52, Expo Router v4)
   package.json                           # Depends on @aviary/shared via workspace
   app/
-    _layout.tsx                          # Root: fonts, providers (QueryClient, Auth, BottomSheet)
+    _layout.tsx                          # Root: fonts, providers (QueryClient, Auth, ColorScheme, BottomSheet)
+    auth/callback.tsx                    # Email confirmation deep link handler (aviary://auth/callback)
     (auth)/                              # Login + signup screens
       _layout.tsx                        # Redirects to (app) if already authenticated
-      login.tsx, signup.tsx
+      login.tsx, signup.tsx              # Both include Google Sign-In via expo-auth-session
+      forgot-password.tsx                # Password reset request screen
     (app)/                               # Auth-protected screens
       _layout.tsx                        # Auth guard — redirects to (auth)/login if no session
       (dashboard)/
         _layout.tsx                      # Dashboard tab layout
-        index.tsx                        # Group list with balances + bird fact
+        index.tsx                        # Group list with balances + bird fact + staggered animations
         create-group.tsx                 # Create group modal screen
+        add-friend-expense.tsx           # Add expense with friends from dashboard
       groups/[id]/
-        index.tsx                        # Group detail: expenses, balances, members
+        index.tsx                        # Group detail: expenses, balances, members, activity
         add-expense.tsx                  # Add expense form
         record-payment.tsx               # Record payment form
         add-member.tsx                   # Add member by email
         expense/[expenseId].tsx          # Expense detail/edit
-        settings.tsx                     # Group settings (rename, banner)
+        recurring.tsx                    # Recurring expenses list
+        settings.tsx                     # Group settings (rename, banner upload, leave/delete)
       invite/[token].tsx                 # Join group via invite link
-      settings/index.tsx                 # User settings (profile, logout, delete account)
+      settings/index.tsx                 # User settings (profile, dark mode toggle, logout, delete account)
   lib/
     supabase.ts                          # Supabase client with SecureStore for session persistence
     auth.tsx                             # AuthProvider context (session, user, loading, signOut)
-    queryClient.ts                       # TanStack Query client instance
+    colorScheme.tsx                       # ColorSchemeProvider: 3-way dark mode toggle (system/light/dark)
+    notifications.ts                     # Push notification registration (expo-notifications + expo-device)
+    queryClient.ts                       # TanStack Query client with onlineManager + AppState refetch
+    useNetworkStatus.ts                  # Network connectivity hook (NetInfo)
     types.ts                             # Re-exports shared types + platform-specific MemberColor, Member
     queries/                             # TanStack Query hooks (direct-to-Supabase, no API intermediary)
       keys.ts                            # Query key factory (groupKeys, userKeys, inviteKeys)
       shared.ts                          # Re-exports from @aviary/shared for mobile consumption
       groups.ts, expenses.ts, payments.ts, members.ts, activity.ts, user.ts, invite.ts
+      friends.ts, contacts.ts           # Friend groups + contacts hooks
   components/
     ErrorBoundary.tsx                    # App-level error boundary
+    ExpenseForm.tsx                      # Shared expense form (add + edit) with keyboard handling
     ui/                                  # Mobile UI primitives (NativeWind-styled)
       Avatar.tsx, Button.tsx, Card.tsx, Input.tsx, LoadingSpinner.tsx,
-      MemberPill.tsx, BottomSheet.tsx
+      MemberPill.tsx, BottomSheet.tsx, GroupThumbnail.tsx,
+      SkeletonLoader.tsx                 # DashboardSkeleton + GroupDetailSkeleton (shimmer blocks)
+      EmptyState.tsx                     # Empty list placeholder with icon, title, subtitle, CTA
+      ErrorState.tsx                     # Error display with retry button
+      OfflineBanner.tsx                  # Network disconnection banner
+      PressableRow.tsx                   # Pressable wrapper with spring scale + opacity feedback
+      ScreenHeader.tsx                   # Reusable screen header with back button
 
 app/                                     # Next.js web app (below)
   layout.tsx                             # Root layout: Geist fonts, metadata, dark mode class
@@ -831,15 +846,18 @@ The web app routes mutations through Next.js API routes (`fetch('/api/groups/...
 2. `AuthProvider` (`mobile/lib/auth.tsx`) restores session on mount via `getSession()`, then listens for changes via `onAuthStateChange`
 3. `(app)/_layout.tsx` checks `session` — redirects to `(auth)/login` if null
 4. `(auth)/_layout.tsx` checks `session` — redirects to `(app)` if authenticated
-5. `detectSessionInUrl: false` — mobile doesn't handle URL-based auth callbacks
+5. **Google Sign-In**: Both login and signup screens offer "Continue with Google" via `expo-auth-session` + `expo-web-browser`. Opens system browser for Google OAuth, returns session via Supabase's PKCE flow.
+6. **Email confirmation deep link**: `mobile/app/auth/callback.tsx` handles `aviary://auth/callback` URLs. Extracts the auth code from the URL, exchanges it for a session via `supabase.auth.exchangeCodeForSession()`, then redirects to the dashboard. **Important**: This route is at `app/auth/callback.tsx` (outside the `(auth)` group) so it's accessible regardless of auth state.
+7. **Forgot password**: `(auth)/forgot-password.tsx` calls `supabase.auth.resetPasswordForEmail()` with redirect to the web app's password reset page.
 
 ### Mobile data layer
 
 All data fetching uses TanStack Query hooks in `mobile/lib/queries/`:
 - **Query key factory** (`keys.ts`): Centralized keys like `groupKeys.all`, `groupKeys.expenses(id)` for consistent cache invalidation
-- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, `useRecurringExpenses(id)`, `useStopRecurringExpense(id)`, etc.
+- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, `useRecurringExpenses(id)`, `useStopRecurringExpense(id)`, `useDeleteExpense()`, `useDeleteAccount()`, `useUploadGroupBanner()`, `useDeleteGroup()`, `useLeaveGroup()`, `useActivityLogs(id)` (infinite query), etc.
 - **Mutations** invalidate relevant query keys on success (e.g., creating an expense invalidates `groupKeys.expenses(id)` and `groupKeys.all`)
 - **Shared imports**: `mobile/lib/queries/shared.ts` re-exports from `@aviary/shared` — single seam for all shared logic imports
+- **Online state**: `queryClient.ts` integrates `@react-native-community/netinfo` with TanStack Query's `onlineManager`, plus `AppState` listener to refetch stale queries when the app comes to foreground
 
 ### Platform-specific types
 
@@ -850,7 +868,8 @@ All data fetching uses TanStack Query hooks in `mobile/lib/queries/`:
 See `mobile/TESTING.md` for the full testing guide. Key points:
 - Same stack as web: Vitest 4 + `@testing-library/react` + happy-dom
 - React Native components mocked to HTML elements (`View` → `<div>`, `Text` → `<span>`, `Pressable` → `<button>`)
-- Expo modules mocked globally in `vitest.setup.ts`
+- Expo modules mocked globally in `vitest.setup.ts` (AsyncStorage, SecureStore, Haptics, ImagePicker, Notifications, WebBrowser, AuthSession, Clipboard, Linking, Constants, Device, Crypto, etc.)
+- Lucide icons mocked via Proxy to return `<span data-testid="icon-{Name}">` stubs
 - Mobile tests run separately: `cd mobile && npm test`
 - Root vitest config excludes `mobile/**` to prevent cross-contamination
 
@@ -867,6 +886,26 @@ React Native mobile app using Expo SDK 52, Expo Router v4, NativeWind v4, and Ta
 | `mobile/lib/queries/friends.ts` | `useCreateFriendExpense` hook — calls `get_or_create_friend_group` + `create_expense` per friend |
 
 **Conditional friend-group rendering:** Mobile group detail screen also conditionally hides settings, members, invite, and leave UI when `isFriendGroup=true`, matching the web behavior.
+
+### Additional Mobile Features
+
+| Feature | Key Files | Notes |
+|---------|-----------|-------|
+| **Dark mode toggle** | `lib/colorScheme.tsx`, `settings/index.tsx` | 3-way cycle: system → light → dark. Persists via AsyncStorage, applies via `Appearance.setColorScheme()` |
+| **Push notifications** | `lib/notifications.ts`, `_layout.tsx` | Registers Expo push token on mount (device-only), saves to User table |
+| **Skeleton loaders** | `ui/SkeletonLoader.tsx` | `DashboardSkeleton` + `GroupDetailSkeleton` replace full-screen spinners |
+| **Staggered animations** | Group detail `index.tsx`, dashboard `index.tsx` | Expense cards, activity items, group cards use `FadeInDown` from reanimated; `hasAnimated` ref skips on refetch |
+| **Swipe-to-delete** | Group detail `index.tsx` | Expense rows use `ReanimatedSwipeable` for swipe-to-delete (own expenses only) |
+| **Error/empty states** | `ui/ErrorState.tsx`, `ui/EmptyState.tsx` | Consistent error retry and empty list placeholders across screens |
+| **Offline banner** | `ui/OfflineBanner.tsx`, `lib/useNetworkStatus.ts` | Shows disconnection banner when offline via NetInfo |
+| **Banner upload** | `settings.tsx`, `queries/groups.ts` | `useUploadGroupBanner()` — picks image, uploads to Supabase Storage, updates Group.bannerUrl |
+| **Keyboard handling** | All form screens | `automaticallyAdjustKeyboardInsets` on ScrollViews + `KeyboardAvoidingView` with platform-aware behavior |
+
+### Mobile Gotchas
+
+- **`auth/callback.tsx` lives outside `(auth)/`**: Placed at `app/auth/callback.tsx` (not `app/(auth)/auth/callback.tsx`) so it's accessible regardless of auth state — the auth guard in `(auth)/_layout.tsx` would redirect away before the deep link handler runs.
+- **`Button` requires `onPress` even when `disabled`**: The `ButtonProps` interface makes `onPress` required. Pass a no-op if the button should be disabled without a handler.
+- **Reanimated `entering` prop + `undefined`**: Pass `undefined` (not `null`) to skip entering animations conditionally. `entering={condition ? FadeInDown : undefined}`.
 
 ## Open Questions
 
