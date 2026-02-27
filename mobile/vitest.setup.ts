@@ -92,6 +92,14 @@ vi.mock("expo-auth-session", () => ({
   makeRedirectUri: vi.fn(() => "aviary://redirect"),
 }));
 
+// --- expo-image-picker ---
+vi.mock("expo-image-picker", () => ({
+  launchImageLibraryAsync: vi.fn(() =>
+    Promise.resolve({ canceled: true, assets: [] }),
+  ),
+  MediaTypeOptions: { Images: "Images" },
+}));
+
 // --- react-native-gesture-handler/ReanimatedSwipeable ---
 vi.mock("react-native-gesture-handler/ReanimatedSwipeable", () => {
   const React = require("react");
