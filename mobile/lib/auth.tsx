@@ -7,6 +7,10 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import {
+  registerForPushNotifications,
+  savePushToken,
+} from "./notifications";
 
 interface AuthContextValue {
   user: User | null;
@@ -44,6 +48,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(newSession);
       if (event === "INITIAL_SESSION") {
         setLoading(false);
+      }
+      if (event === "SIGNED_IN" && newSession?.user) {
+        const user = newSession.user;
+        registerForPushNotifications().then((token) => {
+          if (token) savePushToken(user.id, token);
+        });
       }
     });
 
