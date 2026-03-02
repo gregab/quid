@@ -167,6 +167,43 @@ describe("recurring expenses", () => {
       .should("have.length", 1);
   });
 
+  // ---------------------------------------------------------------------------
+  // Delete expense: also cleans up recurring template
+  // ---------------------------------------------------------------------------
+
+  it("deleting a recurring expense instance also stops the recurring template", () => {
+    const cronSecret = Cypress.env("CRON_SECRET") as string;
+
+    // Create a backdated recurring expense so cron could process it
+    cy.then(() => {
+      cy.request("POST", `/api/groups/${groupId}/expenses`, {
+        description: "[cypress] Delete Stops Recurring",
+        amountCents: 3500,
+        date: BACKDATED_FIRST_DATE,
+        recurring: { frequency: "monthly" },
+      }).then((res: Cypress.Response<{ data: { id: string } }>) => {
+        const expenseId = res.body.data.id;
+        // Delete the expense instance — this should also delete the recurring template
+        cy.request("DELETE", `/api/groups/${groupId}/expenses/${expenseId}`);
+      });
+    });
+
+    // Trigger the cron — the recurring template should have been cleaned up
+    cy.request({
+      method: "POST",
+      url: "/api/cron/process-recurring",
+      headers: { authorization: `Bearer ${cronSecret}` },
+    }).then((res: Cypress.Response<{ data: { processed: number }; error: null }>) => {
+      expect(res.status).to.eq(200);
+      // Template was deleted, so cron should not process anything
+      expect(res.body.data.processed).to.eq(0);
+    });
+
+    // Verify no expenses exist in the group (the instance was deleted, and no cron-generated ones)
+    cy.then(() => cy.visit(`/groups/${groupId}`));
+    cy.contains("[cypress] Delete Stops Recurring").should("not.exist");
+  });
+
   it("stop button removes recurring badge from future instances via UI", () => {
     // Create a recurring expense via API
     cy.then(() => {
