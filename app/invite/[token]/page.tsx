@@ -98,15 +98,15 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   if (error || !data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
-        <div className="text-center">
+        <div className="landing-card text-center">
           <p className="text-4xl mb-4">🔗</p>
           <h1 className="text-xl font-bold text-stone-900 dark:text-white mb-2">Invalid invite link</h1>
-          <p className="text-sm text-stone-500 mb-6">This invite link is invalid or has been reset.</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mb-6">This invite link is invalid or has been reset.</p>
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-amber-700 hover:text-amber-800"
+            className="text-sm font-medium text-amber-700 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
           >
-            ← Go to dashboard
+            &larr; Go to dashboard
           </Link>
         </div>
       </div>

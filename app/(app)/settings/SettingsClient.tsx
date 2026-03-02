@@ -295,16 +295,16 @@ export function SettingsClient({
   return (
     <div className="space-y-8">
       <div>
-        <button
-          onClick={() => router.back()}
-          className="mb-4 flex items-center gap-1 text-sm text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 transition-colors"
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-400 hover:text-amber-700 dark:hover:text-amber-400 mb-3 transition-colors py-1"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="size-4">
-            <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back
-        </button>
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white">Settings</h1>
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight text-stone-900 dark:text-white">Settings</h1>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           Manage your account
         </p>

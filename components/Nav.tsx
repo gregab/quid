@@ -25,16 +25,16 @@ export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
   }
 
   return (
-    <nav className="border-b border-stone-200 bg-white/80 shadow-sm backdrop-blur-sm dark:border-stone-800 dark:bg-stone-950/80">
+    <nav className="sticky top-0 z-30 border-b border-stone-200 bg-white/80 shadow-sm backdrop-blur-md dark:border-stone-800 dark:bg-stone-950/80">
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
         <Link href="/dashboard" className="text-2xl text-stone-800 dark:text-stone-200 hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-serif-logo)" }}>
           Aviary
         </Link>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-stone-500 hidden sm:block dark:text-stone-400">{email}</span>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <span className="text-sm text-stone-500 hidden sm:block dark:text-stone-400 truncate max-w-[200px]">{email}</span>
           <Link
             href="/settings"
-            className="flex items-center justify-center w-7 h-7 rounded-full overflow-hidden hover:ring-2 hover:ring-amber-400 transition-all"
+            className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-amber-400 ring-offset-1 ring-offset-white dark:ring-offset-stone-950 transition-all"
             aria-label="Settings"
           >
             {showAvatar ? (
@@ -42,11 +42,11 @@ export default function Nav({ email, avatarUrl, defaultEmoji }: NavProps) {
               <img
                 src={avatarUrl}
                 alt=""
-                className="w-7 h-7 rounded-full object-cover"
+                className="w-8 h-8 rounded-full object-cover"
                 onError={() => setImgError(true)}
               />
             ) : (
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-base dark:bg-amber-900/40">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-base dark:bg-amber-900/40">
                 {defaultEmoji ?? "🦊"}
               </span>
             )}

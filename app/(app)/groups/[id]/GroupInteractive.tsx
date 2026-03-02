@@ -215,7 +215,7 @@ export function GroupInteractive({
       )}
 
       {/* Balance card */}
-      <Card className="px-4 py-3 -mt-2 sm:-mt-4">
+      <Card className="px-4 py-3.5 -mt-2 sm:-mt-4">
         {/* Net summary line */}
         <div className={`flex items-center gap-2 ${resolvedDebts.length > 0 ? "mb-2" : ""}`}>
           {resolvedDebts.length === 0 ? (

@@ -164,19 +164,19 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8 sm:space-y-10">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
+      <div className="section-enter relative overflow-hidden rounded-2xl sm:rounded-3xl shadow-xl">
         <img
           src="/birds.jpg"
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/20" />
-        <div className="relative z-10 px-6 sm:px-8 pt-16 sm:pt-24 pb-6 sm:pb-8">
+        <div className="absolute inset-0 bg-gradient-to-t from-stone-900/80 via-stone-900/40 to-stone-900/10" />
+        <div className="relative z-10 px-6 sm:px-8 pt-20 sm:pt-24 pb-6 sm:pb-8">
           <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-md">
             Hey {displayName}.
           </h1>
           {hasAnyExpenses && (
-            <p className="mt-1.5 text-base sm:text-lg font-medium text-white/90 drop-shadow-sm">
+            <p className="mt-2 text-base sm:text-lg font-medium text-white/90 drop-shadow-sm">
               Right now, you {totalBalance >= 0 ? "are owed" : "owe"}{" "}
               <span className={totalBalance > 0 ? "font-bold text-emerald-300" : "font-bold text-white"}>
                 {formatCents(Math.abs(totalBalance))}
@@ -187,7 +187,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Groups section */}
-      <div>
+      <div className="section-enter" style={{ animationDelay: "80ms" }}>
         <div className="mb-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl sm:text-lg font-bold tracking-tight text-stone-900 dark:text-white">Your groups</h2>
@@ -230,7 +230,7 @@ export default async function DashboardPage() {
                   key={group.id}
                   href={`/groups/${group.id}`}
                   prefetch={false}
-                  className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < regularGroups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
+                  className={`group-card group flex items-center gap-3 py-3.5 transition-all duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2 rounded-xl${i < regularGroups.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   {/* Thumbnail */}
@@ -297,6 +297,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Friends section */}
+      <div className="section-enter" style={{ animationDelay: "160ms" }}>
       <DashboardFriends
         currentUserId={user.id}
         currentUserDisplayName={displayName}
@@ -304,16 +305,17 @@ export default async function DashboardPage() {
         groups={dashboardGroups}
         initialFriends={friends}
       />
+      </div>
 
       {/* PWA install prompt — mobile only, hidden if already using PWA */}
       <InstallPrompt />
 
       {/* Bird fact — subtle editorial aside */}
-      <div className="relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-4 dark:border-stone-700/40 dark:bg-stone-900/30">
-        <p className="text-xs sm:text-[11px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70">
-          Bird fact
+      <div className="section-enter relative overflow-hidden rounded-2xl border border-stone-200/60 bg-stone-50/80 px-5 py-5 dark:border-stone-700/40 dark:bg-stone-900/30" style={{ animationDelay: "240ms" }}>
+        <p className="text-xs sm:text-[11px] font-bold uppercase tracking-[0.15em] text-amber-700/80 dark:text-amber-400/70 flex items-center gap-1.5">
+          <span>🐦</span> Bird fact
         </p>
-        <p className="mt-1.5 text-lg sm:text-base leading-relaxed text-stone-700 dark:text-stone-300" style={{ fontFamily: "var(--font-serif-logo)" }}>
+        <p className="mt-2 text-lg sm:text-base leading-relaxed text-stone-700 dark:text-stone-300" style={{ fontFamily: "var(--font-serif-logo)" }}>
           {BIRD_FACTS[Math.floor(Math.random() * BIRD_FACTS.length)]}
         </p>
       </div>

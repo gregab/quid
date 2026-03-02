@@ -62,27 +62,27 @@ function SignupForm() {
   if (emailSent) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
-        <div className="w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
-          <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-10 text-white">
+        <div className="landing-card w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
+          <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-12 sm:py-10 text-white">
             <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-10 -left-4 h-52 w-52 rounded-full bg-amber-400/20 blur-3xl" />
             <div className="relative z-10">
               <div className="mb-3 text-4xl">📬</div>
               <h1 className="mb-2 text-2xl font-black tracking-tight">Check your email.</h1>
-              <p className="font-mono text-xs text-stone-300/80">
+              <p className="text-sm text-stone-300/80" style={{ fontFamily: "var(--font-serif-logo)" }}>
                 Confirmation dispatched to <span className="text-white">{email}</span>.
               </p>
             </div>
           </div>
           <div className="bg-white px-8 py-7 dark:bg-stone-900">
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
               Click the link in your email to activate your account. It will not click itself.
             </p>
             <p className="mt-5 text-center text-xs text-stone-400">
               Wrong address?{" "}
               <button
                 onClick={() => setEmailSent(false)}
-                className="font-semibold text-stone-700 transition-colors hover:text-amber-700"
+                className="font-semibold text-stone-700 transition-colors hover:text-amber-700 dark:text-stone-300 dark:hover:text-amber-400"
               >
                 Go back
               </button>
@@ -95,17 +95,17 @@ function SignupForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-stone-50 via-amber-50 to-stone-100 p-4 dark:from-stone-950 dark:via-stone-900 dark:to-stone-950">
-      <div className="w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
+      <div className="landing-card w-full max-w-sm overflow-hidden rounded-3xl shadow-xl">
 
         {/* Hero top */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-10 text-white">
+        <div className="relative overflow-hidden bg-gradient-to-br from-stone-700 via-stone-600 to-amber-700 px-8 py-12 sm:py-10 text-white">
           <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-10 -left-4 h-52 w-52 rounded-full bg-amber-400/20 blur-3xl" />
           <div className="pointer-events-none absolute left-1/2 top-0 h-24 w-48 -translate-x-1/2 rounded-full bg-stone-300/10 blur-2xl" />
           <div className="relative z-10">
             <div className="mb-3 text-4xl">🪶</div>
             <h1 className="mb-2 text-2xl font-black tracking-tight">Join the flock.</h1>
-            <p className="text-sm text-stone-300/80 font-medium">We love you.</p>
+            <p className="text-sm text-stone-300/80" style={{ fontFamily: "var(--font-serif-logo)" }}>Create your account and start splitting.</p>
           </div>
         </div>
 
@@ -184,7 +184,7 @@ function SignupForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-amber-600 py-2.5 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-amber-700 disabled:opacity-50 active:scale-[0.98]"
+              className="w-full rounded-xl bg-amber-600 py-3 text-sm font-bold text-white shadow-sm transition-all duration-150 hover:bg-amber-700 disabled:opacity-50 active:scale-[0.97]"
             >
               {loading ? "Creating account..." : "Create account →"}
             </button>

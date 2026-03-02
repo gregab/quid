@@ -128,7 +128,7 @@ export function DashboardFriends({
               key={friend.groupId}
               href={`/groups/${friend.groupId}`}
               prefetch={false}
-              className={`group-card group flex items-center gap-3 py-3.5 transition-colors duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2${i < visibleFriends.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
+              className={`group-card group flex items-center gap-3 py-3.5 transition-all duration-150 hover:bg-stone-50 dark:hover:bg-stone-900/50 -mx-2 px-2 rounded-xl${i < visibleFriends.length - 1 ? " border-b border-stone-100 dark:border-stone-800/60" : ""}`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               {/* Avatar */}
