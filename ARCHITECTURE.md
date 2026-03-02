@@ -16,7 +16,7 @@ Both expenses and payments can be edited and deleted, which immediately affects 
 
 ## Project Structure
 
-Monorepo with npm workspaces: root = Next.js web app, `packages/shared/` = shared business logic, `mobile/` = React Native (Expo) app.
+npm workspaces: root = Next.js web app, `packages/shared/` = shared business logic.
 
 ```
 packages/shared/                         # @aviary/shared — pure TS business logic (no React/DOM/Node deps)
@@ -30,63 +30,11 @@ packages/shared/                         # @aviary/shared — pure TS business l
     amount.ts                            # Amount input filtering, MAX_AMOUNT_CENTS
     percentageSplit.ts                   # Percentage ↔ cents conversion
     groupPattern.ts                      # Deterministic SVG pattern generation
-    birdFacts.ts                         # Bird fact strings (shared between web + mobile dashboards)
+    birdFacts.ts                         # Bird fact strings (dashboard)
     types.ts                             # Platform-agnostic types: ExpenseRow, ActivityLog, etc.
     validation.ts                        # Zod schemas extracted from API routes
     activityDiff.ts                      # computeExpenseChanges(), buildSplitSnapshot()
     rpcParams.ts                         # RPC parameter builders for Supabase .rpc() calls
-
-mobile/                                  # React Native app (Expo SDK 52, Expo Router v4)
-  package.json                           # Depends on @aviary/shared via workspace
-  app/
-    _layout.tsx                          # Root: fonts, providers (QueryClient, Auth, ColorScheme, BottomSheet)
-    auth/callback.tsx                    # Email confirmation deep link handler (aviary://auth/callback)
-    (auth)/                              # Login + signup screens
-      _layout.tsx                        # Redirects to (app) if already authenticated
-      login.tsx, signup.tsx              # Both include Google Sign-In via expo-auth-session
-      forgot-password.tsx                # Password reset request screen
-    (app)/                               # Auth-protected screens
-      _layout.tsx                        # Auth guard — redirects to (auth)/login if no session
-      (dashboard)/
-        _layout.tsx                      # Dashboard tab layout
-        index.tsx                        # Group list with balances + bird fact + staggered animations
-        create-group.tsx                 # Create group modal screen
-        add-friend-expense.tsx           # Add expense with friends from dashboard
-      groups/[id]/
-        index.tsx                        # Group detail: expenses, balances, members, activity
-        add-expense.tsx                  # Add expense form
-        record-payment.tsx               # Record payment form
-        add-member.tsx                   # Add member by email
-        expense/[expenseId].tsx          # Expense detail/edit
-        recurring.tsx                    # Recurring expenses list
-        settings.tsx                     # Group settings (rename, banner upload, leave/delete)
-      invite/[token].tsx                 # Join group via invite link
-      settings/index.tsx                 # User settings (profile, dark mode toggle, logout, delete account)
-  lib/
-    supabase.ts                          # Supabase client with SecureStore for session persistence
-    auth.tsx                             # AuthProvider context (session, user, loading, signOut)
-    colorScheme.tsx                       # ColorSchemeProvider: 3-way dark mode toggle (system/light/dark)
-    notifications.ts                     # Push notification registration (expo-notifications + expo-device)
-    queryClient.ts                       # TanStack Query client with onlineManager + AppState refetch
-    useNetworkStatus.ts                  # Network connectivity hook (NetInfo)
-    types.ts                             # Re-exports shared types + platform-specific MemberColor, Member
-    queries/                             # TanStack Query hooks (direct-to-Supabase, no API intermediary)
-      keys.ts                            # Query key factory (groupKeys, userKeys, inviteKeys)
-      shared.ts                          # Re-exports from @aviary/shared for mobile consumption
-      groups.ts, expenses.ts, payments.ts, members.ts, activity.ts, user.ts, invite.ts
-      friends.ts, contacts.ts           # Friend groups + contacts hooks
-  components/
-    ErrorBoundary.tsx                    # App-level error boundary
-    ExpenseForm.tsx                      # Shared expense form (add + edit) with keyboard handling
-    ui/                                  # Mobile UI primitives (NativeWind-styled)
-      Avatar.tsx, Button.tsx, Card.tsx, Input.tsx, LoadingSpinner.tsx,
-      MemberPill.tsx, BottomSheet.tsx, GroupThumbnail.tsx,
-      SkeletonLoader.tsx                 # DashboardSkeleton + GroupDetailSkeleton (shimmer blocks)
-      EmptyState.tsx                     # Empty list placeholder with icon, title, subtitle, CTA
-      ErrorState.tsx                     # Error display with retry button
-      OfflineBanner.tsx                  # Network disconnection banner
-      PressableRow.tsx                   # Pressable wrapper with spring scale + opacity feedback
-      ScreenHeader.tsx                   # Reusable screen header with back button
 
 app/                                     # Next.js web app (below)
   layout.tsx                             # Root layout: Geist fonts, metadata, dark mode class
@@ -349,7 +297,7 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `get_group_by_invite_token(_token)` | Returns `{ id, name, memberCount, isMember }` for invite preview; SECURITY DEFINER so non-members can read group name | `app/(app)/invite/[token]/page.tsx` (server component) |
 | `join_group_by_token(_token)` | Adds caller as group member; idempotent; returns `{ groupId, alreadyMember }` | `POST /api/invite/[token]/join` |
 | `create_payment(...)` | Creates payment expense + single split for recipient + activity log | `POST /api/groups/[id]/payments` |
-| `add_member_by_email(_group_id, _email)` | Looks up user by email, adds as group member. Atomic: auth check → user lookup → duplicate check → insert. Returns `{ userId, displayName, groupId, joinedAt }` | Mobile `add-member.tsx` (direct RPC) |
+| `add_member_by_email(_group_id, _email)` | Looks up user by email, adds as group member. Atomic: auth check → user lookup → duplicate check → insert. Returns `{ userId, displayName, groupId, joinedAt }` | Direct RPC |
 | `get_or_create_friend_group(_other_user_id)` | Finds or creates a 2-person friend group (`isFriendGroup=true`) between the caller and another user. Uses `pg_advisory_xact_lock` to prevent duplicate friend groups from concurrent requests. Returns the group ID. | `POST /api/friends/expenses` |
 
 **Note:** `join_group_by_token` now blocks friend groups — attempting to join via invite token returns an error if the group has `isFriendGroup=true`.
@@ -640,9 +588,6 @@ App lives on its own subdomain (`aviary.gregbigelow.com`) as a standalone Vercel
 ### Why DROP + CREATE for RPC function migrations?
 PostgreSQL's `CREATE OR REPLACE FUNCTION` only replaces a function with the **exact same parameter signature**. If you add or remove parameters, it creates a new overload instead. This caused a bug where stale overloads with missing auth checks coexisted with the intended version. Always use `DROP FUNCTION IF EXISTS fn_name(param_types)` followed by `CREATE FUNCTION` when changing a function's signature.
 
-### Why resource-oriented API routes?
-Future mobile client should reuse the same API. `/api/groups/[id]/expenses` works for any client.
-
 ### Edit/delete permissions
 Only the creator of an expense (the user who clicked "Add expense") can edit or delete it. Payments likewise enforce creator-only deletion. Expenses created before `createdById` was populated (NULL `createdById`) are treated as legacy and remain editable/deletable by any group member. Enforcement happens at three layers: UI hides buttons (`canEdit`/`canDelete` flags in `page.tsx`), API routes return 403, and RPC functions raise an exception.
 
@@ -790,7 +735,7 @@ These features extend the core expense-splitting functionality:
 
 | Feature | Key files | Notes |
 |---------|-----------|-------|
-| **Recurring expenses** | `RecurringExpense` table, `api/cron/process-recurring/`, `api/groups/[id]/recurring/`, `mobile/app/(app)/groups/[id]/recurring.tsx`, `mobile/lib/queries/recurring.ts` | Weekly/monthly/yearly auto-creation via cron; mobile: view + stop |
+| **Recurring expenses** | `RecurringExpense` table, `api/cron/process-recurring/`, `api/groups/[id]/recurring/` | Weekly/monthly/yearly auto-creation via cron |
 | **Group settings** | `GroupSettingsButton.tsx`, `GroupSettingsModal.tsx`, `api/groups/[id]/settings/` | Rename group, upload custom banner image |
 | **Profile pictures** | `SettingsClient.tsx`, `api/account/profile-picture/`, `lib/compressImage.ts` | Client-side compression → Supabase storage |
 | **Group patterns** | `lib/groupPattern.ts`, `GroupThumbnail.tsx` | Deterministic SVG thumbnails + banners from `patternSeed` |
@@ -803,11 +748,9 @@ These features extend the core expense-splitting functionality:
 
 ## Shared Pure Logic (`@aviary/shared`)
 
-All pure business logic lives in `packages/shared/src/` and is published as the `@aviary/shared` workspace package. **Zero framework dependencies** — no React, no DOM, no Node.js APIs. Both the web app and mobile app consume this package.
+All pure business logic lives in `packages/shared/src/` and is published as the `@aviary/shared` workspace package. **Zero framework dependencies** — no React, no DOM, no Node.js APIs.
 
 **Web app access:** Existing `lib/` files are re-export barrels that forward to `@aviary/shared`. This means `import { formatCents } from "@/lib/format"` still works — but the source of truth is in `packages/shared/`.
-
-**Mobile app access:** Imports via `@aviary/shared` (through `mobile/lib/queries/shared.ts` re-export layer).
 
 **Adding to the shared package:** Add your file to `packages/shared/src/`, export from `packages/shared/src/index.ts`, and create a re-export barrel in `lib/` if web code needs the old import path.
 
@@ -828,84 +771,6 @@ All pure business logic lives in `packages/shared/src/` and is published as the 
 | `validation.ts` | Zod schemas: `createExpenseSchema`, `updateExpenseSchema`, `createPaymentSchema`, `createGroupSchema`, `updateSettingsSchema`, `addMemberSchema`, `feedbackSchema` | — |
 | `activityDiff.ts` | `computeExpenseChanges()`, `buildSplitSnapshot()` — activity log change detection | — |
 | `rpcParams.ts` | `buildCreateExpenseParams()`, `buildUpdateExpenseParams()`, `buildCreatePaymentParams()`, `buildDeleteExpenseParams()`, `buildCreateRecurringExpenseParams()` | — |
-
-## Mobile App Architecture
-
-The mobile app is a React Native app built with Expo SDK 52, Expo Router v4, NativeWind v4 (Tailwind for RN), and TanStack Query v5.
-
-### Key difference from web: Direct-to-Supabase
-
-The web app routes mutations through Next.js API routes (`fetch('/api/groups/...')`). The mobile app calls Supabase **directly** — queries via the JS client and mutations via `supabase.rpc()`. There is no API intermediary. This works because:
-- RLS policies enforce authorization at the database layer
-- RPC functions (`SECURITY DEFINER`) handle atomic multi-table operations
-- Zod validation schemas from `@aviary/shared` validate input before RPC calls
-
-### Mobile auth flow
-
-1. Supabase client configured with `expo-secure-store` for session persistence (encrypted on-device storage)
-2. `AuthProvider` (`mobile/lib/auth.tsx`) restores session on mount via `getSession()`, then listens for changes via `onAuthStateChange`
-3. `(app)/_layout.tsx` checks `session` — redirects to `(auth)/login` if null
-4. `(auth)/_layout.tsx` checks `session` — redirects to `(app)` if authenticated
-5. **Google Sign-In**: Both login and signup screens offer "Continue with Google" via `expo-auth-session` + `expo-web-browser`. Opens system browser for Google OAuth, returns session via Supabase's PKCE flow.
-6. **Email confirmation deep link**: `mobile/app/auth/callback.tsx` handles `aviary://auth/callback` URLs. Extracts the auth code from the URL, exchanges it for a session via `supabase.auth.exchangeCodeForSession()`, then redirects to the dashboard. **Important**: This route is at `app/auth/callback.tsx` (outside the `(auth)` group) so it's accessible regardless of auth state.
-7. **Forgot password**: `(auth)/forgot-password.tsx` calls `supabase.auth.resetPasswordForEmail()` with redirect to the web app's password reset page.
-
-### Mobile data layer
-
-All data fetching uses TanStack Query hooks in `mobile/lib/queries/`:
-- **Query key factory** (`keys.ts`): Centralized keys like `groupKeys.all`, `groupKeys.expenses(id)` for consistent cache invalidation
-- **Hooks**: `useGroups()`, `useGroupDetail(id)`, `useGroupExpenses(id)`, `useCreateExpense()`, `useCreatePayment()`, `useRecurringExpenses(id)`, `useStopRecurringExpense(id)`, `useDeleteExpense()`, `useDeleteAccount()`, `useUploadGroupBanner()`, `useDeleteGroup()`, `useLeaveGroup()`, `useActivityLogs(id)` (infinite query), etc.
-- **Mutations** invalidate relevant query keys on success (e.g., creating an expense invalidates `groupKeys.expenses(id)` and `groupKeys.all`)
-- **Shared imports**: `mobile/lib/queries/shared.ts` re-exports from `@aviary/shared` — single seam for all shared logic imports
-- **Online state**: `queryClient.ts` integrates `@react-native-community/netinfo` with TanStack Query's `onlineManager`, plus `AppState` listener to refetch stale queries when the app comes to foreground
-
-### Platform-specific types
-
-`MemberColor` is platform-specific: web uses `{ bg: string; text: string }` (Tailwind class objects), mobile uses a string union (`"rose" | "sky" | ...`). The `Member` type includes `MemberColor`, so it's also kept per-platform. All other types (`ExpenseRow`, `ActivityLog`, etc.) are shared via `@aviary/shared`.
-
-### Mobile testing
-
-See `mobile/TESTING.md` for the full testing guide. Key points:
-- Same stack as web: Vitest 4 + `@testing-library/react` + happy-dom
-- React Native components mocked to HTML elements (`View` → `<div>`, `Text` → `<span>`, `Pressable` → `<button>`)
-- Expo modules mocked globally in `vitest.setup.ts` (AsyncStorage, SecureStore, Haptics, ImagePicker, Notifications, WebBrowser, AuthSession, Clipboard, Linking, Constants, Device, Crypto, etc.)
-- Lucide icons mocked via Proxy to return `<span data-testid="icon-{Name}">` stubs
-- Mobile tests run separately: `cd mobile && npm test`
-- Root vitest config excludes `mobile/**` to prevent cross-contamination
-
-## Mobile App (React Native / Expo)
-
-React Native mobile app using Expo SDK 52, Expo Router v4, NativeWind v4, and TanStack Query v5. Calls Supabase directly (no API intermediary). Shares business logic from `@aviary/shared`.
-
-### Friends Feature (Mobile)
-
-| File | Purpose |
-|------|---------|
-| `mobile/app/add-friend-expense.tsx` | Modal screen for adding an expense with friends |
-| `mobile/lib/queries/contacts.ts` | `useContacts` hook — fetches user's friends/contacts |
-| `mobile/lib/queries/friends.ts` | `useCreateFriendExpense` hook — calls `get_or_create_friend_group` + `create_expense` per friend |
-
-**Conditional friend-group rendering:** Mobile group detail screen also conditionally hides settings, members, invite, and leave UI when `isFriendGroup=true`, matching the web behavior.
-
-### Additional Mobile Features
-
-| Feature | Key Files | Notes |
-|---------|-----------|-------|
-| **Dark mode toggle** | `lib/colorScheme.tsx`, `settings/index.tsx` | 3-way cycle: system → light → dark. Persists via AsyncStorage, applies via `Appearance.setColorScheme()` |
-| **Push notifications** | `lib/notifications.ts`, `_layout.tsx` | Registers Expo push token on mount (device-only), saves to User table |
-| **Skeleton loaders** | `ui/SkeletonLoader.tsx` | `DashboardSkeleton` + `GroupDetailSkeleton` replace full-screen spinners |
-| **Staggered animations** | Group detail `index.tsx`, dashboard `index.tsx` | Expense cards, activity items, group cards use `FadeInDown` from reanimated; `hasAnimated` ref skips on refetch |
-| **Swipe-to-delete** | Group detail `index.tsx` | Expense rows use `ReanimatedSwipeable` for swipe-to-delete (own expenses only) |
-| **Error/empty states** | `ui/ErrorState.tsx`, `ui/EmptyState.tsx` | Consistent error retry and empty list placeholders across screens |
-| **Offline banner** | `ui/OfflineBanner.tsx`, `lib/useNetworkStatus.ts` | Shows disconnection banner when offline via NetInfo |
-| **Banner upload** | `settings.tsx`, `queries/groups.ts` | `useUploadGroupBanner()` — picks image, uploads to Supabase Storage, updates Group.bannerUrl |
-| **Keyboard handling** | All form screens | `automaticallyAdjustKeyboardInsets` on ScrollViews + `KeyboardAvoidingView` with platform-aware behavior |
-
-### Mobile Gotchas
-
-- **`auth/callback.tsx` lives outside `(auth)/`**: Placed at `app/auth/callback.tsx` (not `app/(auth)/auth/callback.tsx`) so it's accessible regardless of auth state — the auth guard in `(auth)/_layout.tsx` would redirect away before the deep link handler runs.
-- **`Button` requires `onPress` even when `disabled`**: The `ButtonProps` interface makes `onPress` required. Pass a no-op if the button should be disabled without a handler.
-- **Reanimated `entering` prop + `undefined`**: Pass `undefined` (not `null`) to skip entering animations conditionally. `entering={condition ? FadeInDown : undefined}`.
 
 ## Open Questions
 
