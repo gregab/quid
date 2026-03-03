@@ -165,3 +165,35 @@ body {
     background: linear-gradient(to right, rgb(251 191 36 / 0.08), transparent);
   }
 }
+
+/* Landing page entrance animation */
+@keyframes landing-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.landing-card {
+  animation: landing-entrance 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Section entrance — staggered for dashboard sections */
+@keyframes section-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-enter {
+  animation: section-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

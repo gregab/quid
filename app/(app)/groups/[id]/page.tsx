@@ -179,7 +179,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
       <div>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 text-sm text-stone-400 hover:text-amber-700 mb-3 transition-colors py-1"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-400 hover:text-amber-700 dark:hover:text-amber-400 mb-3 transition-colors py-1"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -189,7 +189,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Banner hero (only when a banner is set) */}
         {group.bannerUrl && (
-          <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
+          <div className="section-enter relative mb-4 overflow-hidden rounded-2xl h-36 sm:h-40">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={group.bannerUrl}
@@ -219,7 +219,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         {!group.bannerUrl && (() => {
           const { lightSvg, darkSvg } = generateGroupBanner(group.patternSeed);
           return (
-            <div className="relative mb-4 overflow-hidden rounded-2xl h-32 sm:h-40">
+            <div className="section-enter relative mb-4 overflow-hidden rounded-2xl h-36 sm:h-40">
               <div
                 className="absolute inset-0 dark:hidden"
                 dangerouslySetInnerHTML={{ __html: lightSvg }}
@@ -250,7 +250,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
 
         {/* Member chips — hidden for friend groups */}
         {!isFriendGroup && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             {groupMembers.map((m) => (
               <MemberPill
                 key={m.id}
