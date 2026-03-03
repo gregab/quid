@@ -55,6 +55,9 @@ export {
   updateSettingsSchema,
   addMemberSchema,
   feedbackSchema,
+  createGroupBillSchema,
+  createGroupBillItemSchema,
+  updateGroupBillItemSchema,
 } from "./validation";
 
 // Activity diff
@@ -95,3 +98,11 @@ export {
   seedToBytes,
   resolvePatternDNA,
 } from "./groupPattern";
+
+// Group Bills
+export {
+  computeBillSplits,
+  type GroupBill,
+  type GroupBillItem,
+  type GroupBillSummary,
+} from "./groupBills";

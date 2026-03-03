@@ -94,3 +94,24 @@ export const feedbackSchema = z.object({
     })
     .optional(),
 });
+
+// ── Group Bill schemas ─────────────────────────────────────────────
+
+export const createGroupBillSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
+export const createGroupBillItemSchema = z.object({
+  description: z.string().min(1).max(200),
+  amountCents: z.number().int().min(0),
+  isTaxOrTip: z.boolean().default(false),
+  sortOrder: z.number().int().min(0),
+});
+
+export const updateGroupBillItemSchema = z.object({
+  description: z.string().min(1).max(200).optional(),
+  amountCents: z.number().int().min(0).optional(),
+  claimedByUserIds: z.array(z.string()).optional(),
+  action: z.enum(["toggle_claim", "toggle_all", "edit"]).optional(),
+  include: z.boolean().optional(), // for toggle_all action
+});

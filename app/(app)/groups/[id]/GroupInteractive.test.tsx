@@ -11,6 +11,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
+vi.mock("./GroupBillsSection", () => ({
+  GroupBillsSection: () => null,
+}));
+
 const MEMBERS = [
   { userId: "user-a", displayName: "Alice" },
   { userId: "user-b", displayName: "Bob" },
@@ -26,6 +30,7 @@ const BASE_PROPS = {
   members: MEMBERS,
   allUserNames: { "user-a": "Alice", "user-b": "Bob" },
   inviteToken: "test-invite-token",
+  initialBills: [],
 };
 
 function makeExpense(overrides: Partial<ExpenseRow> = {}): ExpenseRow {

@@ -10,6 +10,7 @@ import { MemberPill, type MemberColor } from "./MemberPill";
 import { getUserBalanceCents } from "@/lib/balances/getUserDebt";
 import { GroupSettingsButton } from "./GroupSettingsButton";
 import { generateGroupBanner } from "@/lib/groupPattern";
+import type { GroupBillSummary } from "@aviary/shared";
 
 // Each member gets a unique color. Full class strings required for Tailwind JIT.
 const MEMBER_COLORS: MemberColor[] = [
@@ -158,6 +159,32 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     };
   });
 
+  // Fetch in-progress group bills (for initial render)
+  const { data: groupBills } = !isFriendGroup ? await supabase
+    .from("GroupBill")
+    .select("*, GroupBillItem(id, isTaxOrTip, claimedByUserIds)")
+    .eq("groupId", id)
+    .order("createdAt", { ascending: false }) : { data: null };
+
+  const initialBills: GroupBillSummary[] = (groupBills ?? []).map((bill) => {
+    const items = bill.GroupBillItem ?? [];
+    const regularItems = items.filter((item) => !item.isTaxOrTip);
+    return {
+      id: bill.id,
+      groupId: bill.groupId,
+      name: bill.name,
+      status: bill.status as "in_progress" | "finalized",
+      expenseId: bill.expenseId,
+      createdAt: bill.createdAt,
+      receiptImageUrl: bill.receiptImageUrl,
+      itemCount: regularItems.length,
+      unclaimedCount: regularItems.filter((item) => {
+        const claimed = item.claimedByUserIds as string[];
+        return claimed.length === 0;
+      }).length,
+    };
+  });
+
   // Compute the user's outstanding balance (absolute value — block leaving if nonzero)
   const userOutstandingCents = Math.abs(getUserBalanceCents(
     initialExpenses.map((e) => ({
@@ -280,6 +307,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         allUserNames={allUserNames}
         inviteToken={group.inviteToken}
         isFriendGroup={isFriendGroup}
+        initialBills={initialBills}
       />
 
       {/* Leave button — hidden for friend groups */}

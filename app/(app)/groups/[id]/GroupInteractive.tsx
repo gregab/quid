@@ -11,6 +11,8 @@ import { buildRawDebts } from "@/lib/balances/buildRawDebts";
 import { formatDisplayName } from "@/lib/formatDisplayName";
 import { formatCents } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
+import { GroupBillsSection } from "./GroupBillsSection";
+import type { GroupBillSummary } from "@aviary/shared";
 
 interface ResolvedDebt {
   fromId: string;
@@ -112,6 +114,7 @@ interface GroupInteractiveProps {
   allUserNames: Record<string, string>;
   inviteToken: string;
   isFriendGroup?: boolean;
+  initialBills: GroupBillSummary[];
 }
 
 
@@ -127,6 +130,7 @@ export function GroupInteractive({
   allUserNames,
   inviteToken,
   isFriendGroup,
+  initialBills,
 }: GroupInteractiveProps) {
   const { logs, addOptimisticLog, hasMore, isLoadingMore, loadMore } =
     useActivityLogs(initialLogs, groupId, hasMoreLogs);
@@ -252,6 +256,14 @@ export function GroupInteractive({
         )}
       </Card>
 
+      {!isFriendGroup && (
+        <GroupBillsSection
+          groupId={groupId}
+          currentUserId={currentUserId}
+          initialBills={initialBills}
+          members={members}
+        />
+      )}
       <ExpensesList
         groupId={groupId}
         groupCreatedById={groupCreatedById}

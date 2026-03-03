@@ -79,6 +79,13 @@ app/                                     # Next.js web app (below)
       useActivityLogs.ts                 # Hook: manages activity log state with optimistic additions
                                          #   and server reconciliation
       loading.tsx                        # Suspense fallback for group page
+      GroupBillsSection.tsx              # In-progress bills list + "Scan Receipt" button; rendered
+                                         #   above ExpensesList for non-friend groups
+      CreateGroupBillDialog.tsx          # Modal: upload receipt photo, sends to /bills API for parsing
+      GroupBillClient.tsx                # Client component for bill detail page: item claiming,
+                                         #   editing, finalize/unfinalize actions
+      bills/[billId]/
+        page.tsx                         # Bill detail server page: fetches bill + items + members
     settings/
       page.tsx                           # Settings page: fetches user info + group balances (server)
       SettingsClient.tsx                 # Profile picture, emoji, account deletion (client)
@@ -106,6 +113,12 @@ app/                                     # Next.js web app (below)
       export/route.ts                    # GET: download group expenses as .xlsx spreadsheet
       settings/route.ts                  # GET: group settings; PUT: rename group, update banner
       recurring/[recurringId]/route.ts   # PUT: update recurring expense; DELETE: cancel recurring
+      bills/route.ts                     # GET: list group bills; POST: create bill (with receipt parsing)
+      bills/[billId]/route.ts            # GET: bill detail with items; DELETE: delete bill
+      bills/[billId]/items/route.ts      # POST: add item to bill
+      bills/[billId]/items/[itemId]/route.ts  # PUT: update item; DELETE: delete item
+      bills/[billId]/finalize/route.ts   # POST: finalize bill → creates expense with custom splits
+      bills/[billId]/unfinalize/route.ts # POST: unfinalize bill (reopen for editing)
   api/invite/[token]/
     join/route.ts                        # POST: join group via invite token (via join_group_by_token RPC)
   api/feedback/
@@ -140,6 +153,8 @@ lib/
   compressImage.ts                       # Client-side image compression (Canvas API, web-only)
   export/buildExportData.ts              # Transform expense data for spreadsheet export
   export/generateSpreadsheet.ts          # Generate .xlsx file using exceljs
+  parseReceipt.ts                        # Server-only: sends receipt image to Claude AI, returns
+                                         #   parsed items array with description + amountCents
 
 supabase/
   migrations/                            # SQL migrations applied via `npx supabase db push`
@@ -231,9 +246,29 @@ Feedback
   userId        String    → User
   message       String
   createdAt     DateTime  @default(now())
+
+GroupBill
+  id               String    @id @default(uuid)
+  groupId          String    → Group (cascade delete)
+  createdById      String    → User
+  name             String
+  receiptImageUrl  String              // storage path (not signed URL); client resolves via signed URL API
+  receiptType      String    @default('other') CHECK IN ('meal', 'other')
+  status           String    @default('in_progress') CHECK IN ('in_progress', 'finalized')
+  expenseId        String?   → Expense (ON DELETE SET NULL)  // set when bill is finalized
+  createdAt        DateTime  @default(now())
+
+GroupBillItem
+  id                 String    @id @default(uuid)
+  groupBillId        String    → GroupBill (cascade delete)
+  description        String
+  amountCents        Int       CHECK >= 0
+  isTaxOrTip         Boolean   @default(false)   // tax/tip items distributed proportionally
+  claimedByUserIds   String[]  @default([])       // array of user IDs who claim this item
+  sortOrder          Int       @default(0)        // display order within bill
 ```
 
-**Cascade behavior:** Deleting a Group cascades to GroupMember, Expense, and ActivityLog. Deleting an Expense cascades to ExpenseSplit. Deleting a User cascades to GroupMember only (expenses and activity logs retain the reference).
+**Cascade behavior:** Deleting a Group cascades to GroupMember, Expense, ActivityLog, and GroupBill. Deleting an Expense cascades to ExpenseSplit. Deleting a GroupBill cascades to GroupBillItem. Deleting a User cascades to GroupMember only (expenses and activity logs retain the reference). Deleting an Expense sets `GroupBill.expenseId` to NULL (ON DELETE SET NULL).
 
 ## Data Access — Supabase JS Client + RLS
 
@@ -299,6 +334,8 @@ RLS is enabled on all 6 tables. A `SECURITY DEFINER` helper function `is_group_m
 | `create_payment(...)` | Creates payment expense + single split for recipient + activity log | `POST /api/groups/[id]/payments` |
 | `add_member_by_email(_group_id, _email)` | Looks up user by email, adds as group member. Atomic: auth check → user lookup → duplicate check → insert. Returns `{ userId, displayName, groupId, joinedAt }` | Direct RPC |
 | `get_or_create_friend_group(_other_user_id)` | Finds or creates a 2-person friend group (`isFriendGroup=true`) between the caller and another user. Uses `pg_advisory_xact_lock` to prevent duplicate friend groups from concurrent requests. Returns the group ID. | `POST /api/friends/expenses` |
+| `toggle_group_bill_item_claim(_item_id, _user_id)` | Atomically adds or removes a user from `claimedByUserIds` on a GroupBillItem. Called on behalf of the requesting user by the API route. | `PUT /api/groups/[id]/bills/[billId]/items/[itemId]` |
+| `set_group_bill_member_all_items(_bill_id, _user_id, _claim)` | Claims or unclaims all non-tax/tip items for a given user in a bill in one operation. | `PUT /api/groups/[id]/bills/[billId]/items/[itemId]` |
 
 **Note:** `join_group_by_token` now blocks friend groups — attempting to join via invite token returns an error if the group has `isFriendGroup=true`.
 
@@ -392,6 +429,41 @@ Creates expenses across friend groups (fan-out). For each friend, calls `get_or_
 ### `POST /api/invite/[token]/join`
 Joins the group associated with the invite token. Uses the `join_group_by_token` RPC (idempotent — safe to call if already a member). Blocked for friend groups (`isFriendGroup=true`).
 - Returns: `{ data: { groupId, alreadyMember }, error: null }`
+
+### `GET /api/groups/[id]/bills`
+Lists all GroupBills for the group.
+- Returns: `{ data: GroupBill[] }`
+
+### `POST /api/groups/[id]/bills`
+Creates a new GroupBill. Accepts a receipt image (multipart/form-data), uploads it to Supabase storage, sends it to Claude AI via `lib/parseReceipt.ts`, and stores the parsed items.
+- Body: multipart form with `image` (file) and `name` (string)
+- Returns: 201 with `{ data: { id, name, receiptImageUrl, status, items } }`
+
+### `GET /api/groups/[id]/bills/[billId]`
+Returns a GroupBill with all its items and a signed URL for the receipt image.
+- Returns: `{ data: GroupBill }` with `receiptImageUrl` resolved to a signed URL
+
+### `DELETE /api/groups/[id]/bills/[billId]`
+Deletes a GroupBill and its items. Also deletes the receipt image from storage.
+
+### `POST /api/groups/[id]/bills/[billId]/items`
+Adds a new item to a bill (manual entry).
+- Body: `{ description: string, amountCents: number, isTaxOrTip?: boolean }`
+
+### `PUT /api/groups/[id]/bills/[billId]/items/[itemId]`
+Updates an item (description, amount, isTaxOrTip, or claimedByUserIds). Uses `toggle_group_bill_item_claim` or `set_group_bill_member_all_items` RPCs for atomic claim updates.
+- Body: `{ description?: string, amountCents?: number, isTaxOrTip?: boolean, toggleClaimUserId?: string, setAllClaim?: { userId: string, claim: boolean } }`
+
+### `DELETE /api/groups/[id]/bills/[billId]/items/[itemId]`
+Deletes a single item from a bill.
+
+### `POST /api/groups/[id]/bills/[billId]/finalize`
+Finalizes a bill: runs `computeBillSplits()` to get per-person amounts, then calls `create_expense` RPC to create an expense with `splitType='custom'`, and sets `GroupBill.expenseId` and `GroupBill.status='finalized'`.
+- Body: `{ description: string, date: "YYYY-MM-DD", paidById: string }`
+- Returns: `{ data: { expenseId } }`
+
+### `POST /api/groups/[id]/bills/[billId]/unfinalize`
+Reopens a finalized bill: deletes the associated expense and resets `GroupBill.status='in_progress'` and `GroupBill.expenseId=null`.
 
 ## Data Flow
 
@@ -745,6 +817,7 @@ These features extend the core expense-splitting functionality:
 | **PWA** | `InstallPrompt.tsx`, `ServiceWorkerRegistration.tsx` | Install prompt + offline support |
 | **Google Sign-In** | `GoogleSignInButton.tsx`, login/signup pages | OAuth via Supabase |
 | **Split modes** | `AddExpenseForm.tsx`, `lib/percentageSplit.ts` | Equal, custom dollar amounts, or percentage |
+| **Group Bills (Receipt Scanning)** | `GroupBillsSection.tsx`, `CreateGroupBillDialog.tsx`, `GroupBillClient.tsx`, `groups/[id]/bills/[billId]/`, `api/groups/[id]/bills/` | Upload receipt photo → Claude AI parses items → members claim their items → finalize creates expense with custom splits |
 
 ## Shared Pure Logic (`@aviary/shared`)
 
@@ -768,9 +841,10 @@ All pure business logic lives in `packages/shared/src/` and is published as the 
 | `groupPattern.ts` | `generateGroupPattern()`, `generateGroupBanner()` | Thorough |
 | `birdFacts.ts` | `BIRD_FACTS` — array of bird fact strings | — |
 | `types.ts` | `ExpenseRow`, `ActivityLog`, `UserOwesDebt`, `SplitEntry`, `ResolvedDebt`, `GroupSummary` | — |
-| `validation.ts` | Zod schemas: `createExpenseSchema`, `updateExpenseSchema`, `createPaymentSchema`, `createGroupSchema`, `updateSettingsSchema`, `addMemberSchema`, `feedbackSchema` | — |
+| `validation.ts` | Zod schemas: `createExpenseSchema`, `updateExpenseSchema`, `createPaymentSchema`, `createGroupSchema`, `updateSettingsSchema`, `addMemberSchema`, `feedbackSchema`, `createGroupBillSchema`, `createGroupBillItemSchema`, `updateGroupBillItemSchema` | — |
 | `activityDiff.ts` | `computeExpenseChanges()`, `buildSplitSnapshot()` — activity log change detection | — |
 | `rpcParams.ts` | `buildCreateExpenseParams()`, `buildUpdateExpenseParams()`, `buildCreatePaymentParams()`, `buildDeleteExpenseParams()`, `buildCreateRecurringExpenseParams()` | — |
+| `groupBills.ts` | `GroupBill`, `GroupBillItem`, `GroupBillSummary` types; `computeBillSplits(items)` — computes per-person split amounts from a finalized bill (regular items split equally among claimants, tax/tip distributed proportionally) | Thorough |
 
 ## Open Questions
 

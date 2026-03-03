@@ -284,6 +284,109 @@ export type Database = {
           },
         ]
       }
+      GroupBill: {
+        Row: {
+          createdAt: string
+          createdById: string
+          expenseId: string | null
+          groupId: string
+          id: string
+          name: string
+          receiptImageUrl: string
+          receiptType: string
+          status: string
+        }
+        Insert: {
+          createdAt?: string
+          createdById: string
+          expenseId?: string | null
+          groupId: string
+          id?: string
+          name: string
+          receiptImageUrl: string
+          receiptType: string
+          status?: string
+        }
+        Update: {
+          createdAt?: string
+          createdById?: string
+          expenseId?: string | null
+          groupId?: string
+          id?: string
+          name?: string
+          receiptImageUrl?: string
+          receiptType?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "GroupBill_createdById_fkey"
+            columns: ["createdById"]
+            isOneToOne: false
+            referencedRelation: "User"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "GroupBill_expenseId_fkey"
+            columns: ["expenseId"]
+            isOneToOne: false
+            referencedRelation: "Expense"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "GroupBill_expenseId_fkey"
+            columns: ["expenseId"]
+            isOneToOne: false
+            referencedRelation: "ExpenseMasked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "GroupBill_groupId_fkey"
+            columns: ["groupId"]
+            isOneToOne: false
+            referencedRelation: "Group"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      GroupBillItem: {
+        Row: {
+          amountCents: number
+          claimedByUserIds: string[]
+          description: string
+          groupBillId: string
+          id: string
+          isTaxOrTip: boolean
+          sortOrder: number
+        }
+        Insert: {
+          amountCents: number
+          claimedByUserIds?: string[]
+          description: string
+          groupBillId: string
+          id?: string
+          isTaxOrTip?: boolean
+          sortOrder: number
+        }
+        Update: {
+          amountCents?: number
+          claimedByUserIds?: string[]
+          description?: string
+          groupBillId?: string
+          id?: string
+          isTaxOrTip?: boolean
+          sortOrder?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "GroupBillItem_groupBillId_fkey"
+            columns: ["groupBillId"]
+            isOneToOne: false
+            referencedRelation: "GroupBill"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       GroupMember: {
         Row: {
           groupId: string
@@ -691,9 +794,17 @@ export type Database = {
       join_group_by_token: { Args: { _token: string }; Returns: Json }
       leave_group: { Args: { _group_id: string }; Returns: Json }
       process_due_recurring_expenses: { Args: never; Returns: number }
+      set_group_bill_member_all_items: {
+        Args: { _bill_id: string; _include: boolean; _user_id: string }
+        Returns: undefined
+      }
       stop_recurring_expense: {
         Args: { _recurring_id: string }
         Returns: undefined
+      }
+      toggle_group_bill_item_claim: {
+        Args: { _item_id: string; _user_id: string }
+        Returns: string[]
       }
       update_expense: {
         Args: {
