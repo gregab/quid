@@ -114,6 +114,7 @@ interface GroupInteractiveProps {
   allUserNames: Record<string, string>;
   inviteToken: string;
   isFriendGroup?: boolean;
+  showGroupBills: boolean;
   initialBills: GroupBillSummary[];
 }
 
@@ -130,6 +131,7 @@ export function GroupInteractive({
   allUserNames,
   inviteToken,
   isFriendGroup,
+  showGroupBills,
   initialBills,
 }: GroupInteractiveProps) {
   const { logs, addOptimisticLog, hasMore, isLoadingMore, loadMore } =
@@ -256,7 +258,7 @@ export function GroupInteractive({
         )}
       </Card>
 
-      {!isFriendGroup && (
+      {showGroupBills && !isFriendGroup && (
         <GroupBillsSection
           groupId={groupId}
           currentUserId={currentUserId}

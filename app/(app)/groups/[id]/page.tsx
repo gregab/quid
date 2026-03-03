@@ -159,8 +159,11 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
     };
   });
 
+  // Receipt scanning / group bill splitting is gated to gregbglw@gmail.com only
+  const showGroupBills = user.email === "gregbglw@gmail.com";
+
   // Fetch in-progress group bills (for initial render)
-  const { data: groupBills } = !isFriendGroup ? await supabase
+  const { data: groupBills } = showGroupBills && !isFriendGroup ? await supabase
     .from("GroupBill")
     .select("*, GroupBillItem(id, isTaxOrTip, claimedByUserIds)")
     .eq("groupId", id)
@@ -307,6 +310,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         allUserNames={allUserNames}
         inviteToken={group.inviteToken}
         isFriendGroup={isFriendGroup}
+        showGroupBills={showGroupBills}
         initialBills={initialBills}
       />
 

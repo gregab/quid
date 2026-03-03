@@ -30,6 +30,7 @@ const BASE_PROPS = {
   members: MEMBERS,
   allUserNames: { "user-a": "Alice", "user-b": "Bob" },
   inviteToken: "test-invite-token",
+  showGroupBills: true,
   initialBills: [],
 };
 
