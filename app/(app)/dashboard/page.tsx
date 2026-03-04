@@ -48,12 +48,17 @@ export default async function DashboardPage() {
   // Fetch expenses with splits for balance computation
   const balanceMap = new Map<string, number>();
   const groupsWithExpenses = new Set<string>();
+  let totalExpenseCount = 0;
+  let totalAmountTrackedCents = 0;
   if (allGroups.length > 0) {
     const { data: expenses } = await supabase
       .from("Expense")
       .select("groupId, paidById, ExpenseSplit(userId, amountCents)")
       .in("groupId", allGroups.map((g) => g.id));
     if (expenses) {
+      totalExpenseCount = expenses.length;
+      totalAmountTrackedCents = expenses.reduce((sum, e) =>
+        sum + (e.ExpenseSplit ?? []).reduce((s, split) => s + split.amountCents, 0), 0);
       // Group expenses by groupId
       const byGroup = new Map<string, Array<{ paidById: string; splits: Array<{ userId: string; amountCents: number }> }>>();
       for (const e of expenses) {
@@ -185,6 +190,28 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Lifetime stats */}
+      {hasAnyExpenses && (
+        <div className="section-enter grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ animationDelay: "60ms" }}>
+          <div className="stats-card rounded-2xl bg-gradient-to-br from-amber-500 to-amber-700 p-4 text-white shadow-lg">
+            <p className="text-2xl sm:text-3xl font-black tracking-tight">{totalExpenseCount}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/75 mt-1">Expenses</p>
+          </div>
+          <div className="stats-card rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-4 text-white shadow-lg" style={{ animationDelay: "80ms" }}>
+            <p className="text-2xl sm:text-3xl font-black tracking-tight">{formatCents(totalAmountTrackedCents)}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/75 mt-1">Tracked</p>
+          </div>
+          <div className="stats-card rounded-2xl bg-gradient-to-br from-sky-500 to-sky-700 p-4 text-white shadow-lg" style={{ animationDelay: "160ms" }}>
+            <p className="text-2xl sm:text-3xl font-black tracking-tight">{regularGroups.length}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/75 mt-1">Groups</p>
+          </div>
+          <div className="stats-card rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 p-4 text-white shadow-lg" style={{ animationDelay: "240ms" }}>
+            <p className="text-2xl sm:text-3xl font-black tracking-tight">{friends.length}</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/75 mt-1">Friends</p>
+          </div>
+        </div>
+      )}
 
       {/* Groups section */}
       <div className="section-enter" style={{ animationDelay: "80ms" }}>

@@ -197,3 +197,19 @@ body {
 .section-enter {
   animation: section-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Stats card pop-in */
+@keyframes stats-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.stats-card {
+  animation: stats-pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
